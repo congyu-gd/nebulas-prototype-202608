@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nebulas Cloud Setting</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/install.css">
+</head>
+<body>
+
+<!-- ==================================================== cloud setting shell
+     Two columns: the twelve-module menu, and the configuration surface for
+     whichever module is selected. The status strip spans both, because
+     deployment progress belongs to neither column.
+
+     This page is independent of the workspace prototype — it shares the
+     design system in css/ and nothing else.
+========================================================================== -->
+<div class="setup" id="setup">
+
+  <aside class="menu" aria-label="Deployment modules">
+    <div class="menu__head">
+      <div class="menu__mark" aria-hidden="true">N</div>
+      <!-- The page name is fixed; the sub-line carries which tenant it is. -->
+      <div class="menu__id">
+        <span class="menu__name">Nebulas cloud setting</span>
+        <span class="menu__sub" id="menuSub">Not initialised</span>
+      </div>
+    </div>
+    <nav class="menu__body" id="menuBody"></nav>
+  </aside>
+
+  <!-- ================================================= configuration pane -->
+  <section class="cfg" aria-label="Module configuration">
+    <header class="cfg__head">
+      <h1 class="cfg__title" id="cfgTitle">Initialisation</h1>
+      <span class="badge" id="cfgState">Not configured</span>
+      <div class="cfg__spacer"></div>
+      <button class="btn btn--ghost btn--sm" id="resetBtn">Reset all</button>
+    </header>
+
+    <div class="cfg__body" id="cfgBody"></div>
+
+    <!-- The actions are centred in the row; the hint is taken out of the flow
+         so its width can't pull them off centre. -->
+    <footer class="cfg__foot">
+      <div class="cfg__actions">
+        <button class="btn btn--secondary" id="prevBtn">Back</button>
+        <button class="btn btn--primary" id="nextBtn">Save &amp; continue</button>
+        <button class="btn btn--ghost btn--sm" id="skipBtn">Skip for now</button>
+      </div>
+      <span class="cfg__hint" id="cfgHint">Choices are kept in this browser only.</span>
+    </footer>
+  </section>
+
+  <!-- Progress spans both columns, because it belongs to neither. -->
+  <footer class="statusbar">
+    <span class="statusbar__item"><span class="dot" id="stDot"></span><span id="stState">not configured</span></span>
+    <span class="statusbar__item statusbar__hide-sm" id="stProvider">AWS</span>
+    <span class="statusbar__item statusbar__hide-sm" id="stRegion">ap-southeast-1</span>
+    <div class="statusbar__spacer"></div>
+    <span class="statusbar__item statusbar__hide-sm">
+      <span id="stProg">0 / 12 modules</span>
+      <span class="meter statusbar__meter"><i id="stBar" style="width:0%"></i></span>
+    </span>
+    <button class="statusbar__item" id="stThemeBtn" title="Toggle theme (⌘J)"><span id="stTheme">Light</span></button>
+    <button class="statusbar__item" id="stDensityBtn" title="Cycle interface density"><span id="stDensity">Comfortable</span></button>
+  </footer>
+</div>
+
+<!-- ================================================ initialisation dialog
+     Module 01 is the gate, not a page: the tenant, its billing identity and
+     the regions every other module inherits. Until it is done there is
+     nothing for the eleven configuration pages to attach to, so it arrives
+     as a layer over them rather than as the first item in the menu.
+====================================================================== -->
+<div class="scrim scrim--wizard" id="wizScrim" data-open="false">
+  <div class="wizard" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
+    <header class="wizard__head">
+      <div class="wizard__headrow">
+        <span class="t-eyebrow">Initialisation</span>
+        <div class="cfg__spacer"></div>
+        <button class="iconbtn iconbtn--sm" id="wizClose" title="Close (esc)" aria-label="Close"></button>
+      </div>
+      <h2 class="t-title" id="wizTitle">Start the deployment</h2>
+      <p class="wizard__desc" id="wizPage">Tenant Onboarding · creates the tenant, its billing identity and the regions every module inherits.</p>
+    </header>
+
+    <div class="wizard__body" id="wizBody"></div>
+
+    <footer class="wizard__foot">
+      <span class="cfg__hint" id="wizHint"></span>
+      <div class="cfg__spacer"></div>
+      <button class="btn btn--secondary" id="wizCancel">Cancel</button>
+      <button class="btn btn--primary" id="wizStart">Start deployment</button>
+    </footer>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="js/install-data.js"></script>
+<script src="js/install.js"></script>
+</body>
+</html>

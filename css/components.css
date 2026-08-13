@@ -1,0 +1,583 @@
+/* ============================================================================
+   components — reusable parts. Nothing here knows where it sits on screen.
+   ========================================================================= */
+
+/* ================================================================ buttons */
+.btn{
+  display:inline-flex; align-items:center; gap:var(--s-2);
+  height:var(--ctl-md); padding:0 var(--s-3);
+  border-radius:var(--r-md);
+  font-size:var(--t-12); font-weight:var(--w-medium);
+  white-space:nowrap;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease),
+             border-color var(--fast) var(--ease);
+}
+.btn--primary{ background:var(--accent); color:var(--accent-fg) }
+.btn--primary:hover{ background:var(--accent-hi) }
+.btn--secondary{ background:var(--bg); color:var(--text); border:var(--border) solid var(--line-strong) }
+.btn--secondary:hover{ background:var(--raised) }
+.btn--ghost{ color:var(--text-3) }
+.btn--ghost:hover{ background:var(--raised); color:var(--text) }
+.btn--danger{ color:var(--err) }
+.btn--danger:hover{ background:var(--err-soft) }
+.btn--sm{ height:var(--ctl-sm); padding:0 var(--s-2); font-size:var(--t-11) }
+.btn:disabled{ opacity:.4; cursor:not-allowed }
+
+/* Square icon-only button. Three sizes, all token-derived. */
+.iconbtn{
+  display:grid; place-items:center;
+  width:var(--ctl-md); height:var(--ctl-md);
+  border-radius:var(--r-md);
+  color:var(--text-3);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.iconbtn:hover{ background:var(--raised); color:var(--text) }
+.iconbtn[aria-pressed="true"]{ background:var(--raised-2); color:var(--text) }
+.iconbtn--sm{ width:var(--ctl-sm); height:var(--ctl-sm); border-radius:var(--r-sm) }
+.iconbtn--xs{ width:var(--ctl-xs); height:var(--ctl-xs); border-radius:var(--r-sm); color:var(--text-4) }
+.iconbtn:disabled{ opacity:.35; cursor:not-allowed }
+
+/* =================================================================== kbd */
+.kbd{
+  font-family:var(--mono); font-size:var(--t-11); line-height:1;
+  padding:3px 5px;
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-sm);
+  background:var(--surface);
+  color:var(--text-3);
+}
+.btn--primary .kbd{ background:rgba(255,255,255,.16); border-color:transparent; color:inherit }
+
+/* =============================================================== tooltip */
+.tip{ position:relative }
+.tip::after{
+  content:attr(data-tip);
+  position:absolute; left:calc(100% + 10px); top:50%; translate:0 -50%;
+  background:var(--inv-bg); color:var(--inv-text);
+  font-size:var(--t-11); line-height:1;
+  padding:6px var(--s-2);
+  border-radius:var(--r-sm);
+  white-space:nowrap; pointer-events:none;
+  opacity:0; transition:opacity var(--fast) var(--ease);
+  z-index:60;
+  box-shadow:var(--shadow-md);
+}
+.tip:hover::after{ opacity:1 }
+.tip--below::after{ left:50%; top:calc(100% + 8px); translate:-50% 0 }
+
+/* ================================================================= badge */
+.badge{
+  display:inline-flex; align-items:center; gap:5px;
+  height:var(--ctl-xs); padding:0 var(--s-2);
+  border-radius:var(--r-sm);
+  font-size:var(--t-11); font-weight:var(--w-medium);
+  background:var(--raised); color:var(--text-3);
+}
+.badge--ok  { background:var(--ok-soft);   color:var(--ok) }
+.badge--warn{ background:var(--warn-soft); color:var(--warn) }
+.badge--err { background:var(--err-soft);  color:var(--err) }
+.badge--info{ background:var(--accent-soft); color:var(--accent) }
+.badge--mono{ font-family:var(--mono) }
+
+/* Status dot. --state drives the color; .is-live adds the pulse. */
+.dot{
+  width:var(--dot); height:var(--dot);
+  border-radius:var(--r-full);
+  background:var(--line-strong);
+  flex:none;
+}
+.dot--ok{ background:var(--ok) }
+.dot--warn{ background:var(--warn) }
+.dot--err{ background:var(--err) }
+.dot--run{ background:var(--accent) }
+.dot.is-live{ animation:pulse 1.1s var(--ease) infinite }
+@keyframes pulse{ 0%,100%{opacity:1;scale:1} 50%{opacity:.35;scale:.7} }
+
+/* ================================================================= chips */
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px var(--s-2);
+  border-radius:var(--r-sm);
+  border:var(--border) solid var(--line);
+  background:var(--raised);
+  color:var(--text-2);
+  font-size:var(--t-11);
+  max-width:220px;
+  transition:border-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+button.chip:hover{ border-color:var(--line-strong); color:var(--text) }
+.chip > span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.chip--removable{ padding-right:var(--s-1) }
+/* Sits on --surface rather than in it: prompt starters read as things to pick
+   up, not as fields already filled in. */
+.chip--plain{ background:var(--bg) }
+button.chip--plain:hover{ background:var(--raised) }
+.chip__x{ display:grid; place-items:center; color:var(--text-4); border-radius:var(--r-xs) }
+.chip__x:hover{ color:var(--text) }
+
+/* ================================================================ inputs */
+.field{ margin-bottom:var(--s-4) }
+.field__label{
+  display:flex; align-items:center;
+  font-size:var(--t-12); color:var(--text-2);
+  margin-bottom:6px;
+}
+.field__value{ margin-left:auto; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.field__help{ font-size:var(--t-11); color:var(--text-4); margin-top:5px }
+
+.input,.select{
+  width:100%; height:var(--ctl-md);
+  padding:0 var(--s-2);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-md);
+  background:var(--bg); color:var(--text);
+  font-size:var(--t-12);
+  appearance:none;
+  transition:border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+.input:focus,.select:focus{
+  outline:none;
+  border-color:var(--accent-line);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+.select{
+  padding-right:26px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+}
+.range{ width:100%; accent-color:var(--accent) }
+
+/* Switch. The track is a sibling, not adjacent — use ~ not +. */
+.switch{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-2) 0;
+  font-size:var(--t-12); color:var(--text-2);
+  cursor:pointer;
+}
+.switch input{ position:absolute; opacity:0; pointer-events:none }
+.switch__track{
+  position:relative; flex:none;
+  width:30px; height:18px;
+  margin-left:auto;
+  border-radius:var(--r-full);
+  background:var(--line-strong);
+  transition:background var(--base) var(--ease);
+}
+.switch__track::after{
+  content:""; position:absolute; top:2px; left:2px;
+  width:14px; height:14px;
+  border-radius:var(--r-full);
+  background:var(--bg);
+  box-shadow:var(--shadow-sm);
+  transition:translate var(--base) var(--ease);
+}
+.switch input:checked ~ .switch__track{ background:var(--accent) }
+.switch input:checked ~ .switch__track::after{ translate:12px 0 }
+.switch input:focus-visible ~ .switch__track{ outline:var(--ring) solid var(--accent); outline-offset:2px }
+
+/* ======================================================== segmented tabs */
+.seg{ display:flex; gap:2px; padding:2px; border-radius:var(--r-md); background:var(--raised-2) }
+.seg button{
+  padding:3px var(--s-2);
+  border-radius:var(--r-sm);
+  font-size:var(--t-11); color:var(--text-3);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.seg button[aria-selected="true"]{ background:var(--bg); color:var(--text); box-shadow:var(--shadow-sm) }
+
+/* ================================================================= meter */
+.meter{ display:block; height:4px; border-radius:var(--r-full); background:var(--raised-2); overflow:hidden }
+.meter > i{
+  display:block; height:100%;
+  border-radius:var(--r-full);
+  background:var(--accent);
+  transition:width var(--slow) var(--ease);
+}
+.meter--warn > i{ background:var(--warn) }
+
+.sparkbars{ display:flex; align-items:flex-end; gap:2px; height:32px }
+.sparkbars i{ flex:1; background:var(--accent-soft); border-radius:var(--r-xs) }
+.sparkbars i:last-child{ background:var(--accent) }
+
+/* ============================================================== rows/list
+   The list column and every table-ish surface share this row. */
+.row{
+  display:flex; align-items:center; gap:var(--s-2);
+  width:100%; text-align:left;
+  padding:var(--s-2) var(--s-3);
+  border-radius:var(--r-md);
+  color:var(--text-2);
+  transition:background var(--fast) var(--ease);
+}
+.row:hover{ background:var(--raised) }
+.row[aria-current="true"]{ background:var(--raised-2); color:var(--text) }
+.row__main{ display:block; min-width:0; flex:1 }
+.row__title{
+  display:block;
+  font-size:var(--t-12); color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.row[aria-current="true"] .row__title{ font-weight:var(--w-medium) }
+.row__sub{
+  display:block;
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.row__meta{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4); flex:none }
+.row__icon{ color:var(--text-4); flex:none }
+
+/* ================================================================= cards */
+.card{
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--bg);
+  overflow:hidden;
+}
+.card__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--ctl-lg); padding:0 var(--s-2) 0 var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.card__title{ font-size:var(--t-12); font-weight:var(--w-medium); color:var(--text-2) }
+.card__body{ padding:var(--s-4) }
+.card--raised{ background:var(--raised) }
+
+/* ================================================================ tables */
+.table{ width:100%; border-collapse:collapse; font-size:var(--t-12) }
+.table th{
+  text-align:left;
+  font-size:var(--t-11); font-weight:var(--w-semi);
+  letter-spacing:var(--ls-caps); text-transform:uppercase;
+  color:var(--text-4);
+  padding:0 var(--s-3) var(--s-2) 0;
+  border-bottom:var(--border) solid var(--line);
+  white-space:nowrap;
+}
+.table td{
+  padding:var(--s-2) var(--s-3) var(--s-2) 0;
+  border-bottom:var(--border) solid var(--line);
+  color:var(--text-2);
+}
+.table tbody tr:last-child td{ border-bottom:0 }
+.table .num{ text-align:right; font-family:var(--mono); padding-right:0 }
+.table th.num{ text-align:right; padding-right:0 }
+/* A right-aligned column gives up its right padding, so whatever follows
+   has to supply the gap — otherwise the two columns touch. */
+.table td.num + td,.table th.num + th{ padding-left:var(--s-3) }
+/* Paired with `.table` so they out-specify `.table td`, which sets a colour
+   of its own and would otherwise silently win. */
+.delta-up,.table .delta-up{ color:var(--ok) }
+.delta-dn,.table .delta-dn{ color:var(--err) }
+.table--rows tbody tr{ transition:background var(--fast) var(--ease) }
+.table--rows tbody tr:hover{ background:var(--raised) }
+
+/* Horizontal overflow container — wide tables scroll, the page never does. */
+.scroll-x{ overflow-x:auto; max-width:100% }
+
+/* ============================================================== artifact list
+   A table artifact in the pane: one label per row against one muted value.
+   No column headers — with two columns the header row names what the rows
+   already say. */
+.artlist{ display:block }
+.artlist__row{
+  display:flex; align-items:center; gap:var(--s-3);
+  padding:var(--s-2) 0;
+  min-height:34px;
+  border-bottom:var(--border) solid var(--line);
+  font-size:var(--t-12);
+}
+.artlist__row:last-child{ border-bottom:0 }
+.artlist__k{
+  min-width:0; color:var(--text-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.artlist__v{ margin-left:auto; flex:none; color:var(--text-4) }
+
+/* ================================================================== code */
+.code{
+  margin:0;
+  font-family:var(--mono); font-size:var(--t-12); line-height:1.7;
+  color:var(--text-2);
+  overflow-x:auto;
+}
+.code .k{ color:var(--accent) }
+.code .s{ color:var(--ok) }
+.code .c{ color:var(--text-4) }
+.code .del{ color:var(--err) }
+.code .add{ color:var(--ok) }
+
+/* ================================================================== tool trace */
+.trace{
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+  overflow:hidden;
+}
+.trace__sum{
+  display:flex; align-items:center; gap:var(--s-2);
+  width:100%;
+  padding:var(--s-2) var(--s-3);
+  font-size:var(--t-12); color:var(--text-2);
+  transition:background var(--fast) var(--ease);
+}
+.trace__sum:hover{ background:var(--raised) }
+.trace__chev{ color:var(--text-4); transition:rotate var(--base) var(--ease) }
+.trace[data-open="true"] .trace__chev{ rotate:90deg }
+.trace__ico{ color:var(--accent); display:flex }
+.trace__dur{ margin-left:auto; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.trace__body{ display:none; padding:var(--s-1) var(--s-3) var(--s-3); border-top:var(--border) solid var(--line) }
+.trace[data-open="true"] .trace__body{ display:block }
+
+.step{
+  display:flex; align-items:baseline; gap:var(--s-2);
+  padding:var(--s-2) 0;
+  font-size:var(--t-12);
+  border-bottom:var(--border) solid var(--line);
+}
+.step:last-child{ border-bottom:0 }
+.step .dot{ translate:0 -2px }
+.step__name{ font-family:var(--mono); color:var(--text-2) }
+.step__detail{
+  color:var(--text-4);
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.step__t{ margin-left:auto; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4); flex:none }
+
+/* ====================================================== artifact reference
+   What a turn leaves in the thread once the artifact itself moved to the
+   pane: a line you can scan past, or click to bring the thing back. */
+.artref{
+  display:flex; align-items:center; gap:var(--s-2);
+  width:100%; text-align:left;
+  padding:var(--s-2) var(--s-3);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+  color:var(--text-2);
+  animation:rise var(--slow) var(--ease-out) both;
+  transition:background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+@keyframes rise{ from{opacity:0; translate:0 6px} to{opacity:1; translate:0 0} }
+.artref:hover{ background:var(--raised); border-color:var(--line-strong) }
+.artref[aria-current="true"]{ border-color:var(--accent-line); background:var(--accent-soft) }
+.artref__ico{ display:flex; color:var(--text-4); flex:none }
+.artref__title{
+  min-width:0;
+  font-size:var(--t-12); font-weight:var(--w-medium); color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.artref__meta{ margin-left:auto; flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
+/* ================================================================== apps
+   An app is identified by a colour and a glyph, set through --app-c. That is
+   an identity channel, distinct from --accent: it answers "which app", never
+   "act here", which is why it lives only on this tile. */
+.apptile{
+  position:relative; flex:none;
+  display:grid; place-items:center;
+  width:var(--app-tile); height:var(--app-tile);
+  border-radius:var(--r-full);
+  background:var(--app-c, var(--raised-2));
+  color:var(--app-fg);
+  transition:filter var(--fast) var(--ease), scale var(--fast) var(--ease);
+}
+/* Only "needs attention" earns a mark in the narrow rail. Beta and draft
+   are labels, and labels wait until there is room for words. */
+.apptile[data-state="warn"]::after{
+  content:"";
+  position:absolute; right:-1px; bottom:-1px;
+  width:7px; height:7px;
+  border-radius:var(--r-full);
+  background:var(--warn);
+  border:2px solid var(--surface);
+}
+.approw{
+  display:flex; align-items:center; gap:var(--s-2);
+  width:100%; text-align:left;
+  padding:var(--s-1);
+  border-radius:var(--r-md);
+  color:var(--text-2);
+  transition:background var(--fast) var(--ease);
+}
+.approw:hover{ background:var(--raised) }
+/* The tile already carries a colour, so hover brightens it rather than
+   swapping it for another one. */
+.approw:hover .apptile{ filter:brightness(1.08) }
+.approw[aria-current="true"]{ background:var(--raised-2) }
+.approw__name{
+  min-width:0;
+  font-size:var(--t-12); color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+/* ============================================================== bar list
+   A ranked magnitude read left to right. The leader takes the accent; the
+   rest stay soft, so rank is legible before any number is read. */
+.barlist{ display:grid; gap:var(--s-2) }
+.barlist__row{
+  display:grid;
+  grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;
+  align-items:center; gap:var(--s-3);
+}
+.barlist__k{
+  font-family:var(--mono); font-size:var(--t-11); color:var(--text-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.barlist__v{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.barlist__row:not(:first-child) .meter > i{ background:var(--accent-soft) }
+
+/* ================================================================ calendar
+   A month as a scanning surface: the marked days carry a value, so the mark
+   is a neutral dot and the number beside it does the talking. Today is a
+   surface step, not the accent — a date is not an action. */
+.cal{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px }
+.cal__wd{
+  font-size:var(--t-11); color:var(--text-4);
+  text-align:center; padding-bottom:var(--s-1);
+}
+.cal__d{
+  position:relative;
+  display:grid; place-items:center;
+  height:32px;
+  border-radius:var(--r-sm);
+  font-size:var(--t-12); color:var(--text-2);
+}
+.cal__d--pad{ visibility:hidden }
+.cal__d--mark{ background:var(--raised); color:var(--text); font-weight:var(--w-medium) }
+.cal__d--mark::after{
+  content:"";
+  position:absolute; bottom:4px; left:50%; translate:-50% 0;
+  width:4px; height:4px;
+  border-radius:var(--r-full);
+  background:var(--text-4);
+}
+.cal__d--today{ box-shadow:inset 0 0 0 1px var(--line-strong) }
+
+/* ============================================================ definitions */
+.deflist{
+  display:grid; grid-template-columns:auto minmax(0,1fr);
+  gap:var(--s-2) var(--s-4);
+  font-size:var(--t-12); margin:0;
+}
+.deflist dt{ color:var(--text-4); white-space:nowrap }
+.deflist dd{ margin:0; color:var(--text-2); min-width:0 }
+
+/* ========================================================== empty states */
+.empty{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--s-3);
+  padding:var(--s-12) var(--s-6);
+  text-align:center;
+  color:var(--text-3);
+}
+.empty__icon{
+  display:grid; place-items:center;
+  width:40px; height:40px;
+  border-radius:var(--r-lg);
+  background:var(--raised);
+  color:var(--text-4);
+}
+.empty__title{ font-size:var(--t-13); font-weight:var(--w-medium); color:var(--text) }
+.empty__body{ font-size:var(--t-12); color:var(--text-3); max-width:34ch; line-height:var(--lh-ui) }
+
+/* ================================================================ banner */
+.banner{
+  display:flex; align-items:flex-start; gap:var(--s-2);
+  padding:var(--s-3);
+  border-radius:var(--r-md);
+  font-size:var(--t-12);
+  border:var(--border) solid transparent;
+}
+.banner--warn{ background:var(--warn-soft); color:var(--warn); border-color:var(--warn-soft) }
+.banner--err { background:var(--err-soft);  color:var(--err);  border-color:var(--err-soft) }
+.banner--info{ background:var(--accent-soft); color:var(--accent) }
+
+/* ============================================================== skeleton */
+.skel{
+  background:linear-gradient(90deg,var(--raised) 25%,var(--raised-2) 50%,var(--raised) 75%);
+  background-size:200% 100%;
+  border-radius:var(--r-sm);
+  animation:shimmer 1.4s linear infinite;
+}
+@keyframes shimmer{ to{ background-position:-200% 0 } }
+
+/* ============================================================== overlays */
+.scrim{
+  position:fixed; inset:0; z-index:80;
+  display:grid; place-items:start center;
+  padding-top:14vh;
+  background:var(--scrim);
+  backdrop-filter:blur(2px);
+  opacity:0; pointer-events:none;
+  transition:opacity var(--base) var(--ease);
+}
+.scrim[data-open="true"]{ opacity:1; pointer-events:auto }
+
+.palette{
+  width:min(560px,92vw);
+  background:var(--bg);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  translate:0 -8px; scale:.985;
+  transition:translate var(--base) var(--ease), scale var(--base) var(--ease);
+}
+.scrim[data-open="true"] .palette{ translate:0 0; scale:1 }
+.palette__input{
+  display:flex; align-items:center; gap:var(--s-3);
+  padding:0 var(--s-4);
+  border-bottom:var(--border) solid var(--line);
+}
+.palette__input input{
+  width:100%; height:46px;
+  border:0; background:none; outline:none;
+  font-size:var(--t-15); letter-spacing:var(--ls-snug);
+}
+.palette__input input::placeholder{ color:var(--text-4) }
+.palette__list{ max-height:min(420px,52vh); overflow-y:auto; padding:var(--s-2) }
+.palette__group{
+  font-size:var(--t-11); font-weight:var(--w-semi);
+  letter-spacing:var(--ls-caps); text-transform:uppercase;
+  color:var(--text-4);
+  padding:var(--s-3) var(--s-2) var(--s-1);
+}
+.palette__item{
+  display:flex; align-items:center; gap:var(--s-3);
+  width:100%; text-align:left;
+  padding:var(--s-2);
+  border-radius:var(--r-md);
+  color:var(--text-2);
+}
+.palette__item .nm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text) }
+.palette__item .sub{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.palette__item[data-active="true"]{ background:var(--accent-soft) }
+.palette__foot{
+  display:flex; align-items:center; gap:var(--s-4);
+  padding:var(--s-2) var(--s-4);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+  font-size:var(--t-11); color:var(--text-4);
+}
+.palette__foot span{ display:flex; align-items:center; gap:5px }
+
+/* ================================================================ toasts */
+.toasts{
+  position:fixed; bottom:calc(var(--status-h) + var(--s-3)); left:50%; translate:-50% 0;
+  z-index:90;
+  display:flex; flex-direction:column; align-items:center; gap:var(--s-2);
+}
+.toast{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:8px var(--s-3);
+  border-radius:var(--r-md);
+  background:var(--inv-bg); color:var(--inv-text);
+  font-size:var(--t-12);
+  box-shadow:var(--shadow-md);
+  animation:toast-in var(--base) var(--ease-out) both;
+}
+.toast.is-out{ animation:toast-out var(--base) var(--ease) both }
+@keyframes toast-in{ from{ opacity:0; translate:0 8px } }
+@keyframes toast-out{ to{ opacity:0; translate:0 8px } }

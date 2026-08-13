@@ -1,0 +1,1288 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nebulas — Workspace</title>
+<style>
+/* ============================================================
+   NEBULAS · "QUIET PRECISION"
+   Design tokens. This block is the intended source of truth —
+   lift it into tokens.css verbatim when the system is extracted.
+   ============================================================ */
+:root{
+  /* --- neutral ramp ------------------------------------------------ */
+  --g-0:#ffffff;  --g-50:#fafafa;  --g-100:#f4f4f5; --g-150:#ededef;
+  --g-200:#e4e4e7; --g-300:#d4d4d8; --g-400:#a1a1aa; --g-500:#71717a;
+  --g-600:#52525b; --g-700:#3f3f46; --g-800:#27272a; --g-900:#18181b;
+
+  /* --- semantic surfaces (light) ----------------------------------- */
+  --bg:          var(--g-0);
+  --surface:     var(--g-50);      /* rails, panels                     */
+  --raised:      var(--g-100);     /* result surface, +2% lightness     */
+  --raised-2:    var(--g-150);
+  --line:        var(--g-200);     /* hairline, the primary separator   */
+  --line-strong: var(--g-300);
+  --text:        var(--g-900);
+  --text-2:      var(--g-600);
+  --text-3:      var(--g-500);
+  --text-4:      var(--g-400);
+
+  /* --- the one accent ---------------------------------------------- */
+  --accent:      #5b5bd6;
+  --accent-hi:   #4f4fc9;
+  --accent-fg:   #ffffff;
+  --accent-soft: rgba(91,91,214,.10);
+  --accent-line: rgba(91,91,214,.28);
+
+  /* --- status (used sparingly, never decoratively) ------------------ */
+  --ok:#0f8a5f; --warn:#a86b00; --err:#c0392b;
+  --ok-soft:rgba(15,138,95,.10);
+
+  /* --- type -------------------------------------------------------- */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --t-11:11px; --t-12:12px; --t-13:13px; --t-15:15px;
+  --t-18:18px; --t-22:22px; --t-28:28px;
+
+  /* --- 4px grid ---------------------------------------------------- */
+  --s-1:4px;  --s-2:8px;  --s-3:12px; --s-4:16px;
+  --s-5:20px; --s-6:24px; --s-8:32px; --s-10:40px; --s-12:48px;
+
+  /* --- radius / elevation ------------------------------------------ */
+  --r-sm:4px; --r-md:6px; --r-lg:8px; --r-xl:10px;
+  --shadow-sm:0 1px 2px rgba(24,24,27,.06), 0 0 0 1px rgba(24,24,27,.04);
+  --shadow-md:0 4px 12px rgba(24,24,27,.08), 0 0 0 1px rgba(24,24,27,.05);
+  --shadow-lg:0 16px 48px rgba(24,24,27,.14), 0 0 0 1px rgba(24,24,27,.06);
+
+  /* --- motion ------------------------------------------------------ */
+  --ease:cubic-bezier(.2,.7,.3,1);
+  --fast:110ms; --base:180ms; --slow:280ms;
+
+  /* --- shell metrics ----------------------------------------------- */
+  --rail-w:56px; --inspector-w:320px; --measure:none;
+}
+
+:root[data-theme="dark"]{
+  --bg:#0d0d0f;
+  --surface:#141417;
+  --raised:#1b1b1f;
+  --raised-2:#212127;
+  --line:#26262b;
+  --line-strong:#35353c;
+  --text:#f4f4f5;
+  --text-2:#a1a1aa;
+  --text-3:#8b8b93;
+  --text-4:#6a6a72;
+  --accent:#7c7cf0;
+  --accent-hi:#8f8ff5;
+  --accent-fg:#0d0d0f;
+  --accent-soft:rgba(124,124,240,.14);
+  --accent-line:rgba(124,124,240,.34);
+  --ok:#3fbd8b; --warn:#d99b28; --err:#ef6b5e;
+  --ok-soft:rgba(63,189,139,.12);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
+  --shadow-lg:0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.07);
+}
+
+/* ============================================================ base */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--font); font-size:var(--t-13); line-height:1.55;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow:hidden;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+::selection{background:var(--accent-soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:var(--r-sm)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg{display:block;flex:none}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--text-4);background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============================================================ shell */
+.app{
+  display:grid; height:100vh;
+  grid-template-columns:var(--rail-w) minmax(0,1fr) var(--inspector-w);
+  overflow:hidden;
+  transition:grid-template-columns var(--base) var(--ease);
+}
+.app[data-inspector="closed"]{grid-template-columns:var(--rail-w) minmax(0,1fr) 0px}
+
+/* ---------------------------------------------------------- rail */
+.rail{
+  background:var(--surface); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; align-items:center;
+  padding:var(--s-3) 0; gap:var(--s-1); z-index:3;
+}
+.mark{
+  width:28px;height:28px;border-radius:var(--r-md);
+  background:var(--accent);color:var(--accent-fg);
+  display:grid;place-items:center;margin-bottom:var(--s-4);
+  font-weight:600;font-size:var(--t-13);letter-spacing:-.02em;
+  box-shadow:var(--shadow-sm);
+}
+.rail-btn{
+  width:34px;height:34px;border-radius:var(--r-md);
+  display:grid;place-items:center;color:var(--text-3);
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
+  position:relative;
+}
+.rail-btn:hover{background:var(--raised);color:var(--text)}
+.rail-btn[aria-current="true"]{background:var(--raised-2);color:var(--text)}
+.rail-btn[aria-current="true"]::before{
+  content:"";position:absolute;left:-11px;top:50%;translate:0 -50%;
+  width:2px;height:16px;border-radius:99px;background:var(--accent);
+}
+.rail-sp{flex:1}
+
+/* tooltip */
+.tip{position:relative}
+.tip::after{
+  content:attr(data-tip);
+  position:absolute;left:calc(100% + 10px);top:50%;translate:0 -50%;
+  background:var(--g-900);color:var(--g-0);
+  font-size:var(--t-11);line-height:1;padding:6px 8px;border-radius:var(--r-sm);
+  white-space:nowrap;pointer-events:none;opacity:0;
+  transition:opacity var(--fast) var(--ease);z-index:60;
+}
+:root[data-theme="dark"] .tip::after{background:var(--raised-2);color:var(--text);box-shadow:var(--shadow-md)}
+.tip:hover::after{opacity:1}
+
+/* ---------------------------------------------------------- center */
+.center{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:var(--bg)}
+
+.topbar{
+  height:48px;flex:none;display:flex;align-items:center;gap:var(--s-2);
+  padding:0 var(--s-3) 0 var(--s-4);
+  border-bottom:1px solid var(--line);
+}
+.thread-pick{
+  display:flex;align-items:center;gap:var(--s-2);min-width:0;
+  padding:5px var(--s-2);margin-left:-8px;border-radius:var(--r-md);
+  transition:background var(--fast) var(--ease);
+}
+.thread-pick:hover{background:var(--raised)}
+.thread-pick h1{
+  margin:0;font-size:var(--t-13);font-weight:550;letter-spacing:-.006em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42ch;
+}
+.thread-pick .chev{color:var(--text-4)}
+.topbar-sp{flex:1}
+.icon-btn{
+  width:30px;height:30px;border-radius:var(--r-md);display:grid;place-items:center;
+  color:var(--text-3);transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
+}
+.icon-btn:hover{background:var(--raised);color:var(--text)}
+.icon-btn[aria-pressed="true"]{color:var(--text);background:var(--raised-2)}
+
+.kbd{
+  font-family:var(--mono);font-size:var(--t-11);line-height:1;
+  padding:3px 5px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:var(--surface);color:var(--text-3);
+}
+.searchbtn{
+  display:flex;align-items:center;gap:var(--s-2);height:28px;padding:0 var(--s-2) 0 var(--s-3);
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);
+  color:var(--text-3);font-size:var(--t-12);
+  transition:border-color var(--fast) var(--ease),color var(--fast) var(--ease);
+}
+.searchbtn:hover{border-color:var(--line-strong);color:var(--text-2)}
+.searchbtn .kbd{background:var(--bg)}
+
+/* ---------------------------------------------------------- stream */
+.stream{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth}
+.stream-inner{max-width:760px;margin:0 auto;padding:var(--s-8) var(--s-6) var(--s-12)}
+
+.msg{position:relative;padding-bottom:var(--s-8)}
+.msg-head{display:flex;align-items:center;gap:var(--s-2);margin-bottom:var(--s-3);height:20px}
+.who{
+  font-size:var(--t-11);font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--text-4);
+}
+.msg-meta{font-size:var(--t-11);color:var(--text-4);font-family:var(--mono)}
+.msg-actions{
+  margin-left:auto;display:flex;gap:2px;opacity:0;
+  transition:opacity var(--fast) var(--ease);
+}
+.msg:hover .msg-actions,.msg:focus-within .msg-actions{opacity:1}
+.act{
+  width:24px;height:24px;border-radius:var(--r-sm);display:grid;place-items:center;
+  color:var(--text-4);transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
+}
+.act:hover{background:var(--raised);color:var(--text-2)}
+
+/* user turn reads as an input record, not a bubble */
+.msg[data-role="user"] .body{
+  border-left:2px solid var(--line-strong);padding-left:var(--s-4);
+  color:var(--text);font-size:var(--t-15);letter-spacing:-.008em;
+}
+.body{font-size:var(--t-15);line-height:1.65;letter-spacing:-.006em}
+.body p{margin:0 0 var(--s-4)}
+.body p:last-child{margin-bottom:0}
+.body h3{
+  font-size:var(--t-13);font-weight:600;letter-spacing:.02em;text-transform:uppercase;
+  color:var(--text-3);margin:var(--s-6) 0 var(--s-3);
+}
+.body ul{margin:0 0 var(--s-4);padding-left:var(--s-5);list-style:none}
+.body li{position:relative;margin-bottom:var(--s-2)}
+.body li::before{
+  content:"";position:absolute;left:calc(-1 * var(--s-4));top:.62em;
+  width:4px;height:4px;border-radius:99px;background:var(--line-strong);
+}
+.body strong{font-weight:600}
+.body code{
+  font-family:var(--mono);font-size:.86em;background:var(--raised);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:1px 4px;
+}
+.body em{font-style:normal;color:var(--text-2)}
+
+/* progressive reveal during simulated streaming */
+.body.streaming > *{display:none}
+.body.streaming > .revealed{display:revert}
+.caret::after{
+  content:"";display:inline-block;width:2px;height:1em;margin-left:2px;
+  background:var(--accent);vertical-align:-.14em;animation:blink 1s steps(2) infinite;
+}
+@keyframes blink{50%{opacity:0}}
+
+/* ------------------------------------------------------ tool trace */
+.trace{
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+  margin-bottom:var(--s-4);overflow:hidden;
+}
+.trace-sum{
+  width:100%;display:flex;align-items:center;gap:var(--s-2);
+  padding:var(--s-2) var(--s-3);font-size:var(--t-12);color:var(--text-2);
+  transition:background var(--fast) var(--ease);
+}
+.trace-sum:hover{background:var(--raised)}
+.trace-sum .chev{color:var(--text-4);transition:rotate var(--base) var(--ease)}
+.trace[data-open="true"] .trace-sum .chev{rotate:90deg}
+.trace-sum .trace-ico{color:var(--accent)}
+.trace-sum .dur{margin-left:auto;font-family:var(--mono);font-size:var(--t-11);color:var(--text-4)}
+.trace-body{display:none;padding:var(--s-1) var(--s-3) var(--s-3) var(--s-3);border-top:1px solid var(--line)}
+.trace[data-open="true"] .trace-body{display:block}
+.step{
+  display:flex;align-items:baseline;gap:var(--s-2);
+  padding:var(--s-2) 0;font-size:var(--t-12);
+  border-bottom:1px solid var(--line);
+}
+.step:last-child{border-bottom:0}
+.step-dot{
+  flex:none;width:5px;height:5px;border-radius:99px;background:var(--line-strong);
+  translate:0 -2px;
+}
+.step[data-status="run"] .step-dot{background:var(--accent);animation:pulse 1.1s var(--ease) infinite}
+.step[data-status="done"] .step-dot{background:var(--ok)}
+@keyframes pulse{0%,100%{opacity:1;scale:1}50%{opacity:.35;scale:.7}}
+.step-name{font-family:var(--mono);color:var(--text-2)}
+.step-detail{color:var(--text-4);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step-t{margin-left:auto;font-family:var(--mono);font-size:var(--t-11);color:var(--text-4);flex:none}
+
+/* -------------------------------------------------------- artifact */
+.artifact{
+  border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;
+  background:var(--raised);margin-top:var(--s-5);
+  animation:rise var(--slow) var(--ease) both;
+}
+@keyframes rise{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+.artifact-bar{
+  display:flex;align-items:center;gap:var(--s-2);height:34px;padding:0 var(--s-2) 0 var(--s-3);
+  border-bottom:1px solid var(--line);background:var(--surface);
+}
+.artifact-title{font-size:var(--t-12);font-weight:550;color:var(--text-2)}
+.artifact-bar .sp{flex:1}
+.seg{display:flex;gap:2px;background:var(--raised-2);padding:2px;border-radius:var(--r-md)}
+.seg button{
+  font-size:var(--t-11);padding:3px 8px;border-radius:var(--r-sm);color:var(--text-3);
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
+}
+.seg button[aria-selected="true"]{background:var(--bg);color:var(--text);box-shadow:var(--shadow-sm)}
+.artifact-pane{padding:var(--s-4);font-size:var(--t-12)}
+.artifact-pane[hidden]{display:none}
+pre.code{
+  margin:0;font-family:var(--mono);font-size:var(--t-12);line-height:1.7;
+  overflow-x:auto;color:var(--text-2);
+}
+.code .k{color:var(--accent)}
+.code .s{color:var(--ok)}
+.code .c{color:var(--text-4)}
+
+/* small data table used inside artifacts */
+table.mini{width:100%;border-collapse:collapse;font-size:var(--t-12)}
+table.mini th{
+  text-align:left;font-weight:600;font-size:var(--t-11);letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-4);padding:0 var(--s-3) var(--s-2) 0;
+  border-bottom:1px solid var(--line);
+}
+table.mini td{padding:var(--s-2) var(--s-3) var(--s-2) 0;border-bottom:1px solid var(--line);color:var(--text-2)}
+table.mini tr:last-child td{border-bottom:0}
+table.mini td:last-child,table.mini th:last-child{text-align:right;padding-right:0;font-family:var(--mono)}
+.delta-up{color:var(--ok)} .delta-dn{color:var(--err)}
+
+/* --------------------------------------------------------- composer */
+.composer-wrap{flex:none;padding:0 var(--s-6) var(--s-5);background:linear-gradient(to top,var(--bg) 62%,transparent)}
+.composer{
+  max-width:760px;margin:0 auto;border:1px solid var(--line-strong);border-radius:var(--r-xl);
+  background:var(--bg);box-shadow:var(--shadow-sm);
+  transition:border-color var(--base) var(--ease),box-shadow var(--base) var(--ease);
+}
+.composer:focus-within{border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s-1);padding:var(--s-2) var(--s-3) 0}
+.chips:empty{display:none}
+.chip{
+  display:flex;align-items:center;gap:6px;font-size:var(--t-11);
+  padding:3px 4px 3px 7px;border-radius:var(--r-sm);
+  background:var(--raised);border:1px solid var(--line);color:var(--text-2);
+}
+.chip button{color:var(--text-4);display:grid;place-items:center;border-radius:2px}
+.chip button:hover{color:var(--text)}
+#input{
+  display:block;width:100%;border:0;background:none;resize:none;outline:none;
+  padding:var(--s-3) var(--s-3) var(--s-2);font-size:var(--t-15);line-height:1.6;
+  letter-spacing:-.006em;max-height:200px;
+}
+#input::placeholder{color:var(--text-4)}
+.composer-bar{display:flex;align-items:center;gap:var(--s-1);padding:0 var(--s-2) var(--s-2)}
+.mini-btn{
+  display:flex;align-items:center;gap:5px;height:26px;padding:0 var(--s-2);
+  border-radius:var(--r-md);color:var(--text-3);font-size:var(--t-12);
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
+}
+.mini-btn:hover{background:var(--raised);color:var(--text)}
+.composer-bar .sp{flex:1}
+.send{
+  display:flex;align-items:center;gap:6px;height:28px;padding:0 var(--s-2) 0 var(--s-3);
+  border-radius:var(--r-md);background:var(--accent);color:var(--accent-fg);
+  font-size:var(--t-12);font-weight:550;
+  transition:background var(--fast) var(--ease),opacity var(--fast) var(--ease);
+}
+.send:hover{background:var(--accent-hi)}
+.send:disabled{opacity:.4;cursor:not-allowed}
+.send .kbd{background:rgba(255,255,255,.16);border-color:transparent;color:inherit}
+.hint{text-align:center;font-size:var(--t-11);color:var(--text-4);margin-top:var(--s-2)}
+
+/* -------------------------------------------------------- inspector */
+.inspector{
+  background:var(--surface);border-left:1px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden;min-width:0;
+}
+.app[data-inspector="closed"] .inspector{border-left-color:transparent}
+.insp-head{
+  height:48px;flex:none;display:flex;align-items:center;gap:2px;
+  padding:0 var(--s-3);border-bottom:1px solid var(--line);
+}
+.tab{
+  padding:6px var(--s-2);border-radius:var(--r-md);font-size:var(--t-12);color:var(--text-3);
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease);white-space:nowrap;
+}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{background:var(--raised-2);color:var(--text);font-weight:550}
+.insp-body{flex:1 1 0;min-height:0;overflow-y:auto;padding:var(--s-4) var(--s-4) var(--s-8)}
+.insp-panel[hidden]{display:none}
+.grp{margin-bottom:var(--s-6)}
+.grp-title{
+  font-size:var(--t-11);font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-4);margin-bottom:var(--s-3);display:flex;align-items:center;gap:var(--s-2);
+}
+.grp-title .count{
+  font-family:var(--mono);letter-spacing:0;background:var(--raised-2);
+  padding:1px 5px;border-radius:var(--r-sm);color:var(--text-3);
+}
+
+.src{
+  display:flex;align-items:flex-start;gap:var(--s-2);width:100%;text-align:left;
+  padding:var(--s-2);border-radius:var(--r-md);margin:0 calc(-1 * var(--s-2)) 2px;
+  width:calc(100% + var(--s-4));
+  transition:background var(--fast) var(--ease);
+}
+.src:hover{background:var(--raised)}
+.src-ico{color:var(--text-4);margin-top:2px}
+.src-name{font-size:var(--t-12);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-sub{font-size:var(--t-11);color:var(--text-4);font-family:var(--mono)}
+.src-txt{min-width:0;flex:1}
+
+.field{margin-bottom:var(--s-4)}
+.label{font-size:var(--t-12);color:var(--text-2);margin-bottom:6px;display:flex;align-items:center}
+.label .v{margin-left:auto;font-family:var(--mono);font-size:var(--t-11);color:var(--text-4)}
+select.ctl,input.ctl{
+  width:100%;height:30px;padding:0 var(--s-2);border:1px solid var(--line);
+  border-radius:var(--r-md);background:var(--bg);color:var(--text);font-size:var(--t-12);
+  appearance:none;
+}
+select.ctl{
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:26px;
+}
+input[type=range].ctl{height:auto;padding:0;border:0;background:none;accent-color:var(--accent)}
+
+.switch{display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) 0;font-size:var(--t-12);color:var(--text-2);cursor:pointer}
+.switch input{position:absolute;opacity:0;pointer-events:none}
+.track{
+  width:30px;height:18px;border-radius:99px;background:var(--line-strong);
+  position:relative;transition:background var(--base) var(--ease);flex:none;margin-left:auto;
+}
+.track::after{
+  content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:99px;
+  background:var(--bg);transition:translate var(--base) var(--ease);box-shadow:var(--shadow-sm);
+}
+.switch input:checked ~ .track{background:var(--accent)}
+.switch input:checked ~ .track::after{translate:12px 0}
+
+.meter{height:4px;border-radius:99px;background:var(--raised-2);overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width var(--slow) var(--ease)}
+.stat-row{display:flex;justify-content:space-between;font-size:var(--t-12);padding:var(--s-2) 0;border-bottom:1px solid var(--line)}
+.stat-row:last-child{border-bottom:0}
+.stat-row .k{color:var(--text-3)}
+.stat-row .v{font-family:var(--mono);color:var(--text)}
+
+.spark{display:flex;align-items:flex-end;gap:2px;height:32px;margin-top:var(--s-2)}
+.spark i{flex:1;background:var(--accent-soft);border-radius:1px;transition:height var(--slow) var(--ease)}
+.spark i:last-child{background:var(--accent)}
+
+/* ------------------------------------------------- command palette */
+.scrim{
+  position:fixed;inset:0;background:rgba(24,24,27,.34);backdrop-filter:blur(2px);
+  display:grid;place-items:start center;padding-top:14vh;z-index:80;
+  opacity:0;pointer-events:none;transition:opacity var(--base) var(--ease);
+}
+:root[data-theme="dark"] .scrim{background:rgba(0,0,0,.6)}
+.scrim[data-open="true"]{opacity:1;pointer-events:auto}
+.palette{
+  width:min(560px,92vw);background:var(--bg);border:1px solid var(--line);
+  border-radius:var(--r-xl);box-shadow:var(--shadow-lg);overflow:hidden;
+  translate:0 -8px;scale:.985;transition:translate var(--base) var(--ease),scale var(--base) var(--ease);
+}
+.scrim[data-open="true"] .palette{translate:0 0;scale:1}
+.pal-in{display:flex;align-items:center;gap:var(--s-3);padding:0 var(--s-4);border-bottom:1px solid var(--line)}
+.pal-in input{width:100%;height:46px;border:0;background:none;outline:none;font-size:var(--t-15);letter-spacing:-.006em}
+.pal-in input::placeholder{color:var(--text-4)}
+.pal-list{max-height:min(420px,52vh);overflow-y:auto;padding:var(--s-2)}
+.pal-grp{font-size:var(--t-11);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-4);padding:var(--s-3) var(--s-2) var(--s-1)}
+.pal-item{
+  display:flex;align-items:center;gap:var(--s-3);width:100%;text-align:left;
+  padding:var(--s-2) var(--s-2);border-radius:var(--r-md);color:var(--text-2);
+}
+.pal-item .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.pal-item .sub{font-size:var(--t-11);color:var(--text-4);font-family:var(--mono);flex:none}
+.pal-item[data-active="true"]{background:var(--accent-soft);color:var(--text)}
+.pal-item[data-active="true"] .nm{color:var(--text)}
+.pal-empty{padding:var(--s-6);text-align:center;color:var(--text-4);font-size:var(--t-12)}
+.pal-foot{
+  display:flex;align-items:center;gap:var(--s-4);padding:var(--s-2) var(--s-4);
+  border-top:1px solid var(--line);background:var(--surface);
+  font-size:var(--t-11);color:var(--text-4);
+}
+.pal-foot span{display:flex;align-items:center;gap:5px}
+
+/* ---------------------------------------------------------- toasts */
+.toasts{position:fixed;bottom:var(--s-5);left:50%;translate:-50% 0;z-index:90;display:flex;flex-direction:column;gap:var(--s-2);align-items:center}
+.toast{
+  display:flex;align-items:center;gap:var(--s-2);
+  background:var(--g-900);color:var(--g-0);font-size:var(--t-12);
+  padding:8px var(--s-3);border-radius:var(--r-md);box-shadow:var(--shadow-md);
+  animation:toast-in var(--base) var(--ease) both;
+}
+:root[data-theme="dark"] .toast{background:var(--raised-2);color:var(--text)}
+.toast.out{animation:toast-out var(--base) var(--ease) both}
+@keyframes toast-in{from{opacity:0;translate:0 8px}}
+@keyframes toast-out{to{opacity:0;translate:0 8px}}
+
+/* ------------------------------------------------------- responsive */
+@media (max-width:860px){
+  .stream-inner{padding:var(--s-6) var(--s-4) var(--s-10)}
+  .composer-wrap{padding:0 var(--s-4) var(--s-4)}
+  .thread-pick h1{max-width:22ch}
+  .searchbtn .lbl,.searchbtn .kbd{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .stream{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app" data-inspector="open">
+
+  <!-- ============================================= rail -->
+  <nav class="rail" aria-label="Sections">
+    <div class="mark" aria-hidden="true">N</div>
+    <button class="rail-btn tip" data-tip="Threads" aria-current="true" data-nav="threads">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.7A8.4 8.4 0 0 1 3.6 11 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></svg>
+    </button>
+    <button class="rail-btn tip" data-tip="Library" data-nav="library">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H9v16H5.5A1.5 1.5 0 0 1 4 18.5Z"/><path d="M11 4h3.5A1.5 1.5 0 0 1 16 5.5v13a1.5 1.5 0 0 1-1.5 1.5H11z"/><path d="m18.2 5.4 1.7 13.3"/></svg>
+    </button>
+    <button class="rail-btn tip" data-tip="Agents" data-nav="agents">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="2.5"/><path d="M12 3v4M8.5 12v1.5M15.5 12v1.5"/></svg>
+    </button>
+    <button class="rail-btn tip" data-tip="Datasets" data-nav="data">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 12v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/></svg>
+    </button>
+    <div class="rail-sp"></div>
+    <button class="rail-btn tip" data-tip="Theme (⌘J)" id="themeBtn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+    </button>
+    <button class="rail-btn tip" data-tip="Shortcuts (⌘/)" id="helpBtn">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .9-1 1.6v.4"/><path d="M12 17h.01"/></svg>
+    </button>
+  </nav>
+
+  <!-- ============================================= center -->
+  <main class="center">
+    <header class="topbar">
+      <button class="thread-pick" id="threadPick" aria-haspopup="dialog">
+        <h1 id="threadTitle">Q3 revenue analysis</h1>
+        <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="topbar-sp"></div>
+      <button class="searchbtn" id="searchBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="lbl">Search</span>
+        <span class="kbd">⌘K</span>
+      </button>
+      <button class="icon-btn tip" data-tip="New thread" id="newBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="icon-btn tip" data-tip="Inspector (⌘\)" id="inspBtn" aria-pressed="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M15 4.5v15"/></svg>
+      </button>
+    </header>
+
+    <div class="stream" id="stream">
+      <div class="stream-inner" id="streamInner"></div>
+    </div>
+
+    <div class="composer-wrap">
+      <form class="composer" id="composer">
+        <div class="chips" id="chips"></div>
+        <textarea id="input" rows="1" placeholder="Ask anything, or describe a task…"></textarea>
+        <div class="composer-bar">
+          <button type="button" class="mini-btn" id="attachBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5 12.4 19a5 5 0 0 1-7-7l7.6-7.6a3.3 3.3 0 0 1 4.7 4.7l-7.6 7.6a1.7 1.7 0 0 1-2.4-2.4l7-7"/></svg>
+            Attach
+          </button>
+          <button type="button" class="mini-btn" id="toolsBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a3.5 3.5 0 0 0 4.6 4.6L21 13l-8 8-2-2 1.9-1.9a3.5 3.5 0 0 0-4.6-4.6L6.4 14.4l-2-2 8-8Z"/></svg>
+            Tools <span style="color:var(--text-4)">3</span>
+          </button>
+          <div class="sp"></div>
+          <button type="submit" class="send" id="sendBtn" disabled>
+            Send <span class="kbd">⌘↵</span>
+          </button>
+        </div>
+      </form>
+      <p class="hint">Prototype — responses are simulated locally. Nothing leaves this page.</p>
+    </div>
+  </main>
+
+  <!-- ============================================= inspector -->
+  <aside class="inspector" aria-label="Context inspector">
+    <div class="insp-head" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="context">Context</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="model">Model</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="usage">Usage</button>
+    </div>
+    <div class="insp-body">
+
+      <section class="insp-panel" data-panel="context">
+        <div class="grp">
+          <div class="grp-title">Sources <span class="count" id="srcCount">0</span></div>
+          <div id="srcList"></div>
+        </div>
+        <div class="grp">
+          <div class="grp-title">Active tools</div>
+          <label class="switch"><input type="checkbox" checked><span>Web search</span><span class="track"></span></label>
+          <label class="switch"><input type="checkbox" checked><span>Code interpreter</span><span class="track"></span></label>
+          <label class="switch"><input type="checkbox" checked><span>Warehouse query</span><span class="track"></span></label>
+          <label class="switch"><input type="checkbox"><span>File write</span><span class="track"></span></label>
+        </div>
+        <div class="grp">
+          <div class="grp-title">Memory</div>
+          <div class="stat-row"><span class="k">Facts retained</span><span class="v">18</span></div>
+          <div class="stat-row"><span class="k">Last compaction</span><span class="v">14:02</span></div>
+        </div>
+      </section>
+
+      <section class="insp-panel" data-panel="model" hidden>
+        <div class="grp">
+          <div class="grp-title">Routing</div>
+          <div class="field">
+            <div class="label">Model</div>
+            <select class="ctl" id="modelSel">
+              <option>Nebula Pro</option>
+              <option>Nebula Pro (extended thinking)</option>
+              <option>Nebula Fast</option>
+              <option>Nebula Mini</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="label">Temperature <span class="v" id="tempV">0.3</span></div>
+            <input class="ctl" type="range" min="0" max="1" step="0.05" value="0.3" id="temp">
+          </div>
+          <div class="field">
+            <div class="label">Max output <span class="v" id="maxV">4096</span></div>
+            <input class="ctl" type="range" min="512" max="16384" step="512" value="4096" id="maxTok">
+          </div>
+        </div>
+        <div class="grp">
+          <div class="grp-title">Behaviour</div>
+          <label class="switch"><input type="checkbox" checked><span>Show reasoning trace</span><span class="track"></span></label>
+          <label class="switch"><input type="checkbox" checked><span>Cite every claim</span><span class="track"></span></label>
+          <label class="switch"><input type="checkbox"><span>Auto-run tools</span><span class="track"></span></label>
+        </div>
+      </section>
+
+      <section class="insp-panel" data-panel="usage" hidden>
+        <div class="grp">
+          <div class="grp-title">Context window</div>
+          <div class="label">Tokens used <span class="v"><span id="tokUsed">12,480</span> / 200k</span></div>
+          <div class="meter"><i id="tokBar" style="width:6.2%"></i></div>
+        </div>
+        <div class="grp">
+          <div class="grp-title">This thread</div>
+          <div class="stat-row"><span class="k">Turns</span><span class="v" id="statTurns">4</span></div>
+          <div class="stat-row"><span class="k">Tool calls</span><span class="v" id="statTools">7</span></div>
+          <div class="stat-row"><span class="k">Cache hits</span><span class="v">61%</span></div>
+          <div class="stat-row"><span class="k">Est. cost</span><span class="v" id="statCost">$0.184</span></div>
+        </div>
+        <div class="grp">
+          <div class="grp-title">Latency, last 12 turns</div>
+          <div class="spark" id="spark"></div>
+        </div>
+      </section>
+
+    </div>
+  </aside>
+</div>
+
+<!-- ============================================= command palette -->
+<div class="scrim" id="scrim" data-open="false">
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="pal-in">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="palInput" placeholder="Search threads and commands…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="pal-list" id="palList"></div>
+    <div class="pal-foot">
+      <span><span class="kbd">↑↓</span> navigate</span>
+      <span><span class="kbd">↵</span> open</span>
+      <span><span class="kbd">esc</span> close</span>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   DATA — canned threads. Static prototype, no network.
+   ========================================================= */
+const THREADS = [
+  {
+    id:'t1', title:'Q3 revenue analysis', when:'2m', sub:'4 turns',
+    sources:[
+      {n:'q3_ledger.parquet', s:'warehouse · 2.4M rows'},
+      {n:'renewals_export.csv', s:'upload · 812 KB'},
+      {n:'FY25_targets.xlsx', s:'drive · sheet 2'},
+      {n:'pricing-changes.md', s:'notion · updated Jul 9'}
+    ],
+    msgs:[
+      {role:'user', text:'Pull Q3 revenue by segment and tell me what actually drove the beat. I care about durable causes, not one-offs.'},
+      {role:'ai', dur:'3.4s',
+       steps:[
+         {n:'warehouse.query', d:'SELECT segment, month, arr FROM q3_ledger …', t:'1.1s'},
+         {n:'code.run', d:'reconcile against FY25_targets, normalise FX', t:'0.9s'},
+         {n:'code.run', d:'decompose beat into new / expansion / churn', t:'1.4s'}
+       ],
+       md:`Q3 landed at **$41.2M**, **12.4%** over plan. The beat is narrower than it looks — two segments carry all of it.
+
+### Where it came from
+- **Enterprise renewals** contributed $3.1M of the $4.5M variance, and 78% of that is multi-year commitments signed before the July pricing change. That's durable.
+- **Mid-market expansion** added $1.0M on seat growth in existing accounts — also durable, and it's the third consecutive quarter of expansion outpacing new logo.
+- **SMB** came in $0.4M *under* plan. Logo churn is up 40bps quarter over quarter.
+
+### What I'd discount
+The $0.6M in <code>professional_services</code> is a single implementation that slipped from Q2. Treat it as timing, not growth — it will not repeat in Q4.`,
+       artifact:{
+         title:'Q3 variance by segment', kind:'table',
+         table:[
+           ['Enterprise','$22.4M','+$3.1M','up'],
+           ['Mid-market','$12.8M','+$1.0M','up'],
+           ['SMB','$4.6M','−$0.4M','dn'],
+           ['Services','$1.4M','+$0.6M','up']
+         ],
+         code:`# variance decomposition\nimport pandas as pd\n\nq3 = wh.read("q3_ledger")\nplan = xls.read("FY25_targets", sheet=2)\n\nvar = (q3.groupby("segment").arr.sum()\n         .sub(plan.set_index("segment").q3_plan)\n         .rename("variance"))\n\n# strip non-recurring before attributing growth\nrecurring = q3[~q3.line_item.isin(ONE_OFFS)]\nprint(var.sort_values(ascending=False))`
+       }},
+      {role:'user', text:'What does that imply for the Q4 forecast?'},
+      {role:'ai', dur:'2.1s',
+       steps:[
+         {n:'code.run', d:'strip non-recurring, re-forecast Q4 from recurring base', t:'1.3s'},
+         {n:'search.docs', d:'pricing-changes.md — effective dates', t:'0.5s'}
+       ],
+       md:`Take the services timing out and the recurring base is **$39.8M**, not $41.2M. Growing that at the trailing three-quarter rate gives **$42.1M–$43.4M** for Q4.
+
+Two things would move it outside that band:
+- The July pricing change starts hitting renewals in **November**, not Q4 as a whole. Roughly a third of Q4 renewal volume is exposed.
+- SMB churn at the current 40bps trajectory costs about $0.3M if it holds.
+
+I'd forecast **$42.4M** and flag the November cohort as the number to watch.`}
+    ]
+  },
+  {
+    id:'t2', title:'Refactor the ingestion pipeline', when:'1h', sub:'6 turns',
+    sources:[
+      {n:'ingest/pipeline.py', s:'repo · 1,204 lines'},
+      {n:'ingest/adapters/', s:'repo · 11 files'},
+      {n:'ADR-014-backpressure.md', s:'repo · docs'}
+    ],
+    msgs:[
+      {role:'user', text:'The ingestion pipeline stalls under load. Read pipeline.py and the adapters, then tell me where the backpressure actually breaks.'},
+      {role:'ai', dur:'5.2s',
+       steps:[
+         {n:'fs.read', d:'ingest/pipeline.py, 11 adapter modules', t:'0.8s'},
+         {n:'code.analyze', d:'trace queue handoffs and await points', t:'2.6s'},
+         {n:'search.repo', d:'ADR-014 — intended backpressure contract', t:'1.8s'}
+       ],
+       md:`The pipeline has backpressure at the edges and nowhere in the middle. Three findings, ordered by how much they'll hurt you.
+
+- **The unbounded fan-out queue.** <code>pipeline.py:318</code> creates the work queue with no <code>maxsize</code>. Every adapter can enqueue freely, so a slow sink builds an in-memory backlog until the process is OOM-killed rather than slowing the producers. This is the stall you're seeing.
+- **Adapters swallow the signal.** Each adapter awaits <code>queue.put()</code>, but <code>S3Adapter</code> and <code>KafkaAdapter</code> wrap it in <code>asyncio.wait_for(..., timeout=5)</code> and log-and-continue on timeout. The one place backpressure could propagate is where it gets dropped.
+- **ADR-014 was never implemented.** The ADR specifies a credit-based scheme with per-adapter budgets. Nothing in the code reads a credit. The doc describes a system that doesn't exist.
+
+Fixing the first one alone converts an OOM into a slowdown, which is the behaviour you want.`,
+       artifact:{
+         title:'pipeline.py — proposed change', kind:'code',
+         code:`# ingest/pipeline.py:318\n-  self._queue = asyncio.Queue()\n+  # bound the queue so a slow sink applies real backpressure\n+  self._queue = asyncio.Queue(maxsize=settings.INGEST_QUEUE_DEPTH)\n\n# ingest/adapters/base.py:74\n-  try:\n-      await asyncio.wait_for(self._q.put(batch), timeout=5)\n-  except asyncio.TimeoutError:\n-      log.warning("queue put timed out, dropping")\n+  # block. a full queue means the sink is behind and the\n+  # producer must wait — that is the entire point.\n+  await self._q.put(batch)`
+       }}
+    ]
+  },
+  {
+    id:'t3', title:'Churn signals in enterprise accounts', when:'Yesterday', sub:'3 turns',
+    sources:[{n:'accounts_health.parquet', s:'warehouse · 41k rows'},{n:'support_tickets.json', s:'zendesk · 90d'}],
+    msgs:[
+      {role:'user', text:'Which enterprise accounts are most likely to churn next quarter, and what is the single strongest signal?'},
+      {role:'ai', dur:'4.0s',
+       steps:[
+         {n:'warehouse.query', d:'account health, usage, ticket volume, 90d', t:'1.5s'},
+         {n:'code.run', d:'fit gradient boosting, rank feature importance', t:'2.5s'}
+       ],
+       md:`Eleven accounts sit above a 60% churn probability. The strongest single signal is not usage decline — it's **admin seat turnover**.
+
+Accounts that lost their original admin in the last two quarters churn at **4.1×** the base rate, and the effect holds after controlling for usage, ticket volume, and contract size. Usage decline is a *consequence* of that handover, which is why it shows up later and reads as the cause.
+
+The practical read: your churn risk is a relationship-continuity problem, and it is visible in the CRM about ninety days before it shows up in usage.`}
+    ]
+  },
+  {
+    id:'t4', title:'Onboarding copy pass', when:'2d', sub:'8 turns',
+    sources:[{n:'onboarding-flow.fig', s:'figma · 14 frames'}],
+    msgs:[
+      {role:'user', text:'Tighten the empty-state copy across onboarding. Keep it plain — no exclamation marks, no "let\'s".'},
+      {role:'ai', dur:'1.8s',
+       steps:[{n:'design.read', d:'onboarding-flow.fig — 14 frames, 9 empty states', t:'1.8s'}],
+       md:`Nine empty states, rewritten. The pattern I applied: state what is missing, then name the one action that fills it. No encouragement, no personality.
+
+- **Projects** — *"No projects yet"* → **"Projects you create appear here."** with a single <code>New project</code> action.
+- **Members** — *"Let's get your team in here!"* → **"You're the only member of this workspace."**
+- **Integrations** — *"Nothing connected yet 🎉"* → **"No integrations connected."**
+
+The full set is in the artifact. Three of the original nine were doing two jobs at once — describing the state *and* selling the feature. I split those, and the selling belongs in the docs, not the empty state.`}
+    ]
+  }
+];
+
+/* =========================================================
+   STATE + tiny helpers
+   ========================================================= */
+const $ = (s,r=document) => r.querySelector(s);
+const $$ = (s,r=document) => [...r.querySelectorAll(s)];
+const state = { thread:'t1', busy:false, tokens:12480, turns:4, tools:7, attach:[] };
+
+const el = (tag, cls, html) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+};
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const nf = n => n.toLocaleString('en-US');
+
+/* Minimal markdown subset, parsed line by line: ###, - bullets, **bold**,
+   *em*, and literal <code> spans authored inline in the data strings. */
+function md(src){
+  let out = '', list = null, para = [];
+  const flushP = () => { if (para.length){ out += `<p>${inline(para.join(' '))}</p>`; para = []; } };
+  const flushL = () => { if (list){ out += `<ul>${list.join('')}</ul>`; list = null; } };
+  for (const raw of src.split('\n')){
+    const l = raw.trim();
+    if (!l){ flushP(); flushL(); continue; }
+    if (l.startsWith('### ')){ flushP(); flushL(); out += `<h3>${inline(l.slice(4))}</h3>`; continue; }
+    if (l.startsWith('- ')){ flushP(); (list ||= []).push(`<li>${inline(l.slice(2))}</li>`); continue; }
+    flushL(); para.push(l);
+  }
+  flushP(); flushL();
+  return out;
+}
+function inline(s){
+  return s
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/&lt;code&gt;([\s\S]*?)&lt;\/code&gt;/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function toast(msg){
+  const t = el('div','toast', `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg><span>${esc(msg)}</span>`);
+  $('#toasts').append(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 200); }, 2000);
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+const ICONS = {
+  copy:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
+  retry:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2 6.2"/><path d="M20 5v6h-6"/></svg>',
+  branch:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="9" r="2.4"/><path d="M6 8.4v7.2M8.4 6H14a2 2 0 0 1 2 2v.6"/></svg>',
+  file:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13 3v6h6"/></svg>',
+  spark:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.6 9 19 10.6 13.6 12.2 12 17.7 10.4 12.2 5 10.6 10.4 9Z"/></svg>',
+  chev:'<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>'
+};
+
+function highlight(code){
+  return esc(code)
+    .replace(/(#[^\n]*)/g, '<span class="c">$1</span>')
+    .replace(/\b(import|from|def|return|await|async|try|except|self|print|not|in|is|for|if)\b/g, '<span class="k">$1</span>')
+    .replace(/("[^"]*")/g, '<span class="s">$1</span>');
+}
+
+function artifactNode(a){
+  const node = el('div','artifact');
+  const hasTable = a.kind === 'table';
+  node.innerHTML = `
+    <div class="artifact-bar">
+      <span style="color:var(--text-4)">${ICONS.file}</span>
+      <span class="artifact-title">${esc(a.title)}</span>
+      <div class="sp"></div>
+      <div class="seg">
+        ${hasTable ? '<button aria-selected="true" data-p="0">Result</button>' : ''}
+        <button aria-selected="${hasTable?'false':'true'}" data-p="1">Code</button>
+      </div>
+      <button class="icon-btn" data-copy style="width:26px;height:26px">${ICONS.copy}</button>
+    </div>
+    ${hasTable ? `<div class="artifact-pane" data-p="0">
+      <table class="mini">
+        <thead><tr><th>Segment</th><th>ARR</th><th>vs plan</th></tr></thead>
+        <tbody>${a.table.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td class="delta-${r[3]}">${r[2]}</td></tr>`).join('')}</tbody>
+      </table></div>` : ''}
+    <div class="artifact-pane" data-p="1" ${hasTable?'hidden':''}><pre class="code">${highlight(a.code)}</pre></div>`;
+
+  $$('.seg button', node).forEach(b => b.onclick = () => {
+    $$('.seg button', node).forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    $$('.artifact-pane', node).forEach(p => p.hidden = p.dataset.p !== b.dataset.p);
+  });
+  $('[data-copy]', node).onclick = () => {
+    navigator.clipboard?.writeText(a.code).catch(()=>{});
+    toast('Copied to clipboard');
+  };
+  return node;
+}
+
+function traceNode(steps, dur, open=false){
+  const t = el('div','trace');
+  t.dataset.open = open;
+  t.innerHTML = `
+    <button class="trace-sum" type="button">
+      ${ICONS.chev}
+      <span class="trace-ico">${ICONS.spark}</span>
+      <span>Worked through ${steps.length} step${steps.length>1?'s':''}</span>
+      <span class="dur">${dur}</span>
+    </button>
+    <div class="trace-body">
+      ${steps.map(s => `<div class="step" data-status="done">
+        <span class="step-dot"></span>
+        <span class="step-name">${esc(s.n)}</span>
+        <span class="step-detail">${esc(s.d)}</span>
+        <span class="step-t">${s.t}</span>
+      </div>`).join('')}
+    </div>`;
+  $('.trace-sum', t).onclick = () => t.dataset.open = t.dataset.open === 'true' ? 'false' : 'true';
+  return t;
+}
+
+function msgNode(m){
+  const wrap = el('div','msg');
+  wrap.dataset.role = m.role;
+  const head = el('div','msg-head');
+  head.innerHTML = `<span class="who">${m.role === 'user' ? 'You' : 'Nebula Pro'}</span>` +
+    (m.dur ? `<span class="msg-meta">${m.dur}</span>` : '');
+  const acts = el('div','msg-actions');
+  acts.innerHTML =
+    `<button class="act" title="Copy">${ICONS.copy}</button>` +
+    (m.role === 'ai'
+      ? `<button class="act" title="Retry">${ICONS.retry}</button><button class="act" title="Branch from here">${ICONS.branch}</button>`
+      : `<button class="act" title="Branch from here">${ICONS.branch}</button>`);
+  $$('.act', acts).forEach(b => b.onclick = () => toast(b.title === 'Copy' ? 'Copied to clipboard' : b.title + ' — prototype'));
+  head.append(acts);
+  wrap.append(head);
+
+  if (m.role === 'ai' && m.steps) wrap.append(traceNode(m.steps, m.dur));
+
+  const body = el('div','body', m.role === 'user' ? `<p>${inline(m.text)}</p>` : md(m.md));
+  wrap.append(body);
+  if (m.artifact) wrap.append(artifactNode(m.artifact));
+  return wrap;
+}
+
+function renderThread(id){
+  state.thread = id;
+  const t = THREADS.find(x => x.id === id);
+  $('#threadTitle').textContent = t.title;
+  const inner = $('#streamInner');
+  inner.innerHTML = '';
+  t.msgs.forEach(m => inner.append(msgNode(m)));
+
+  // inspector: sources
+  $('#srcCount').textContent = t.sources.length;
+  const list = $('#srcList');
+  list.innerHTML = '';
+  t.sources.forEach(s => {
+    const b = el('button','src',
+      `<span class="src-ico">${ICONS.file}</span>
+       <span class="src-txt"><span class="src-name">${esc(s.n)}</span><br><span class="src-sub">${esc(s.s)}</span></span>`);
+    b.onclick = () => toast('Open ' + s.n + ' — prototype');
+    list.append(b);
+  });
+
+  state.turns = t.msgs.length;
+  state.tools = t.msgs.reduce((a,m) => a + (m.steps ? m.steps.length : 0), 0);
+  state.tokens = 3200 + t.msgs.length * 2400 + state.tools * 640;
+  syncUsage();
+  requestAnimationFrame(() => $('#stream').scrollTo({ top:$('#stream').scrollHeight, behavior:'instant' }));
+}
+
+function syncUsage(){
+  $('#tokUsed').textContent = nf(state.tokens);
+  $('#tokBar').style.width = Math.min(100, state.tokens / 2000) + '%';
+  $('#statTurns').textContent = state.turns;
+  $('#statTools').textContent = state.tools;
+  $('#statCost').textContent = '$' + (state.tokens * 0.0000148).toFixed(3);
+}
+
+/* sparkline */
+(() => {
+  const s = $('#spark');
+  [38,52,44,61,49,72,58,45,67,53,80,62].forEach(v => {
+    const i = el('i'); i.style.height = v + '%'; s.append(i);
+  });
+})();
+
+/* =========================================================
+   SIMULATED TURN — tool trace, then progressive text reveal
+   ========================================================= */
+const REPLIES = [
+  { steps:[{n:'search.web',d:'gathering current sources',t:'0.9s'},{n:'code.run',d:'cross-check figures against the loaded dataset',t:'1.2s'}],
+    md:`Here's what I found, with the caveat that this prototype is answering from a fixed script rather than a live model.
+
+The useful thing to notice is the **shape** of the response — a tool trace you can expand, a claim-per-bullet structure, and inline <code>references</code> that the inspector can resolve. That structure is the actual design work; the words are placeholder.
+
+- Each bullet carries one claim, so citation and disagreement both have somewhere to attach.
+- The trace collapses by default. Nobody reads it until something goes wrong, and then they read all of it.
+- Long output gets pushed into an artifact rather than inlined, which keeps the conversation scannable.` },
+  { steps:[{n:'warehouse.query',d:'resolving the entities in your question',t:'1.4s'},{n:'code.run',d:'aggregate and rank',t:'0.8s'},{n:'search.docs',d:'checking internal definitions',t:'0.6s'}],
+    md:`Answered — though again, simulated output.
+
+What this turn demonstrates is **streaming into a pre-laid-out block**. The paragraph structure exists before the text arrives, so nothing reflows as it fills. That's why the page doesn't jitter the way naive token-appending does.
+
+Three details worth keeping in the real implementation:
+- The caret sits at the true end of the text, not at the end of a container.
+- Blocks reveal only once they have content, so you never see an empty bullet.
+- <code>prefers-reduced-motion</code> collapses the whole thing to an instant render.` }
+];
+let replyIx = 0;
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+async function runTurn(userText){
+  if (state.busy) return;
+  state.busy = true;
+  $('#sendBtn').disabled = true;
+
+  const inner = $('#streamInner');
+  inner.append(msgNode({ role:'user', text:userText }));
+  scrollDown();
+
+  const reply = REPLIES[replyIx++ % REPLIES.length];
+
+  // assistant shell
+  const wrap = el('div','msg'); wrap.dataset.role = 'ai';
+  const head = el('div','msg-head');
+  head.innerHTML = `<span class="who">Nebula Pro</span><span class="msg-meta" data-dur>thinking…</span>`;
+  wrap.append(head);
+
+  const trace = traceNode([], '', true);
+  const tbody = $('.trace-body', trace);
+  tbody.innerHTML = '';
+  $('.trace-sum span:nth-of-type(2)', trace).textContent = 'Working…';
+  wrap.append(trace);
+  inner.append(wrap);
+  scrollDown();
+
+  let elapsed = 0;
+  for (const s of reply.steps){
+    const step = el('div','step');
+    step.dataset.status = 'run';
+    step.innerHTML = `<span class="step-dot"></span><span class="step-name">${esc(s.n)}</span>
+      <span class="step-detail">${esc(s.d)}</span><span class="step-t"></span>`;
+    tbody.append(step);
+    scrollDown();
+    await sleep(parseFloat(s.t) * 620);
+    step.dataset.status = 'done';
+    $('.step-t', step).textContent = s.t;
+    elapsed += parseFloat(s.t);
+    state.tools++;
+    state.tokens += 420;
+    syncUsage();
+  }
+  const dur = elapsed.toFixed(1) + 's';
+  $('.trace-sum span:nth-of-type(2)', trace).textContent =
+    `Worked through ${reply.steps.length} steps`;
+  $('.trace-sum .dur', trace).textContent = dur;
+  trace.dataset.open = 'false';
+  $('[data-dur]', head).textContent = 'responding…';
+
+  // stream the text
+  const body = el('div','body streaming');
+  body.innerHTML = md(reply.md);
+  wrap.append(body);
+
+  const nodes = [];
+  const walk = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+  let n; while ((n = walk.nextNode())) nodes.push({ node:n, full:n.nodeValue });
+  nodes.forEach(x => x.node.nodeValue = '');
+
+  const topOf = node => {
+    let e = node.parentNode;
+    while (e && e.parentNode && e.parentNode !== body) e = e.parentNode;
+    return e;
+  };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduced){
+    nodes.forEach(x => { x.node.nodeValue = x.full; topOf(x.node).classList.add('revealed'); });
+  } else {
+    // The caret rides the block currently being filled, so it sits at the
+    // true end of the text rather than at the end of the message container.
+    let caret = null;
+    for (const x of nodes){
+      const top = topOf(x.node);
+      top.classList.add('revealed');
+      if (caret !== top){ caret?.classList.remove('caret'); top.classList.add('caret'); caret = top; }
+      const parts = x.full.split(/(\s+)/);
+      for (let i = 0; i < parts.length; i += 2){
+        x.node.nodeValue += parts.slice(i, i + 2).join('');
+        state.tokens += 2;
+        if (i % 8 === 0){ syncUsage(); scrollDown(); }
+        await sleep(11 + Math.floor(i % 3) * 6);
+      }
+    }
+    caret?.classList.remove('caret');
+  }
+  body.classList.remove('streaming');
+  $$('.revealed', body).forEach(e => e.classList.remove('revealed'));
+
+  $('[data-dur]', head).textContent = dur;
+  const acts = el('div','msg-actions');
+  acts.innerHTML = `<button class="act" title="Copy">${ICONS.copy}</button><button class="act" title="Retry">${ICONS.retry}</button><button class="act" title="Branch from here">${ICONS.branch}</button>`;
+  $$('.act', acts).forEach(b => b.onclick = () => toast(b.title === 'Copy' ? 'Copied to clipboard' : b.title + ' — prototype'));
+  head.append(acts);
+
+  state.turns += 2;
+  syncUsage();
+  scrollDown();
+  state.busy = false;
+  $('#sendBtn').disabled = !$('#input').value.trim();
+}
+
+/* Follow the stream only while the reader is already at the bottom — and do it
+   instantly. CSS smooth scrolling restarts its animation on every append, so
+   during token streaming it perpetually lags behind the caret. */
+function scrollDown(){
+  const s = $('#stream');
+  if (s.scrollHeight - s.scrollTop - s.clientHeight < 260)
+    s.scrollTo({ top:s.scrollHeight, behavior:'instant' });
+}
+
+/* =========================================================
+   COMPOSER
+   ========================================================= */
+const input = $('#input');
+function autosize(){ input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 200) + 'px'; }
+input.addEventListener('input', () => { autosize(); $('#sendBtn').disabled = !input.value.trim() || state.busy; });
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)){ e.preventDefault(); $('#composer').requestSubmit(); }
+});
+$('#composer').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = input.value.trim();
+  if (!v || state.busy) return;
+  input.value = ''; autosize(); $('#sendBtn').disabled = true;
+  $('#chips').innerHTML = ''; state.attach = [];
+  runTurn(v);
+});
+
+let attachN = 0;
+$('#attachBtn').onclick = () => {
+  const names = ['q4_forecast.csv','notes.md','schema.sql','dashboard.png'];
+  const name = names[attachN++ % names.length];
+  const c = el('div','chip', `${ICONS.file}<span>${name}</span>`);
+  const x = el('button','', '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>');
+  x.onclick = () => c.remove();
+  c.append(x);
+  $('#chips').append(c);
+};
+$('#toolsBtn').onclick = () => { selectTab('context'); openInspector(true); toast('Tools shown in inspector'); };
+
+/* =========================================================
+   INSPECTOR
+   ========================================================= */
+function selectTab(name){
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+  $$('.insp-panel').forEach(p => p.hidden = p.dataset.panel !== name);
+}
+$$('.tab').forEach(t => t.onclick = () => selectTab(t.dataset.tab));
+
+/* null = follow the viewport; true/false = the user has decided. Below 860px
+   there is no room for a 320px panel, so the preference is ignored. */
+let inspPref = null;
+function applyInspector(){
+  const narrow = matchMedia('(max-width:1280px)').matches;
+  const tiny   = matchMedia('(max-width:860px)').matches;
+  const open   = tiny ? false : (inspPref === null ? !narrow : inspPref);
+  $('#app').dataset.inspector = open ? 'open' : 'closed';
+  $('#inspBtn').setAttribute('aria-pressed', String(open));
+  $('#inspBtn').disabled = tiny;
+  $('#inspBtn').style.opacity = tiny ? '.35' : '';
+}
+function openInspector(open){ inspPref = open; applyInspector(); }
+$('#inspBtn').onclick = () => openInspector($('#app').dataset.inspector === 'closed');
+
+$('#temp').oninput = e => $('#tempV').textContent = (+e.target.value).toFixed(2);
+$('#maxTok').oninput = e => $('#maxV').textContent = nf(+e.target.value);
+$('#modelSel').onchange = e => toast('Routed to ' + e.target.value);
+
+/* =========================================================
+   THEME
+   ========================================================= */
+function setTheme(t){
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('nebulas.theme', t); } catch(e){}
+}
+try {
+  const saved = localStorage.getItem('nebulas.theme');
+  setTheme(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+} catch(e){}
+$('#themeBtn').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+
+/* =========================================================
+   COMMAND PALETTE
+   ========================================================= */
+const COMMANDS = [
+  { g:'Actions', nm:'New thread', sub:'⌘N', run:() => { toast('New thread — prototype'); } },
+  { g:'Actions', nm:'Toggle inspector', sub:'⌘\\', run:() => openInspector($('#app').dataset.inspector === 'closed') },
+  { g:'Actions', nm:'Toggle theme', sub:'⌘J', run:() => $('#themeBtn').click() },
+  { g:'Actions', nm:'Attach file', sub:'', run:() => $('#attachBtn').click() },
+  { g:'Actions', nm:'Export thread as Markdown', sub:'', run:() => toast('Exported — prototype') },
+  { g:'View', nm:'Show context sources', sub:'', run:() => { selectTab('context'); openInspector(true); } },
+  { g:'View', nm:'Show model settings', sub:'', run:() => { selectTab('model'); openInspector(true); } },
+  { g:'View', nm:'Show usage', sub:'', run:() => { selectTab('usage'); openInspector(true); } }
+];
+
+const scrim = $('#scrim'), palInput = $('#palInput'), palList = $('#palList');
+let palItems = [], palIx = 0;
+
+function palOpen(){
+  scrim.dataset.open = 'true';
+  palInput.value = ''; palRender(''); palInput.focus();
+}
+function palClose(){ scrim.dataset.open = 'false'; palInput.blur(); }
+
+function palRender(q){
+  const ql = q.toLowerCase().trim();
+  const threads = THREADS
+    .filter(t => !ql || t.title.toLowerCase().includes(ql))
+    .map(t => ({ g:'Threads', nm:t.title, sub:t.when, run:() => renderThread(t.id) }));
+  const cmds = COMMANDS.filter(c => !ql || c.nm.toLowerCase().includes(ql));
+  palItems = [...threads, ...cmds];
+  palIx = 0;
+
+  if (!palItems.length){
+    palList.innerHTML = `<div class="pal-empty">No matches for “${esc(q)}”</div>`;
+    return;
+  }
+  palList.innerHTML = '';
+  let lastG = null;
+  palItems.forEach((it, i) => {
+    if (it.g !== lastG){ palList.append(el('div','pal-grp', it.g)); lastG = it.g; }
+    const b = el('button','pal-item',
+      `<span class="nm">${esc(it.nm)}</span>${it.sub ? `<span class="sub">${esc(it.sub)}</span>` : ''}`);
+    b.dataset.ix = i;
+    b.onmousemove = () => palHi(i);
+    b.onclick = () => { palClose(); it.run(); };
+    palList.append(b);
+  });
+  palHi(0);
+}
+function palHi(i){
+  palIx = i;
+  $$('.pal-item', palList).forEach(b => b.dataset.active = String(+b.dataset.ix === i));
+  $$('.pal-item', palList)[i]?.scrollIntoView({ block:'nearest' });
+}
+
+palInput.addEventListener('input', e => palRender(e.target.value));
+palInput.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown'){ e.preventDefault(); palHi(Math.min(palIx + 1, palItems.length - 1)); }
+  else if (e.key === 'ArrowUp'){ e.preventDefault(); palHi(Math.max(palIx - 1, 0)); }
+  else if (e.key === 'Enter'){ e.preventDefault(); const it = palItems[palIx]; if (it){ palClose(); it.run(); } }
+  else if (e.key === 'Escape'){ palClose(); }
+});
+scrim.addEventListener('mousedown', e => { if (e.target === scrim) palClose(); });
+$('#searchBtn').onclick = palOpen;
+$('#threadPick').onclick = () => { palOpen(); };
+$('#newBtn').onclick = () => toast('New thread — prototype');
+$('#helpBtn').onclick = () => { palOpen(); palInput.value = ''; palRender(''); };
+
+/* =========================================================
+   GLOBAL KEYS
+   ========================================================= */
+addEventListener('keydown', e => {
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && e.key.toLowerCase() === 'k'){ e.preventDefault(); scrim.dataset.open === 'true' ? palClose() : palOpen(); }
+  else if (mod && e.key === '\\'){ e.preventDefault(); openInspector($('#app').dataset.inspector === 'closed'); }
+  else if (mod && e.key.toLowerCase() === 'j'){ e.preventDefault(); $('#themeBtn').click(); }
+  else if (e.key === 'Escape' && scrim.dataset.open === 'true'){ palClose(); }
+  else if (!mod && e.key === '/' && document.activeElement === document.body){ e.preventDefault(); input.focus(); }
+});
+
+addEventListener('resize', applyInspector);
+
+/* boot */
+applyInspector();
+renderThread('t1');
+})();
+</script>
+</body>
+</html>

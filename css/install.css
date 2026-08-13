@@ -1,0 +1,274 @@
+/* ============================================================================
+   install — the deployment page shell only. Two columns plus a status strip
+   spanning both, on the same tokens as the workspace.
+
+       menu · configuration
+
+   Nothing here declares a colour, a duration or a size that isn't a token.
+   ========================================================================= */
+
+.setup{
+  --menu-w:288px;
+  display:grid;
+  height:100vh;
+  overflow:hidden;
+  grid-template-columns:var(--menu-w) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) var(--status-h);
+}
+.setup > *{ min-width:0 }
+
+/* ==================================================================== menu */
+.menu{
+  grid-row:1;
+  display:flex; flex-direction:column;
+  min-height:0;
+  background:var(--surface);
+  border-right:var(--border) solid var(--line);
+}
+.menu__head{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-3);
+  height:var(--topbar-h);
+  padding:0 var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+}
+.menu__mark{
+  display:grid; place-items:center;
+  width:var(--brand); height:var(--brand);
+  flex:none;
+  border-radius:var(--r-md);
+  background:var(--accent); color:var(--accent-fg);
+  font-weight:var(--w-semi); font-size:var(--t-13); letter-spacing:var(--ls-tight);
+  box-shadow:var(--shadow-sm);
+}
+.menu__id{ min-width:0; flex:1 }
+.menu__name{
+  display:block; min-width:0;
+  font-size:var(--t-13); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.menu__sub{
+  display:block;
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.menu__body{ flex:1 1 0; min-height:0; overflow-y:auto; padding:var(--s-2) }
+
+/* The pinned row sits above the phases and is separated from them, because it
+   opens a layer rather than navigating — same pattern as the workspace's
+   pinned sidebar actions. */
+.menu__pinned{
+  padding-bottom:var(--s-2);
+  border-bottom:var(--border) solid var(--line);
+  margin-bottom:var(--s-1);
+}
+/* Until the tenant exists, this is the one thing on the page asking to be
+   pressed, so its icon takes the accent. */
+.row__icon--act{ color:var(--accent) }
+/* Group label in the menu. The eyebrow alone separates the phases — no rule,
+   so the column carries one fewer line than the label it is naming. */
+.menu__group{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-4) var(--s-2) var(--s-2) var(--s-3);
+}
+.menu__group:first-child{ padding-top:var(--s-1) }
+
+/* A module row is the shared .row plus its state. */
+.mrow{ position:relative }
+/* Active marker bleeds to the column's own left edge, as in the rail. */
+.mrow[aria-current="true"]::before{
+  content:"";
+  position:absolute; left:calc(-1 * var(--s-2));
+  top:50%; translate:0 -50%;
+  width:2px; height:16px;
+  border-radius:var(--r-full);
+  background:var(--accent);
+}
+.mrow__state{ flex:none; display:flex; color:var(--ok) }
+
+/* =========================================================== configuration */
+.cfg{
+  grid-row:1;
+  display:flex; flex-direction:column;
+  min-height:0;
+  background:var(--bg);
+}
+.cfg__head{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--topbar-h);
+  padding:0 var(--s-3) 0 var(--s-5);
+  border-bottom:var(--border) solid var(--line);
+}
+.cfg__title{
+  margin:0; min-width:0;
+  font-size:var(--t-13); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.cfg__spacer{ flex:1 }
+.cfg__body{ flex:1 1 0; min-height:0; overflow-y:auto }
+/* Centred at a fixed measure, like the workspace's non-thread views — a form
+   that grows with the viewport stops being scannable well before it stops
+   fitting. */
+.cfg__inner{ max-width:720px; margin:0 auto; padding:var(--s-8) var(--s-6) var(--s-12) }
+
+/* The step footer. Actions live at the foot of the column, not in the scroll,
+   so "continue" is in the same place in every module. */
+.cfg__foot{
+  position:relative;
+  flex:none;
+  display:flex; align-items:center; justify-content:center; gap:var(--s-2);
+  height:calc(var(--topbar-h) + var(--s-2));
+  padding:0 var(--s-5);
+  border-top:var(--border) solid var(--line);
+  background:var(--bg);
+}
+.cfg__actions{ display:flex; align-items:center; gap:var(--s-2) }
+/* Out of the flow, so a longer hint never shifts the centred actions. */
+.cfg__hint{
+  position:absolute; right:var(--s-5); top:50%; translate:0 -50%;
+  font-size:var(--t-11); color:var(--text-4);
+}
+
+/* ================================================================== groups
+   One card per PRD step, so the checklist and the form are the same object. */
+.step-card{ margin-bottom:var(--s-4) }
+
+/* Two fields to a row; anything that needs the width takes both. */
+.fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--s-4) var(--s-4);
+}
+.fields > .field{ margin-bottom:0; grid-column:span 2 }
+.fields > .field--half{ grid-column:span 1 }
+/* A switch is a row, not a labelled box — it opts out of the field padding.
+   It aligns to the top of its cell, not the middle, so a pair of switches
+   still line up when only one of them carries help text. */
+.fields > .field--switch{ align-self:start }
+.fields > .field--switch .switch{ padding:0; min-height:var(--ctl-md) }
+
+.input--mono{ font-family:var(--mono) }
+/* A prefixed input: the symbol is chrome, so it sits inside the border. */
+.input-pre{
+  display:flex; align-items:center;
+  height:var(--ctl-md);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-md);
+  background:var(--bg);
+  transition:border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+.input-pre:focus-within{ border-color:var(--accent-line); box-shadow:0 0 0 3px var(--accent-soft) }
+.input-pre__sym{
+  padding:0 var(--s-1) 0 var(--s-2);
+  font-family:var(--mono); font-size:var(--t-12); color:var(--text-4);
+}
+.input-pre .input{ border:0; box-shadow:none; padding-left:0 }
+.input-pre .input:focus{ box-shadow:none }
+
+/* Multi-select reuses the chip. Pressed takes the accent — the one place a
+   choice in this page says "you acted". */
+.chips{ display:flex; flex-wrap:wrap; gap:var(--s-1) }
+.chip[aria-pressed="true"]{
+  border-color:var(--accent-line);
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+.chip__tick{ display:flex; opacity:0; width:0; transition:opacity var(--fast) var(--ease) }
+.chip[aria-pressed="true"] .chip__tick{ opacity:1; width:auto }
+
+/* Segmented control at field width rather than hugging its labels. */
+.field .seg{ display:inline-flex }
+.field .seg button{ padding:4px var(--s-3); font-size:var(--t-12) }
+
+.range-row{ display:flex; align-items:center; gap:var(--s-3) }
+.range-row .range{ flex:1 }
+
+/* ================================================== initialisation dialog
+   A layer, because until the tenant exists there is nothing for the eleven
+   configuration pages to attach to. Sits higher on the screen than the
+   command palette does, since it is taller. */
+.scrim--wizard{ padding-top:7vh }
+.wizard{
+  display:flex; flex-direction:column;
+  width:min(680px,94vw);
+  max-height:82vh;
+  background:var(--bg);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  translate:0 -8px; scale:.985;
+  transition:translate var(--base) var(--ease), scale var(--base) var(--ease);
+}
+.scrim[data-open="true"] .wizard{ translate:0 0; scale:1 }
+
+.wizard__head{
+  flex:none;
+  padding:var(--s-4) var(--s-5) var(--s-4);
+  border-bottom:var(--border) solid var(--line);
+}
+.wizard__headrow{ display:flex; align-items:center; margin-bottom:var(--s-2) }
+.wizard__desc{
+  margin:var(--s-2) 0 0;
+  font-size:var(--t-12); color:var(--text-3); max-width:60ch;
+}
+.wizard__body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:var(--s-5) }
+
+/* A group in the dialog is a labelled block, not a card — the dialog is
+   already a container, and nesting a second border inside it says nothing. */
+.wizard__group{ margin-bottom:var(--s-6) }
+.wizard__group:last-child{ margin-bottom:0 }
+.wizard__group-t{
+  display:flex; align-items:center; gap:var(--s-2);
+  margin:0 0 var(--s-3);
+}
+.wizard__group-t::after{ content:""; flex:1; height:var(--border); background:var(--line) }
+
+.wizard__foot{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-3) var(--s-4) var(--s-3) var(--s-5);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+}
+/* The dialog's hint is in the flow — nothing here needs centring. */
+.wizard__foot .cfg__hint{ position:static; translate:none; max-width:40ch }
+
+/* =============================================================== statusbar */
+.statusbar{
+  grid-column:1 / -1;
+  grid-row:2;
+  display:flex; align-items:center; gap:var(--s-4);
+  padding:0 var(--s-3);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+  font-size:var(--t-11); color:var(--text-4);
+}
+.statusbar__item{ display:flex; align-items:center; gap:6px; white-space:nowrap }
+.statusbar__spacer{ flex:1 }
+.statusbar__meter{ width:56px; flex:none }
+.statusbar button.statusbar__item{
+  padding:0 var(--s-2); height:calc(var(--status-h) - 6px);
+  border-radius:var(--r-sm);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.statusbar button.statusbar__item:hover{ background:var(--raised); color:var(--text-2) }
+
+/* ============================================================== responsive
+   The menu narrows before it disappears, because it is the only thing telling
+   you where you are in a twelve-step install. */
+@media (max-width:1000px){
+  .setup{ --menu-w:232px }
+  .cfg__inner{ padding:var(--s-6) var(--s-5) var(--s-10) }
+}
+@media (max-width:900px){
+  /* The footer hint sits over the actions before it runs out of room. The
+     dialog's copy of it is in the flow, so it stays. */
+  .cfg__foot .cfg__hint{ display:none }
+}
+@media (max-width:760px){
+  .fields{ grid-template-columns:minmax(0,1fr) }
+  .fields > .field,.fields > .field--half{ grid-column:span 1 }
+  .statusbar__hide-sm{ display:none }
+}

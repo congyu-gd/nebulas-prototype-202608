@@ -1,0 +1,4 @@
+.DS_Store
+
+# Machine-specific tool permissions, not project configuration.
+.claude/settings.local.json

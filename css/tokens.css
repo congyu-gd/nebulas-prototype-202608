@@ -1,0 +1,170 @@
+/* ============================================================================
+   NEBULAS · QUIET PRECISION — tokens
+   The single source of truth. Nothing below this file may declare a raw
+   color, a raw duration, or a size that isn't derived from these.
+   ========================================================================= */
+
+:root{
+  /* ------------------------------------------------------------ neutrals */
+  --g-0:#ffffff;   --g-50:#fafafa;  --g-100:#f4f4f5; --g-150:#ededef;
+  --g-200:#e4e4e7; --g-300:#d4d4d8; --g-400:#a1a1aa; --g-500:#71717a;
+  --g-600:#52525b; --g-700:#3f3f46; --g-800:#27272a; --g-900:#18181b;
+
+  /* ------------------------------------------------- semantic · surfaces */
+  --bg:          var(--g-0);
+  --surface:     var(--g-50);
+  --raised:      var(--g-100);
+  --raised-2:    var(--g-150);
+  --line:        var(--g-200);
+  --line-strong: var(--g-300);
+  --text:        var(--g-900);
+  --text-2:      var(--g-600);
+  --text-3:      var(--g-500);
+  --text-4:      var(--g-400);
+
+  /* Inverted surface — tooltips, toasts. Flips wholesale in dark mode. */
+  --inv-bg:   var(--g-900);
+  --inv-text: var(--g-0);
+
+  /* The rail sits one step below the sidebar, so the two left columns read
+     apart without needing a second border between them. */
+  --rail-bg:     var(--g-150);
+  --rail-active: var(--g-200);
+
+  /* ------------------------------------------------- semantic · app identity
+     An app is identified by a colour and a glyph. This is an IDENTITY channel,
+     not emphasis: it says "which app", never "act here". That is why these are
+     saturated where --accent is reserved, and why they appear only on the app
+     tile — never on chrome, text or state. */
+  --app-1:#6366f1;  /* calendar   */
+  --app-2:#10b981;  /* documents  */
+  --app-3:#f59e0b;  /* revenue    */
+  --app-4:#3b82f6;  /* tasks      */
+  --app-5:#ef4444;  /* authoring  */
+  --app-fg:#ffffff;
+
+  /* ---------------------------------------------------- semantic · accent
+     ONE accent. It means "the model acted" or "you can act". Never decoration. */
+  --accent:      #5b5bd6;
+  --accent-hi:   #4f4fc9;
+  --accent-fg:   #ffffff;
+  --accent-soft: rgba(91,91,214,.10);
+  --accent-line: rgba(91,91,214,.28);
+
+  /* ---------------------------------------------------- semantic · status
+     Dull on purpose. These carry meaning in data, never in chrome. */
+  --ok:#0f8a5f;   --ok-soft:rgba(15,138,95,.11);
+  --warn:#a86b00; --warn-soft:rgba(168,107,0,.12);
+  --err:#c0392b;  --err-soft:rgba(192,57,43,.10);
+
+  --scrim:rgba(24,24,27,.34);
+
+  /* ---------------------------------------------------------------- type */
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+
+  --t-11:11px; --t-12:12px; --t-13:13px; --t-15:15px;
+  --t-18:18px; --t-22:22px; --t-28:28px;
+
+  --lh-tight:1.3; --lh-ui:1.5; --lh-prose:1.65;
+  --ls-tight:-.012em; --ls-snug:-.006em; --ls-caps:.055em;
+  --w-normal:400; --w-medium:550; --w-semi:600;
+
+  /* --------------------------------------------------------------- space
+     One 4px unit, scaled by --density. Every gap derives from it, so
+     switching density is a single-variable change. */
+  --u:4px;
+  --density:1;
+  --s-1:calc(var(--u) * 1 * var(--density));
+  --s-2:calc(var(--u) * 2 * var(--density));
+  --s-3:calc(var(--u) * 3 * var(--density));
+  --s-4:calc(var(--u) * 4 * var(--density));
+  --s-5:calc(var(--u) * 5 * var(--density));
+  --s-6:calc(var(--u) * 6 * var(--density));
+  --s-8:calc(var(--u) * 8 * var(--density));
+  --s-10:calc(var(--u) * 10 * var(--density));
+  --s-12:calc(var(--u) * 12 * var(--density));
+  --s-16:calc(var(--u) * 16 * var(--density));
+
+  /* ------------------------------------------------------- radius / edge */
+  --r-xs:2px; --r-sm:4px; --r-md:6px; --r-lg:8px; --r-xl:10px; --r-full:999px;
+  --border:1px;
+  --ring:2px;
+
+  /* -------------------------------------------------------------- shadow */
+  --shadow-sm:0 1px 2px rgba(24,24,27,.06), 0 0 0 1px rgba(24,24,27,.04);
+  --shadow-md:0 4px 12px rgba(24,24,27,.08), 0 0 0 1px rgba(24,24,27,.05);
+  --shadow-lg:0 16px 48px rgba(24,24,27,.14), 0 0 0 1px rgba(24,24,27,.06);
+
+  /* -------------------------------------------------------------- motion */
+  --ease:cubic-bezier(.2,.7,.3,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --fast:110ms; --base:180ms; --slow:280ms;
+
+  /* ------------------------------------------------- control geometry
+     Named so components never invent a height. */
+  --ctl-xs:22px; --ctl-sm:26px; --ctl-md:30px; --ctl-lg:34px;
+  --dot:5px;
+
+  /* ------------------------------------------------------- shell metrics
+     Five columns: rail · sidebar · chat · artifact · apps. The artifact
+     width is a user-draggable override, which is why it reads through
+     --art-w-user rather than being set directly. */
+  --rail-w:56px;
+  --list-w:264px;
+  --art-w-min:320px;
+  --art-w-max:720px;
+  --app-w:64px;
+  --app-w-wide:212px;
+  --topbar-h:48px;
+  --status-h:26px;
+  --measure:760px;          /* reading column cap */
+  --composer-max:760px;
+  --brand:28px;
+  --app-tile:32px;
+}
+
+/* --------------------------------------------------------------- density
+   The proof that the space layer is real: one attribute, whole app reflows. */
+:root[data-density="compact"]{ --density:.8; --ctl-lg:30px; --ctl-md:27px; --topbar-h:42px; }
+:root[data-density="roomy"]  { --density:1.25; --topbar-h:56px; }
+
+/* ------------------------------------------------------------------ dark
+   Not an inversion. --bg lifts off black so elevation has somewhere to go,
+   and the accent lightens to hold contrast. */
+:root[data-theme="dark"]{
+  --bg:#0d0d0f;
+  --surface:#141417;
+  --raised:#1b1b1f;
+  --raised-2:#212127;
+  --line:#26262b;
+  --line-strong:#35353c;
+  --text:#f4f4f5;
+  --text-2:#a1a1aa;
+  --text-3:#8b8b93;
+  --text-4:#6a6a72;
+
+  --inv-bg:#212127;
+  --inv-text:#f4f4f5;
+
+  /* Dark inverts the relationship: the rail drops below --bg rather than
+     above it, because in dark a recessed column reads as further away. */
+  --rail-bg:#08080a;
+  --rail-active:#2a2a31;
+
+  --accent:#7c7cf0;
+  --accent-hi:#8f8ff5;
+  --accent-fg:#0d0d0f;
+  --accent-soft:rgba(124,124,240,.14);
+  --accent-line:rgba(124,124,240,.34);
+
+  --ok:#3fbd8b;   --ok-soft:rgba(63,189,139,.13);
+  --warn:#d99b28; --warn-soft:rgba(217,155,40,.14);
+  --err:#ef6b5e;  --err-soft:rgba(239,107,94,.13);
+
+  --scrim:rgba(0,0,0,.6);
+
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
+  --shadow-lg:0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.07);
+}

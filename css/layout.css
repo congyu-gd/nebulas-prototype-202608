@@ -1,0 +1,505 @@
+/* ============================================================================
+   layout — the application shell only. Five columns, plus a status strip
+   spanning all of them. Components inside know nothing about this file.
+
+       rail · sidebar · chat · artifact · apps
+
+   Each of the four outer columns collapses to 0 through a data attribute on
+   .app, which redefines its width token rather than restating the template.
+   ========================================================================= */
+
+.app{
+  --art-w:var(--art-w-user, 440px);   /* the drag handle writes --art-w-user */
+  display:grid;
+  height:100vh;
+  overflow:hidden;
+  grid-template-columns:
+    var(--rail-w)
+    var(--list-w)
+    minmax(0,1fr)
+    var(--art-w)
+    var(--app-w);
+  grid-template-rows:minmax(0,1fr) var(--status-h);
+  transition:grid-template-columns var(--base) var(--ease);
+}
+.app[data-list="closed"]{ --list-w:0px }
+.app[data-art="closed"] { --art-w:0px }
+.app[data-apps="closed"]{ --app-w:0px }
+.app[data-apps="wide"]  { --app-w:var(--app-w-wide) }
+
+/* A column that can collapse to zero must not leak its contents. The two
+   that never collapse stay visible so their tooltips can escape sideways —
+   which is also why anything sitting on a clipped edge uses a native
+   title attribute instead of the styled .tip. */
+.app > *{ min-width:0 }
+.listcol,.artpane,.apprail{ overflow:hidden }
+.rail,.chatpane{ overflow:visible }
+
+/* ==================================================================== rail */
+.rail{
+  grid-row:1;
+  display:flex; flex-direction:column; align-items:center;
+  gap:var(--s-1);
+  padding:var(--s-3) 0;
+  background:var(--rail-bg);
+  border-right:var(--border) solid var(--line);
+  z-index:3;
+}
+/* The mark is the logo itself, so it carries no tile: a container drawn behind
+   a logo that already has its own silhouette only fights it. */
+.rail__mark{
+  display:grid; place-items:center;
+  width:var(--brand); height:var(--brand);
+  margin-bottom:var(--s-4);
+  /* The mark's outer ring is currentColor so it inverts with the theme — at
+     #2b282f it would disappear into the dark rail. The face and the eyes are
+     fixed: the eyes sit on the yellow, so they read either way. */
+  color:var(--text);
+}
+.rail__mark svg{ width:23px; height:19px }
+.rail__btn{
+  position:relative;
+  display:grid; place-items:center;
+  width:var(--ctl-lg); height:var(--ctl-lg);
+  border-radius:var(--r-md);
+  color:var(--text-3);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+/* Hover and active sit above the rail's own surface, which is now a step
+   darker than the sidebar — so both go up, not down. */
+.rail__btn:hover{ background:var(--rail-active); color:var(--text) }
+.rail__btn[aria-current="page"]{ background:var(--rail-active); color:var(--text) }
+/* Active marker bleeds to the rail's own left edge. */
+.rail__btn[aria-current="page"]::before{
+  content:"";
+  position:absolute;
+  left:calc(-1 * (var(--rail-w) - var(--ctl-lg)) / 2);
+  top:50%; translate:0 -50%;
+  width:2px; height:16px;
+  border-radius:var(--r-full);
+  background:var(--accent);
+}
+.rail__spacer{ flex:1 }
+/* Account sits alone at the foot, separated from the sections above it. */
+.rail__foot{
+  display:grid; place-items:center;
+  width:var(--ctl-lg); height:var(--ctl-lg);
+  margin-top:var(--s-2);
+  border-radius:var(--r-md);
+  color:var(--text-3);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.rail__foot:hover{ background:var(--rail-active); color:var(--text) }
+.rail__foot[aria-current="page"]{ background:var(--rail-active); color:var(--text) }
+.rail__rule{ width:20px; height:var(--border); background:var(--line); margin:var(--s-2) 0 }
+
+/* ================================================================= sidebar */
+.listcol{
+  grid-row:1;
+  display:flex; flex-direction:column;
+  min-height:0;
+  background:var(--surface);
+  border-right:var(--border) solid var(--line);
+}
+.app[data-list="closed"] .listcol{ border-right-color:transparent }
+
+.listcol__head{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--topbar-h);
+  padding:0 var(--s-2) 0 var(--s-4);
+  border-bottom:var(--border) solid var(--line);
+}
+/* The section's own glyph, repeated beside its name. The rail says which
+   section is active by position; this says it in words. */
+.listcol__ico{ display:flex; flex:none; color:var(--text-3) }
+.listcol__title{
+  flex:1; min-width:0;
+  font-size:var(--t-13); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.listcol__body{ flex:1 1 0; min-height:0; overflow-y:auto; padding:var(--s-2) }
+
+/* Group header. The trailing rule fills whatever the label leaves. */
+.listcol__group{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-4) var(--s-2) var(--s-2) var(--s-3);
+}
+.listcol__group::after{
+  content:""; flex:1; height:var(--border); background:var(--line);
+  order:1;
+}
+.listcol__group > .iconbtn{ order:2 }
+.listcol__group:first-child{ padding-top:var(--s-1) }
+
+/* The pinned actions at the top of the chat sidebar — new chat, assistant,
+   schedule. They are separated from the scrolling content below. */
+.listcol__pinned{ padding-bottom:var(--s-2); border-bottom:var(--border) solid var(--line); margin-bottom:var(--s-1) }
+
+/* ============================================================ shared panes */
+.pane{
+  grid-row:1;
+  display:flex; flex-direction:column;
+  min-height:0;
+  background:var(--bg);
+}
+.pane__body{ flex:1 1 0; min-height:0; overflow-y:auto }
+.pane__pad{ padding:var(--s-6) }
+.pane__measure{ max-width:var(--measure); margin:0 auto; padding:var(--s-8) var(--s-6) var(--s-12) }
+
+.topbar{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--topbar-h);
+  padding:0 var(--s-3) 0 var(--s-4);
+  border-bottom:var(--border) solid var(--line);
+}
+.topbar__title{
+  margin:0;
+  font-size:var(--t-13); font-weight:var(--w-medium);
+  letter-spacing:var(--ls-snug);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  max-width:46ch;
+}
+.topbar__sub{ font-size:var(--t-11); color:var(--text-4); font-family:var(--mono); flex:none }
+.topbar__spacer{ flex:1 }
+
+/* Page header used by non-thread views — where the display type lives. */
+.pagehead{ margin-bottom:var(--s-6) }
+.pagehead__title{ margin:0 0 var(--s-2) }
+.pagehead__desc{ font-size:var(--t-13); color:var(--text-3); max-width:64ch; margin:0 }
+.pagehead__row{ display:flex; align-items:flex-end; gap:var(--s-4); margin-bottom:var(--s-2) }
+
+.section{ margin-bottom:var(--s-8) }
+.section__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  margin-bottom:var(--s-3);
+}
+.grid-cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:var(--s-3);
+}
+.stat-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:var(--s-3);
+}
+.stat{
+  padding:var(--s-3);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+}
+.stat__k{ font-size:var(--t-11); color:var(--text-4); margin-bottom:var(--s-1) }
+.stat__v{ font-size:var(--t-22); font-weight:var(--w-semi); letter-spacing:var(--ls-tight); line-height:1.1 }
+
+/* =============================================================== empty thread
+   A new chat has nothing to show, and an empty state that only says so wastes
+   the one moment the reader is deciding what to ask. So: the question, the two
+   modes it can be asked in, and starters that write themselves into the
+   composer sitting directly below. */
+.hero{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--s-4);
+  min-height:100%;
+  padding:var(--s-8) var(--s-6);
+  text-align:center;
+}
+.hero__title{ margin:0 0 var(--s-1) }
+.hero__starters{
+  display:flex; flex-wrap:wrap; justify-content:center;
+  gap:var(--s-1);
+  max-width:var(--measure);
+}
+
+/* ================================================================ messages */
+.msg{ position:relative; padding-bottom:var(--s-8) }
+.msg__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  height:20px;
+  margin-bottom:var(--s-3);
+}
+.msg__who{
+  font-size:var(--t-11); font-weight:var(--w-semi);
+  letter-spacing:.04em; text-transform:uppercase;
+  color:var(--text-4);
+}
+.msg__meta{ font-size:var(--t-11); color:var(--text-4); font-family:var(--mono) }
+.msg__actions{
+  margin-left:auto;
+  display:flex; gap:2px;
+  opacity:0;
+  transition:opacity var(--fast) var(--ease);
+}
+.msg:hover .msg__actions,
+.msg:focus-within .msg__actions{ opacity:1 }
+
+/* A user turn is a record of input, not a bubble. */
+.msg[data-role="user"] .prose{
+  border-left:2px solid var(--line-strong);
+  padding-left:var(--s-4);
+}
+
+.msg__trace{ margin-bottom:var(--s-4) }
+.msg__ref{ margin-top:var(--s-4) }
+
+/* Citations sit on the response that actually used them. */
+.cites{
+  display:flex; flex-wrap:wrap; align-items:center; gap:var(--s-1);
+  margin-top:var(--s-4);
+  padding-top:var(--s-3);
+  border-top:var(--border) solid var(--line);
+}
+.cites__label{ font-size:var(--t-11); color:var(--text-4); margin-right:var(--s-1) }
+
+/* Progressive reveal while streaming. */
+.prose.is-streaming > *{ display:none }
+.prose.is-streaming > .is-revealed{ display:revert }
+.has-caret::after{
+  content:"";
+  display:inline-block;
+  width:2px; height:1em;
+  margin-left:2px;
+  vertical-align:-.14em;
+  background:var(--accent);
+  animation:blink 1s steps(2) infinite;
+}
+@keyframes blink{ 50%{ opacity:0 } }
+
+/* ================================================================ composer */
+.composer-wrap{
+  flex:none;
+  padding:0 var(--s-6) var(--s-5);
+  background:linear-gradient(to top,var(--bg) 62%,transparent);
+}
+.composer{
+  max-width:var(--composer-max);
+  margin:0 auto;
+  border:var(--border) solid var(--line-strong);
+  border-radius:var(--r-xl);
+  background:var(--bg);
+  box-shadow:var(--shadow-sm);
+  transition:border-color var(--base) var(--ease), box-shadow var(--base) var(--ease);
+}
+.composer:focus-within{
+  border-color:var(--accent-line);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+.composer__chips{ display:flex; flex-wrap:wrap; gap:var(--s-1); padding:var(--s-2) var(--s-3) 0 }
+.composer__chips:empty{ display:none }
+.composer__input{
+  display:block; width:100%;
+  border:0; background:none; resize:none; outline:none;
+  padding:var(--s-3) var(--s-3) var(--s-2);
+  font-size:var(--t-15); line-height:1.6; letter-spacing:var(--ls-snug);
+  max-height:200px;
+}
+.composer__input::placeholder{ color:var(--text-4) }
+.composer__bar{
+  display:flex; align-items:center; gap:var(--s-1);
+  padding:0 var(--s-2) var(--s-2);
+}
+.composer__spacer{ flex:1 }
+.composer__divider{ width:var(--border); height:16px; background:var(--line); margin:0 var(--s-1) }
+/* Model routing sits next to the message it governs. */
+.composer__model{
+  display:flex; align-items:center; gap:5px;
+  height:var(--ctl-sm); padding:0 var(--s-2);
+  border-radius:var(--r-md);
+  font-size:var(--t-12); color:var(--text-2);
+  transition:background var(--fast) var(--ease);
+}
+.composer__model:hover{ background:var(--raised) }
+.composer__hint{ text-align:center; font-size:var(--t-11); color:var(--text-4); margin:var(--s-2) 0 0 }
+
+/* =========================================================== artifact pane
+   Output that outlives the turn. The thread keeps a reference card; the
+   thing itself lives here and survives the next question. */
+.artpane{
+  position:relative;
+  border-left:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.app[data-art="closed"] .artpane{ border-left-color:transparent }
+
+/* The movable boundary. Invisible until you reach for it, and kept fully
+   inside the pane so the pane can still clip itself shut. */
+.artpane__grip{
+  position:absolute; left:0; top:0; bottom:0;
+  width:8px;
+  cursor:col-resize;
+  z-index:4;
+}
+.artpane__grip::after{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0;
+  width:var(--border);
+  background:var(--accent);
+  opacity:0;
+  transition:opacity var(--fast) var(--ease);
+}
+.artpane__grip:hover::after,
+.app[data-resizing="true"] .artpane__grip::after{ opacity:1 }
+.app[data-resizing="true"]{ cursor:col-resize; user-select:none; transition:none }
+
+.artpane__head{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--topbar-h);
+  padding:0 var(--s-2) 0 var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+}
+.artpane__ico{ color:var(--text-4); display:flex; flex:none }
+.artpane__title{
+  flex:1; min-width:0;
+  font-size:var(--t-12); font-weight:var(--w-medium); color:var(--text-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.artpane__body{ flex:1 1 0; min-height:0; overflow:auto; padding:var(--s-4) }
+.artpane__body > .prose{ font-size:var(--t-13) }
+.artpane__foot{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-3);
+  padding:0 var(--s-3);
+  height:var(--ctl-lg);
+  border-top:var(--border) solid var(--line);
+  font-size:var(--t-11); color:var(--text-4);
+}
+.artpane__foot .t-mono{ white-space:nowrap }
+
+/* ================================================================ app rail
+   Solutions, as launchable surfaces. Narrow by default; the chevron at the
+   foot widens it to show names rather than opening a separate screen. */
+.apprail{
+  grid-row:1;
+  display:flex; flex-direction:column;
+  min-height:0;
+  background:var(--surface);
+  border-left:var(--border) solid var(--line);
+}
+.app[data-apps="closed"] .apprail{ border-left-color:transparent }
+
+.apprail__head{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-1);
+  height:var(--topbar-h);
+  padding:0 var(--s-2);
+  border-bottom:var(--border) solid var(--line);
+}
+.apprail__label{ flex:1; min-width:0; white-space:nowrap; overflow:hidden }
+/* The label stays even in the narrow rail — it is the only thing naming
+   the column — but drops its tracking to fit beside the toggle. */
+.app:not([data-apps="wide"]) .apprail__label{ font-size:10px; letter-spacing:0 }
+.app[data-apps="wide"] .apprail__head{ padding:0 var(--s-1) 0 var(--s-2); gap:var(--s-2) }
+
+.apprail__body{
+  flex:1 1 0; min-height:0;
+  overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; align-items:stretch;
+  gap:var(--s-1);
+  padding:var(--s-2);
+}
+/* Narrow rail: the row collapses to just its tile. The hover surface goes
+   with the label, because a circle already has its own hover state. */
+.app:not([data-apps="wide"]) .approw{ justify-content:center; padding:0 }
+.app:not([data-apps="wide"]) .approw:hover{ background:none }
+.app:not([data-apps="wide"]) .approw__name,
+.app:not([data-apps="wide"]) .approw .badge{ display:none }
+.app:not([data-apps="wide"]) .approw[aria-current="true"]{ background:none }
+.app:not([data-apps="wide"]) .approw[aria-current="true"] .apptile{
+  background:var(--line-strong); color:var(--text);
+}
+
+.apprail__more{
+  flex:none;
+  display:grid; place-items:center;
+  height:var(--ctl-lg);
+  border-top:var(--border) solid var(--line);
+  color:var(--text-4);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.apprail__more:hover{ background:var(--raised); color:var(--text-2) }
+.apprail__more svg{ transition:rotate var(--base) var(--ease) }
+.app[data-apps="wide"] .apprail__more svg{ rotate:180deg }
+
+/* =============================================================== app sheet
+   Launched from the rail it sits against, so it stops short of the rail
+   rather than covering it — switching apps is one click, not close-then-open.
+   No scrim: the thread behind stays readable, which is the whole reason an
+   app is a layer and not a page. */
+.appsheet{
+  position:fixed; z-index:70;
+  top:0; bottom:var(--status-h); right:var(--app-w);
+  width:min(460px,92vw);
+  display:flex; flex-direction:column;
+  min-height:0;
+  background:var(--bg);
+  border-left:var(--border) solid var(--line);
+  box-shadow:var(--shadow-lg);
+  opacity:0; translate:12px 0;
+  pointer-events:none;
+  transition:opacity var(--base) var(--ease), translate var(--base) var(--ease-out);
+}
+.appsheet[data-open="true"]{ opacity:1; translate:0 0; pointer-events:auto }
+
+.appsheet__head{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-3);
+  height:var(--topbar-h);
+  padding:0 var(--s-2) 0 var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+}
+.appsheet__id{ flex:1; min-width:0 }
+.appsheet__name{
+  display:block;
+  font-size:var(--t-13); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.appsheet__sub{
+  display:block;
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.appsheet__body{ flex:1 1 0; min-height:0; overflow-y:auto; padding:var(--s-4) }
+.appsheet__body > * + *{ margin-top:var(--s-4) }
+.appsheet__foot{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--ctl-lg);
+  padding:0 var(--s-2) 0 var(--s-3);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+  font-size:var(--t-11); color:var(--text-4);
+}
+
+/* =============================================================== statusbar */
+.statusbar{
+  grid-column:1 / -1;
+  grid-row:2;
+  display:flex; align-items:center; gap:var(--s-4);
+  padding:0 var(--s-3);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+  font-size:var(--t-11); color:var(--text-4);
+}
+.statusbar__item{ display:flex; align-items:center; gap:6px; white-space:nowrap }
+.statusbar__spacer{ flex:1 }
+.statusbar__meter{ width:56px; flex:none }
+.statusbar button.statusbar__item{
+  padding:0 var(--s-2); height:calc(var(--status-h) - 6px);
+  border-radius:var(--r-sm);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.statusbar button.statusbar__item:hover{ background:var(--raised); color:var(--text-2) }
+
+/* ============================================================== responsive
+   Widths that cannot coexist are resolved in app.js, which closes panes by
+   priority as the viewport narrows. What is left here is only padding. */
+@media (max-width:820px){
+  .pane__measure{ padding:var(--s-6) var(--s-4) var(--s-10) }
+  .pane__pad{ padding:var(--s-4) }
+  .composer-wrap{ padding:0 var(--s-4) var(--s-4) }
+  .topbar__title{ max-width:20ch }
+  .statusbar__hide-sm{ display:none }
+}
