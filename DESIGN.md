@@ -244,6 +244,41 @@ timestamp, both carried in the fixture beside the display string, because
 `"2.1 MB"` and `"412 MB"` sort backwards as text. Ascending points up and
 descending points down, from one rotated glyph so the two cannot drift apart.
 
+## Assistants: filter the list, shortlist the ones you use
+
+Sixteen assistants is past the point where a grid is read rather than scanned,
+so the view is a filtered list beside a shortlist:
+
+- **Filter tabs** — `All`, `Favourites`, then one per team, each carrying its
+  count so the size of a pile is known before it is opened. Same `.tab`
+  component as the knowledge detail; a filter and a section are the same
+  gesture, so they should not be two controls.
+- **The favourites column** is fixed at 240px. It is a shortlist, and a
+  shortlist that grows with the viewport stops being one. Below 1080px it stops
+  being a column and becomes a section.
+- **Starring is not decoration.** The favourites column *is* what the composer
+  offers, so starring an assistant and putting it within reach of the next
+  message are the same act. That is why the column is headed **In the
+  composer** rather than "Favourites" — the header names the consequence, not
+  the gesture.
+
+A favourite is one glyph in two weights (outline, then filled in the accent)
+rather than two glyphs, so the states cannot drift out of shape.
+
+**In the composer**, the assistant button opens a popover of favourites,
+anchored to the composer rather than the viewport, and carries a count so an
+empty picker is visible before it is opened. Picking one drops a chip into the
+composer's chip row — beside the attachments, because an assistant governs the
+message, the same reason model routing lives there.
+
+Two consequences of binding one, both deliberate:
+
+- **Attachments die with their message; the binding does not.** The chip row is
+  cleared on send and the assistant chip is put back.
+- **A bound assistant answers under its own name** in the turn header, instead
+  of the model's. That is what binding one means; the model it routes to is
+  still shown in the composer.
+
 ## An app is a layer, not a destination
 
 Clicking an app used to navigate to the solution behind it, which meant opening

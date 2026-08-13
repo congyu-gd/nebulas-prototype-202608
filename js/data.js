@@ -283,20 +283,59 @@ const PROJECTS = [
    An assistant is a named binding of model, skills and knowledge. The rail
    has no icon for it — it belongs to the conversation, so it lives in the
    chat sidebar next to the threads it governs. */
+/* Enough of these that the list has to be filtered rather than read. `team`
+   drives the filter tabs, `fav` puts one in the composer's picker. */
 const ASSISTANTS = [
-  { id:'as1', name:'Revenue analyst', state:'ok', model:'Nebula Pro',
+  { id:'as1', name:'Revenue analyst', state:'ok', model:'Nebula Pro', team:'Revenue', fav:true,
     desc:'Answers from the finance warehouse. Refuses to attribute growth without stripping non-recurring lines first.',
     skills:['warehouse.query','code.run','chart.build'], kb:'Finance corpus', threads:4 },
-  { id:'as2', name:'Code reviewer', state:'ok', model:'Nebula Pro (extended thinking)',
+  { id:'as2', name:'Code reviewer', state:'ok', model:'Nebula Pro (extended thinking)', team:'Engineering', fav:true,
     desc:'Reads the repo before answering. Ordered findings, no style commentary unless asked.',
     skills:['fs.read','code.analyze','search.repo'], kb:'Engineering docs', threads:2 },
-  { id:'as3', name:'Support triage', state:'ok', model:'Nebula Fast',
+  { id:'as3', name:'Support triage', state:'ok', model:'Nebula Fast', team:'Support', fav:false,
     desc:'Labels inbound tickets by product area and urgency, and escalates anything it is unsure about.',
     skills:['classify','search.docs'], kb:'Support corpus', threads:1 },
-  { id:'as4', name:'Board writer', state:'idle', model:'Nebula Pro',
+  { id:'as4', name:'Board writer', state:'idle', model:'Nebula Pro', team:'Revenue', fav:true,
     desc:'Drafts the leadership digest from the week\'s analyses. Plain register, no adjectives.',
-    skills:['search.docs','doc.write'], kb:'Finance corpus', threads:0 }
+    skills:['search.docs','doc.write'], kb:'Finance corpus', threads:0 },
+  { id:'as5', name:'Forecast reviewer', state:'ok', model:'Nebula Pro', team:'Revenue', fav:false,
+    desc:'Checks a forecast against the recurring base and names every assumption it cannot verify.',
+    skills:['warehouse.query','code.run'], kb:'Finance corpus', threads:3 },
+  { id:'as6', name:'Pricing analyst', state:'ok', model:'Nebula Pro', team:'Revenue', fav:false,
+    desc:'Models cohort exposure to a pricing change. Reports the exempt population separately.',
+    skills:['warehouse.query','code.run','chart.build'], kb:'Finance corpus', threads:1 },
+  { id:'as7', name:'Renewals desk', state:'ok', model:'Nebula Fast', team:'Revenue', fav:false,
+    desc:'Answers who renews when, and what is at risk in the next quarter.',
+    skills:['warehouse.query','search.docs'], kb:'Finance corpus', threads:2 },
+  { id:'as8', name:'Incident scribe', state:'ok', model:'Nebula Pro', team:'Engineering', fav:false,
+    desc:'Writes the timeline from logs and traces while the incident is still open. No causes until the data supports one.',
+    skills:['search.logs','trace.read','doc.write'], kb:'Engineering docs', threads:5 },
+  { id:'as9', name:'Runbook keeper', state:'idle', model:'Nebula Fast', team:'Engineering', fav:false,
+    desc:'Compares runbooks against what the services actually do, and flags the drift.',
+    skills:['fs.read','search.repo'], kb:'Engineering docs', threads:0 },
+  { id:'as10', name:'Migration planner', state:'draft', model:'Nebula Pro (extended thinking)', team:'Engineering', fav:false,
+    desc:'Sequences a migration and states what has to be reversible at each step.',
+    skills:['code.analyze','doc.write'], kb:'Engineering docs', threads:0 },
+  { id:'as11', name:'Churn analyst', state:'ok', model:'Nebula Pro', team:'Support', fav:false,
+    desc:'Ranks accounts by churn signal and separates the signals it can act on from the ones it cannot.',
+    skills:['warehouse.query','classify'], kb:'Support corpus', threads:2 },
+  { id:'as12', name:'Macro editor', state:'ok', model:'Nebula Fast', team:'Support', fav:false,
+    desc:'Rewrites support macros to match the current product vocabulary.',
+    skills:['search.docs','doc.write'], kb:'Support corpus', threads:1 },
+  { id:'as13', name:'Escalation reviewer', state:'idle', model:'Nebula Pro', team:'Support', fav:false,
+    desc:'Reads a reopened ticket thread and says whether the escalation was warranted.',
+    skills:['classify','search.docs'], kb:'Support corpus', threads:0 },
+  { id:'as14', name:'Copy pass', state:'ok', model:'Nebula Pro', team:'Product', fav:false,
+    desc:'Rewrites interface copy to state the condition and the one action that changes it.',
+    skills:['doc.write'], kb:'Engineering docs', threads:1 },
+  { id:'as15', name:'Onboarding guide', state:'draft', model:'Nebula Fast', team:'Product', fav:false,
+    desc:'Answers new-workspace questions from the docs, and admits when the docs do not cover it.',
+    skills:['search.docs'], kb:'Engineering docs', threads:0 },
+  { id:'as16', name:'Meeting digest', state:'ok', model:'Nebula Mini', team:'Product', fav:false,
+    desc:'Turns a transcript into decisions, owners and open questions. Nothing else.',
+    skills:['doc.write','classify'], kb:'Engineering docs', threads:3 }
 ];
+const ASSISTANT_TEAMS = ['Revenue','Engineering','Support','Product'];
 
 /* --------------------------------------------------------------- schedule */
 const SCHEDULE = [
@@ -791,7 +830,7 @@ const REPLIES = [
 ];
 
 return {
-  ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, SCHEDULE,
+  ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SCHEDULE,
   KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, SOLUTIONS, APPS, APP_PANELS, CLOUD, CONNECTIONS,
   ACCOUNT, MODELS, REPLIES
 };

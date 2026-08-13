@@ -59,6 +59,9 @@
     <!-- Composer. Model routing lives here — next to the message it affects. -->
     <div class="composer-wrap" id="composerWrap">
       <form class="composer" id="composer">
+        <!-- Anchored to the composer, not the viewport, so it opens where the
+             button that summoned it is. -->
+        <div class="pop" id="assistPop" data-open="false" role="menu"></div>
         <div class="composer__chips" id="composerChips"></div>
         <textarea class="composer__input" id="composerInput" rows="1"
                   placeholder="Ask anything, or describe a task…"></textarea>
@@ -67,9 +70,11 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5 12.4 19a5 5 0 0 1-7-7l7.6-7.6a3.3 3.3 0 0 1 4.7 4.7l-7.6 7.6a1.7 1.7 0 0 1-2.4-2.4l7-7"/></svg>
             Attach
           </button>
-          <button type="button" class="btn btn--ghost btn--sm" id="assistBtn">
+          <!-- Favourited assistants are chosen from here, so one can be bound
+               to a message without leaving the thread. -->
+          <button type="button" class="btn btn--ghost btn--sm" id="assistBtn" aria-haspopup="true">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="2.5"/><path d="M12 3v4M8.5 12v1.5M15.5 12v1.5"/></svg>
-            Assistants
+            Assistants <span style="color:var(--text-4)" id="assistCount"></span>
           </button>
           <span class="composer__divider"></span>
           <button type="button" class="composer__model" id="modelBtn">

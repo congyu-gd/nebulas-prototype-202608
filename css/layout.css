@@ -260,6 +260,46 @@
 }
 .card--dash .card__title{ line-height:var(--lh-tight) }
 
+/* ============================================================== assistants
+   A filtered list beside the shortlist that feeds the composer. The side
+   column is fixed width: it is a shortlist, and a shortlist that grows with
+   the viewport stops being one. */
+.asst{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 240px;
+  gap:var(--s-6);
+  align-items:start;
+}
+.asst__main{ min-width:0 }
+.asst__side{
+  min-width:0;
+  padding:var(--s-3);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+}
+.asst__sidehead{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding-bottom:var(--s-2);
+  border-bottom:var(--border) solid var(--line);
+}
+.asst__sidehead .t-mono{ margin-left:auto }
+.asst__note{
+  margin:var(--s-2) 0 var(--s-3);
+  font-size:var(--t-11); color:var(--text-3); line-height:var(--lh-ui);
+}
+.asst__fav{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-2) 0;
+  border-top:var(--border) solid var(--line);
+}
+.asst__fav .row__main{ flex:1 }
+
+/* Below this the shortlist stops being a column and becomes a section. */
+@media (max-width:1080px){
+  .asst{ grid-template-columns:minmax(0,1fr) }
+}
+
 /* ================================================================ messages */
 .msg{ position:relative; padding-bottom:var(--s-8) }
 .msg__head{
@@ -328,6 +368,9 @@
   background:none;
 }
 .composer{
+  /* The positioning context for the assistant picker, which opens above the
+     bar that summons it. */
+  position:relative;
   max-width:var(--composer-max);
   margin:0 auto;
   border:var(--border) solid var(--line-strong);

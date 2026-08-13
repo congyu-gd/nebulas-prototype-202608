@@ -212,6 +212,57 @@ button.chip--plain:hover{ background:var(--raised) }
 .tab[aria-selected="true"]{ background:var(--raised-2); color:var(--text) }
 .tab svg{ color:var(--text-4) }
 .tab[aria-selected="true"] svg{ color:var(--accent) }
+/* A count on a filter tab, so the size of each pile is known before it is
+   opened. Mono, because it is generated. */
+.tab__n{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.tab[aria-selected="true"] .tab__n{ color:var(--text-3) }
+
+/* ================================================================== star
+   A favourite is a binary, so it gets one glyph in two weights rather than
+   two glyphs. Filled takes the accent: it is the one state you acted to
+   create. */
+.star{ margin-left:var(--s-1) }
+.star svg{ color:var(--text-4) }
+.star:hover svg{ color:var(--text-2) }
+.star[aria-pressed="true"] svg{ color:var(--accent) }
+
+/* ============================================================== popover
+   A short list summoned by a control, anchored to it rather than to the
+   viewport. Floats, so it earns a shadow. */
+.pop{
+  position:absolute; z-index:40;
+  left:var(--s-2); bottom:calc(100% + var(--s-2));
+  min-width:240px; max-width:320px;
+  padding:var(--s-1);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--bg);
+  box-shadow:var(--shadow-md);
+  opacity:0; translate:0 4px;
+  pointer-events:none;
+  transition:opacity var(--fast) var(--ease), translate var(--fast) var(--ease);
+}
+.pop[data-open="true"]{ opacity:1; translate:0 0; pointer-events:auto }
+.pop__item{
+  display:flex; align-items:center; gap:var(--s-2);
+  width:100%; text-align:left;
+  padding:var(--s-2);
+  border-radius:var(--r-md);
+  font-size:var(--t-12); color:var(--text-2);
+  transition:background var(--fast) var(--ease);
+}
+.pop__item:hover{ background:var(--raised) }
+.pop__item[aria-current="true"]{ background:var(--accent-soft); color:var(--accent) }
+.pop__nm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text) }
+.pop__item[aria-current="true"] .pop__nm{ color:var(--accent) }
+.pop__sub{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.pop__item--foot{
+  margin-top:var(--s-1);
+  border-top:var(--border) solid var(--line);
+  border-radius:0 0 var(--r-md) var(--r-md);
+  color:var(--text-3); font-size:var(--t-11);
+}
+.pop__empty{ padding:var(--s-3) var(--s-2); font-size:var(--t-12); color:var(--text-4) }
 
 /* A tab's own toolbar: what the content was last synced, and what you can do
    to it. One primary action per toolbar, because only one of them is the

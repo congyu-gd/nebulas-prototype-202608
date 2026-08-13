@@ -109,6 +109,10 @@ const P = {
   pulse:'<path d="M3 12h3.5l2.2-5.5 3.4 11 2.3-5.5H21"/>',
   sort:'<path d="m8.5 10 3.5-3.5L15.5 10"/><path d="m8.5 14 3.5 3.5L15.5 14"/>',
   code:'<path d="m9.5 8.5-4 3.5 4 3.5"/><path d="m14.5 8.5 4 3.5-4 3.5"/>',
+  /* One star, outlined or filled — the filled one is the same path with a fill,
+     so the two states cannot drift out of shape. */
+  star:'<path d="m12 4.3 2.35 4.9 5.35.75-3.9 3.75.95 5.3-4.75-2.6-4.75 2.6.95-5.3L4.3 9.95l5.35-.75Z"/>',
+  starOn:'<path d="m12 4.3 2.35 4.9 5.35.75-3.9 3.75.95 5.3-4.75-2.6-4.75 2.6.95-5.3L4.3 9.95l5.35-.75Z" fill="currentColor"/>',
   trash:'<path d="M4.5 7h15M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M6.5 7l.8 11.6A1.5 1.5 0 0 0 8.8 20h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/>',
 
   /* app glyphs — the identity half of an app tile */
@@ -145,6 +149,8 @@ const state = {
      The tab survives switching bases — you were looking at Files for a
      reason — but a selection does not. */
   kb:{ tab:'files', sel:[], sort:{ c:'added', d:-1 } },
+  asst:{ tab:'All' },          /* which assistant filter is showing */
+  assistant:null,              /* the assistant bound to the next message */
   /* null means "follow the viewport"; true/false is an explicit choice. */
   pref:{ list:null, art:null, apps:null },
   appsWide:false
@@ -768,37 +774,131 @@ function threadView(body, t){
   if (last) openArtifact(last.artifactId, true);
 }
 
+/* ========================================================== assistants
+   There are more of these than anyone reads, so the list is filtered rather
+   than scrolled, and the ones you actually use are pinned to a column of their
+   own — that column is what the composer offers, so starring an assistant here
+   is the same act as putting it within reach of the next message. */
+const favourites = () => D.ASSISTANTS.filter(a => a.fav);
+
+function asstTabs(){
+  const counts = { All:D.ASSISTANTS.length, Favourites:favourites().length };
+  D.ASSISTANT_TEAMS.forEach(t => counts[t] = D.ASSISTANTS.filter(a => a.team === t).length);
+  const order = ['All','Favourites'].concat(D.ASSISTANT_TEAMS);
+
+  const bar = el('div','tabs');
+  bar.setAttribute('role','tablist');
+  order.forEach(t => {
+    const b = el('button','tab',
+      (t === 'Favourites' ? ic('star',14) : '') +
+      '<span>' + esc(t) + '</span>' +
+      '<span class="tab__n">' + counts[t] + '</span>');
+    b.type = 'button';
+    b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', String(state.asst.tab === t));
+    b.onclick = () => { state.asst.tab = t; render(); };
+    bar.append(b);
+  });
+  return bar;
+}
+
+function asstCard(a){
+  const c = el('article','card');
+  c.innerHTML =
+    '<div class="card__head">' +
+      '<span class="dot ' + (STATE_DOT[a.state] || '') + '"></span>' +
+      '<span class="card__title">' + esc(a.name) + '</span>' +
+      '<span style="flex:1"></span>' +
+      '<span class="t-mono">' + esc(a.threads) + ' threads</span>' +
+    '</div>';
+  const star = el('button','iconbtn iconbtn--sm star', ic(a.fav ? 'starOn' : 'star', 14));
+  star.type = 'button';
+  star.setAttribute('aria-pressed', String(a.fav));
+  star.title = a.fav ? 'Remove from favourites' : 'Add to favourites — appears in the composer';
+  star.onclick = e => {
+    e.stopPropagation();
+    a.fav = !a.fav;
+    toast(a.fav ? a.name + ' added to favourites' : a.name + ' removed from favourites');
+    render();
+    renderComposer();
+  };
+  c.firstChild.append(star);
+
+  const b = el('div','card__body');
+  b.innerHTML =
+    '<div class="t-meta" style="margin-bottom:var(--s-3)">' + esc(a.desc) + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:var(--s-1);margin-bottom:var(--s-3)">' +
+      a.skills.map(s => '<span class="chip">' + esc(s) + '</span>').join('') +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:var(--s-2)">' +
+      '<span class="badge badge--mono">' + esc(a.team) + '</span>' +
+      '<span style="flex:1"></span>' +
+      '<span class="t-mono">' + esc(a.kb) + '</span>' +
+    '</div>';
+  c.append(b);
+  return c;
+}
+
 function assistantsView(body){
   const pad = el('div','pane__pad');
   pad.append(pageHead('Assistants',
     'An assistant is a named binding of a model, a set of skills and one knowledge base. ' +
     'Threads pick one; agents and solutions reuse them.'));
+
+  const split = el('div','asst');
+  const left = el('div','asst__main');
+  left.append(asstTabs());
+
+  const tab = state.asst.tab;
+  const shown = tab === 'All' ? D.ASSISTANTS
+              : tab === 'Favourites' ? favourites()
+              : D.ASSISTANTS.filter(a => a.team === tab);
+
   const grid = el('div','grid-cards');
-  D.ASSISTANTS.forEach(a => {
-    const c = el('article','card');
-    c.innerHTML =
-      '<div class="card__head">' +
-        '<span class="dot ' + (STATE_DOT[a.state] || '') + '"></span>' +
-        '<span class="card__title">' + esc(a.name) + '</span>' +
-        '<span style="flex:1"></span>' +
-        '<span class="t-mono">' + esc(a.threads) + ' threads</span>' +
-      '</div>' +
-      '<div class="card__body">' +
-        '<div class="t-meta" style="margin-bottom:var(--s-3)">' + esc(a.desc) + '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:var(--s-1);margin-bottom:var(--s-3)">' +
-          a.skills.map(s => '<span class="chip">' + esc(s) + '</span>').join('') +
-        '</div>' +
-        '<div style="display:flex;align-items:center;gap:var(--s-2)">' +
-          '<span class="badge">' + esc(a.model) + '</span>' +
-          '<span style="flex:1"></span>' +
-          '<span class="t-mono">' + esc(a.kb) + '</span>' +
-        '</div>' +
-      '</div>';
-    c.style.cursor = 'pointer';
-    c.onclick = () => toast('Open ' + a.name + ' — prototype');
-    grid.append(c);
+  grid.style.marginTop = 'var(--s-4)';
+  if (!shown.length){
+    left.append(emptyState('agent','No favourites yet',
+      'Star an assistant and it appears here and in the composer, ready to pick for the next message.'));
+  } else {
+    shown.forEach(a => grid.append(asstCard(a)));
+    left.append(grid);
+  }
+  split.append(left);
+
+  /* The favourites column. Order is the order they were starred, which is the
+     order the composer offers them in. */
+  const side = el('aside','asst__side');
+  const favs = favourites();
+  side.innerHTML =
+    '<div class="asst__sidehead">' +
+      '<span class="t-eyebrow">In the composer</span>' +
+      '<span class="t-mono">' + favs.length + '</span>' +
+    '</div>' +
+    '<p class="asst__note">Favourites appear in the composer’s assistant picker, so you can bind one to a message without leaving the thread.</p>';
+
+  if (!favs.length){
+    const none = el('p','asst__note');
+    none.textContent = 'Nothing starred yet.';
+    none.style.color = 'var(--text-4)';
+    side.append(none);
+  }
+  favs.forEach(a => {
+    const r = el('div','asst__fav');
+    r.innerHTML =
+      '<span class="row__main">' +
+        '<span class="row__title">' + esc(a.name) + '</span>' +
+        '<span class="row__sub">' + esc(a.model) + '</span>' +
+      '</span>';
+    const x = el('button','iconbtn iconbtn--xs', ic('x',11));
+    x.type = 'button';
+    x.title = 'Remove from favourites';
+    x.onclick = () => { a.fav = false; render(); renderComposer(); };
+    r.append(x);
+    side.append(r);
   });
-  pad.append(grid);
+  split.append(side);
+
+  pad.append(split);
   body.append(pad);
 }
 
@@ -1806,7 +1906,10 @@ async function runTurn(userText){
   const wrap = el('div','msg');
   wrap.dataset.role = 'ai';
   const head = el('div','msg__head');
-  head.innerHTML = '<span class="msg__who">' + esc(state.model) +
+  /* A bound assistant answers under its own name — that is what binding one
+     means. The model it routes to is still in the composer. */
+  head.innerHTML = '<span class="msg__who">' +
+    esc(state.assistant ? find(D.ASSISTANTS, state.assistant).name : state.model) +
                    '</span><span class="msg__meta" data-dur>thinking...</span>';
   wrap.append(head);
 
@@ -1904,6 +2007,71 @@ async function runTurn(userText){
 /* =============================================================== composer */
 function renderComposer(){
   $('#modelLabel').textContent = state.model;
+  /* The button counts what it can offer, so an empty picker is visible before
+     it is opened. */
+  const n = favourites().length;
+  $('#assistCount').textContent = n ? String(n) : '';
+  syncAssistantChip();
+}
+
+/* The assistant bound to the next message. It rides in the composer's chip row
+   next to the attachments, because it governs the message rather than the
+   thread — the same reason model routing lives there. */
+function syncAssistantChip(){
+  const row = $('#composerChips');
+  const old = $('[data-asst]', row);
+  if (old) old.remove();
+  if (!state.assistant) return;
+  const a = find(D.ASSISTANTS, state.assistant);
+  const c = el('div','chip chip--removable', '<span style="display:flex;color:var(--accent)">' +
+    ic('agent',12) + '</span><span>' + esc(a.name) + '</span>');
+  c.dataset.asst = a.id;
+  const x = el('button','chip__x', ic('x',11));
+  x.type = 'button';
+  x.onclick = () => { state.assistant = null; syncAssistantChip(); };
+  c.append(x);
+  row.prepend(c);
+}
+
+function assistantPicker(){
+  const pop = $('#assistPop');
+  if (pop.dataset.open === 'true') return closeAssistantPicker();
+
+  pop.innerHTML = '';
+  const favs = favourites();
+  if (!favs.length){
+    pop.append(el('div','pop__empty','No favourites yet. Star an assistant to put it here.'));
+  }
+  favs.forEach(a => {
+    const b = el('button','pop__item',
+      '<span style="display:flex;color:var(--text-4)">' + ic('agent',13) + '</span>' +
+      '<span class="pop__nm">' + esc(a.name) + '</span>' +
+      '<span class="pop__sub">' + esc(a.team) + '</span>');
+    b.type = 'button';
+    b.setAttribute('aria-current', String(state.assistant === a.id));
+    b.onclick = () => {
+      state.assistant = state.assistant === a.id ? null : a.id;
+      closeAssistantPicker();
+      syncAssistantChip();
+      $('#composerInput').focus();
+    };
+    pop.append(b);
+  });
+  const manage = el('button','pop__item pop__item--foot', ic('open',13) + '<span>Manage assistants</span>');
+  manage.type = 'button';
+  manage.onclick = () => { closeAssistantPicker(); select('chat','assistants'); };
+  pop.append(manage);
+
+  pop.dataset.open = 'true';
+  /* One-shot outside click, bound after this click finishes bubbling. */
+  setTimeout(() => document.addEventListener('mousedown', outsideAssistant), 0);
+}
+function closeAssistantPicker(){
+  $('#assistPop').dataset.open = 'false';
+  document.removeEventListener('mousedown', outsideAssistant);
+}
+function outsideAssistant(e){
+  if (!e.target.closest('#assistPop') && !e.target.closest('#assistBtn')) closeAssistantPicker();
 }
 function autosize(){
   const i = $('#composerInput');
@@ -2077,7 +2245,10 @@ function boot(){
     input.value = '';
     autosize();
     $('#sendBtn').disabled = true;
+    /* Attachments were for that message; the assistant binding survives it,
+       so it is put back after the row is cleared. */
     $('#composerChips').innerHTML = '';
+    syncAssistantChip();
     runTurn(v);
   });
 
@@ -2092,7 +2263,7 @@ function boot(){
     c.append(x);
     $('#composerChips').append(c);
   };
-  $('#assistBtn').onclick = () => select('chat','assistants');
+  $('#assistBtn').onclick = assistantPicker;
   $('#modelBtn').onclick = () => {
     const i = D.MODELS.indexOf(state.model);
     state.model = D.MODELS[(i + 1) % D.MODELS.length];
