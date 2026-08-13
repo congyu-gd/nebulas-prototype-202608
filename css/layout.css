@@ -212,6 +212,53 @@
   gap:var(--s-1);
   max-width:var(--measure);
 }
+/* Data Discovery carries dashboards below the input, so the block stops being
+   centred — vertical centring with more content than height clips the top. */
+.hero--tall{ justify-content:flex-start; padding-top:var(--s-8) }
+
+/* ------------------------------------------------------------- dashboards */
+.hero__dash{ width:100%; max-width:var(--measure); text-align:left; margin-top:var(--s-4) }
+.hero__dashhead{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding-bottom:var(--s-2);
+  margin-bottom:var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+}
+.dash__tiles{ display:flex; gap:var(--s-4) }
+.dash__tile{ display:block; min-width:0 }
+.dash__v{
+  display:block;
+  font-size:var(--t-18); font-weight:var(--w-semi);
+  letter-spacing:var(--ls-tight); line-height:1.2;
+}
+/* In a card the sparkline IS the data, not a texture, so its bars take a
+   readable weight. The accent stays on the latest value, the same way the
+   leading bar in a ranked list takes it. */
+.dash__spark{ height:44px }
+.dash__spark i{ background:var(--line-strong) }
+
+.dash__foot{
+  display:flex; align-items:center; gap:var(--s-2);
+  margin-top:var(--s-3);
+  padding-top:var(--s-2);
+  border-top:var(--border) solid var(--line);
+}
+/* The source can be elided; the age and the action cannot, so they hold their
+   line and the name gives way. */
+.dash__foot .t-mono:first-of-type{
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.dash__foot .t-mono:last-of-type{ margin-left:auto; white-space:nowrap }
+.dash__foot .btn{ margin-left:var(--s-1) }
+
+/* A dashboard's name is what you are scanning for, so in a narrow card it
+   wraps and the head grows rather than truncating it. */
+.card--dash .card__head{
+  height:auto; min-height:var(--ctl-lg);
+  align-items:flex-start;
+  padding:var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+}
+.card--dash .card__title{ line-height:var(--lh-tight) }
 
 /* ================================================================ messages */
 .msg{ position:relative; padding-bottom:var(--s-8) }
@@ -272,6 +319,13 @@
   flex:none;
   padding:0 var(--s-6) var(--s-5);
   background:linear-gradient(to top,var(--bg) 62%,transparent);
+}
+/* Inside the hero the composer is part of the block rather than a bar floating
+   over a scroll, so it drops the fade and the pinned padding. */
+.composer-wrap--inline{
+  width:100%; max-width:var(--composer-max);
+  padding:0;
+  background:none;
 }
 .composer{
   max-width:var(--composer-max);

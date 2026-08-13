@@ -101,6 +101,16 @@ const P = {
   diff:'<path d="M6 3v12a3 3 0 0 0 3 3h6"/><path d="M3 6h6M15 15l3 3-3 3"/><path d="M18 21V9a3 3 0 0 0-3-3H9"/>',
   open:'<path d="M14 4h6v6"/><path d="m20 4-8.5 8.5"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
 
+  /* knowledge-detail tabs */
+  files:'<path d="M8 8V5.5A1.5 1.5 0 0 1 9.5 4h6.6L20 7.9v8.6a1.5 1.5 0 0 1-1.5 1.5H16"/><rect x="4" y="8" width="10" height="12" rx="1.5"/>',
+  trend:'<path d="m3 16 5.5-5.5 3.5 3.5L21 5"/><path d="M15 5h6v6"/>',
+  pie:'<path d="M12 3a9 9 0 1 0 9 9h-9Z"/><path d="M14.5 3.4A9 9 0 0 1 20.6 9.5H14.5Z"/>',
+  lock:'<rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"/>',
+  pulse:'<path d="M3 12h3.5l2.2-5.5 3.4 11 2.3-5.5H21"/>',
+  sort:'<path d="m8.5 10 3.5-3.5L15.5 10"/><path d="m8.5 14 3.5 3.5L15.5 14"/>',
+  code:'<path d="m9.5 8.5-4 3.5 4 3.5"/><path d="m14.5 8.5 4 3.5-4 3.5"/>',
+  trash:'<path d="M4.5 7h15M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M6.5 7l.8 11.6A1.5 1.5 0 0 0 8.8 20h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/>',
+
   /* app glyphs — the identity half of an app tile */
   calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>',
   filetext:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
@@ -131,6 +141,10 @@ const state = {
   tokens:0, turns:0, tools:0,
   art:{ id:'a1', pane:0 },
   app:null,                    /* the app id open in the sheet, or null */
+  /* Knowledge detail: which tab, which rows are picked, how they are sorted.
+     The tab survives switching bases — you were looking at Files for a
+     reason — but a selection does not. */
+  kb:{ tab:'files', sel:[], sort:{ c:'added', d:-1 } },
   /* null means "follow the viewport"; true/false is an explicit choice. */
   pref:{ list:null, art:null, apps:null },
   appsWide:false
@@ -259,25 +273,19 @@ const SECTIONS = {
         onClick:() => select('knowledge', key('ds', d.id))
       })));
 
-      body.append(groupLabel('Artifacts'));
-      D.ARTIFACTS.forEach(a => body.append(listRow({
-        lead:'<span class="row__icon">' + ic(KIND_ICON[a.kind] || 'file',13) + '</span>',
-        title:a.title, meta:a.when,
-        current:state.item.knowledge === key('art', a.id),
-        onClick:() => { select('knowledge', key('art', a.id)); openArtifact(a.id); }
-      })));
+      /* Artifacts are not listed here. They live in the pane that renders
+         them and on the turn that produced them — a third address for the
+         same object was a list nobody opened. */
     },
     head(){
       const v = state.item.knowledge, id = idOf(v);
       if (kindOf(v) === 'ds'){ const d = find(D.DATASETS, id); return { title:d.name, sub:d.source }; }
-      if (kindOf(v) === 'art'){ const a = find(D.ARTIFACTS, id); return { title:a.title, sub:a.kind }; }
       const k = find(D.KBS, id);
       return { title:k.name, sub:k.docs + ' docs' };
     },
     main(body){
       const v = state.item.knowledge, id = idOf(v);
       if (kindOf(v) === 'ds')  return datasetView(body, find(D.DATASETS, id));
-      if (kindOf(v) === 'art') return artifactMetaView(body, find(D.ARTIFACTS, id));
       return kbView(body, find(D.KBS, id));
     }
   },
@@ -583,13 +591,24 @@ const STARTERS = {
   'Data Discovery':['Profile a table','Find anomalies','Join two sources','Chart a trend','Explain a metric']
 };
 let heroMode = 'Work';
+let heroNew = false;           /* the new-dashboard form is open */
+
+/* The composer is a single node with its listeners already bound, so it MOVES
+   between the hero and its pinned position rather than being rebuilt. Anything
+   that clears #mainBody has to hand it back first or it is destroyed. */
+function detachComposer(){
+  const c = $('#composerWrap');
+  c.classList.remove('composer-wrap--inline');
+  $('.chatpane').append(c);
+}
 
 function heroNode(){
   const h = el('div','hero');
+  if (heroMode === 'Data Discovery') h.classList.add('hero--tall');
   h.append(el('h2','t-display hero__title','How can I help you?'));
 
   const modes = Object.keys(STARTERS);
-  h.append(segCtl(modes, heroMode, m => { heroMode = m; render(); }));
+  h.append(segCtl(modes, heroMode, m => { heroMode = m; heroNew = false; render(); }));
 
   const row = el('div','hero__starters');
   STARTERS[heroMode].forEach(s => {
@@ -605,7 +624,130 @@ function heroNode(){
     row.append(b);
   });
   h.append(row);
+
+  /* The input follows the starters, because a starter is a half-written
+     message and the place it lands should be the next thing under it. */
+  const c = $('#composerWrap');
+  c.classList.add('composer-wrap--inline');
+  h.append(c);
+
+  if (heroMode === 'Data Discovery') h.append(dashboardsNode());
   return h;
+}
+
+/* ------------------------------------------------------------- dashboards
+   Data Discovery is not only a way to ask questions, so the mode carries the
+   thing those questions build: dashboards, each bound to one source. */
+function dashboardsNode(){
+  const wrap = el('div','hero__dash');
+
+  const head = el('div','hero__dashhead');
+  head.innerHTML = '<span class="t-eyebrow">Dashboards</span>' +
+                   '<span class="t-mono">' + D.DASHBOARDS.length + '</span>' +
+                   '<span style="flex:1"></span>';
+  const add = el('button','btn btn--secondary btn--sm', ic('plus',13) + 'New dashboard');
+  add.type = 'button';
+  add.onclick = () => { heroNew = !heroNew; render(); };
+  head.append(add);
+  wrap.append(head);
+
+  if (heroNew) wrap.append(newDashNode());
+
+  const grid = el('div','grid-cards');
+  D.DASHBOARDS.forEach(db => grid.append(dashCard(db)));
+  wrap.append(grid);
+  return wrap;
+}
+
+function dashCard(db){
+  const ds = find(D.DATASETS, db.ds);
+  const c = el('article','card card--dash');
+  c.innerHTML =
+    '<div class="card__head">' +
+      '<span class="card__title">' + esc(db.name) + '</span>' +
+      '<span style="flex:1"></span>' +
+      '<span class="badge badge--mono">' + esc(db.kind) + '</span>' +
+    '</div>';
+  const b = el('div','card__body');
+  b.innerHTML =
+    '<div class="dash__tiles">' +
+      db.tiles.map(([k, v]) =>
+        '<span class="dash__tile"><span class="stat__k">' + esc(k) + '</span>' +
+        '<span class="dash__v">' + esc(v) + '</span></span>').join('') +
+    '</div>' +
+    '<span class="sparkbars dash__spark" style="margin-top:var(--s-3)">' +
+      db.bars.map(v => '<i style="height:' + v + '%"></i>').join('') +
+    '</span>' +
+    '<div class="dash__foot">' +
+      '<span class="t-mono">' + esc(ds.name) + '</span>' +
+      '<span class="t-mono">' + esc(db.updated) + '</span>' +
+    '</div>';
+  c.append(b);
+  const open = el('button','btn btn--ghost btn--sm','Open');
+  open.type = 'button';
+  open.onclick = () => toast('Open ' + db.name + ' — prototype');
+  c.querySelector('.dash__foot').append(open);
+  return c;
+}
+
+/* Only sources the user holds a grant on can back a dashboard. The ones they
+   cannot use are named rather than hidden — a picker that silently omits them
+   reads as a missing source, not as a permission. */
+function newDashNode(){
+  const usable = D.DATASETS.filter(d => d.grant);
+  const blocked = D.DATASETS.filter(d => !d.grant);
+
+  const card = el('section','card card--raised');
+  card.style.marginBottom = 'var(--s-3)';
+  card.innerHTML = '<div class="card__head"><span class="card__title">New dashboard</span></div>';
+  const b = el('div','card__body');
+
+  let name = '', src = usable[0], kind = D.DASH_KINDS[0];
+
+  const nameIn = el('input','input');
+  nameIn.placeholder = 'Dashboard name';
+  nameIn.oninput = () => { name = nameIn.value; createBtn.disabled = !name.trim(); };
+  b.append(field('Name', nameIn));
+
+  /* The option carries the grant, so the picker says what you may do with a
+     source rather than only that you may see it. Matched whole, not by prefix
+     — one source name can be the start of another. */
+  const label = d => d.name + ' · ' + d.grant;
+  b.append(field('Source',
+    selectCtl(usable.map(label), label(src),
+      v => { src = usable.filter(d => label(d) === v)[0] || src; }),
+    blocked.length
+      ? plural(usable.length, 'source') + ' shared with you. ' +
+        blocked.map(d => d.name).join(', ') + ' is not.'
+      : 'Every source is shared with you.'));
+
+  b.append(field('View', segCtl(D.DASH_KINDS, kind, v => { kind = v; })));
+
+  const row = el('div');
+  row.style.cssText = 'display:flex;gap:var(--s-2);margin-top:var(--s-2)';
+  const createBtn = el('button','btn btn--primary btn--sm','Create dashboard');
+  createBtn.type = 'button';
+  createBtn.disabled = true;
+  createBtn.onclick = () => {
+    D.DASHBOARDS.unshift({
+      id:'db' + (D.DASHBOARDS.length + 1), name:name.trim(), ds:src.id, kind:kind, updated:'just now',
+      tiles:[['Rows', src.rows],['Source', src.source]],
+      /* A new dashboard has nothing measured yet, so the sparkline is flat
+         rather than invented. */
+      bars:[8,8,8,8,8,8,8,8]
+    });
+    heroNew = false;
+    toast('Created "' + name.trim() + '" on ' + src.name);
+    render();
+  };
+  const cancel = el('button','btn btn--ghost btn--sm','Cancel');
+  cancel.type = 'button';
+  cancel.onclick = () => { heroNew = false; render(); };
+  row.append(createBtn, cancel);
+  b.append(row);
+
+  card.append(b);
+  return card;
 }
 
 function threadView(body, t){
@@ -718,6 +860,21 @@ function projectView(body, p){
   body.append(pad);
 }
 
+/* ====================================================== knowledge detail
+   A base is six kinds of thing at once, so the detail is tabbed rather than
+   one long scroll: the files in it, the tables and series extracted from them,
+   what the model derived, who may read it, and what has happened to it.
+   Base-level facts stay above the tabs, because they belong to the base and
+   not to any one view of it. */
+const KB_TABS = [
+  { id:'files',    label:'Files',       icon:'files' },
+  { id:'tables',   label:'Tables',      icon:'table' },
+  { id:'series',   label:'Time Series', icon:'trend' },
+  { id:'analysis', label:'Analysis',    icon:'pie' },
+  { id:'access',   label:'Access',      icon:'lock' },
+  { id:'activity', label:'Activity',    icon:'pulse' }
+];
+
 function kbView(body, k){
   const pad = el('div','pane__pad');
   pad.append(pageHead(k.name, k.desc,
@@ -731,24 +888,242 @@ function kbView(body, k){
     ['Documents', k.docs], ['Embedding', k.embed], ['Updated', k.updated],
     ['Used by', plural(D.ASSISTANTS.filter(a => a.kb === k.name).length, 'assistant')]
   ], ['Embedding','Updated','Used by']));
-  pad.lastChild.style.marginBottom = 'var(--s-8)';
+  pad.lastChild.style.marginBottom = 'var(--s-6)';
 
-  const statusCell = s => {
-    const cls = { indexed:'dot--ok', queued:'dot--run is-live', failed:'dot--err' }[s] || '';
-    return '<td><span style="display:inline-flex;align-items:center;gap:6px">' +
-           '<span class="dot ' + cls + '"></span>' + esc(s) + '</span></td>';
-  };
-  pad.append(tableSection('Documents',
-    ['File','Type','Size','Status'],
-    k.files.map(f => [
-      '<td style="font-family:var(--mono);color:var(--text)">' + esc(f[0]) + '</td>',
-      '<td>' + esc(f[1]) + '</td>',
-      '<td class="num">' + esc(f[2]) + '</td>',
-      statusCell(f[3])
-    ]),
-    '<span class="t-mono">' + k.files.length + ' of ' + k.docs + '</span>'));
+  const bar = el('div','tabs');
+  bar.setAttribute('role','tablist');
+  KB_TABS.forEach(t => {
+    const b = el('button','tab', ic(t.icon, 15) + '<span>' + esc(t.label) + '</span>');
+    b.type = 'button';
+    b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', String(state.kb.tab === t.id));
+    b.onclick = () => {
+      if (state.kb.tab === t.id) return;
+      state.kb.tab = t.id;
+      state.kb.sel = [];      /* a selection means nothing in another tab */
+      render();
+    };
+    bar.append(b);
+  });
+  pad.append(bar);
+
+  const panel = el('div');
+  panel.style.marginTop = 'var(--s-4)';
+  KB_PANELS[state.kb.tab](panel, k);
+  pad.append(panel);
   body.append(pad);
 }
+
+/* A sortable header cell. Only the column in force shows a single direction;
+   the rest offer both. */
+function sortTh(col, label, num){
+  const active = state.kb.sort.c === col;
+  const dir = state.kb.sort.d;
+  /* Ascending points up, descending points down — one glyph, rotated, so the
+     two states cannot drift apart. */
+  const glyph = active
+    ? ic('chevD', 12).replace('<svg', '<svg style="rotate:' + (dir > 0 ? '180deg' : '0deg') + '"')
+    : ic('sort', 13);
+  const th = el('th', num ? 'num' : null,
+    '<button type="button">' + esc(label) + '<span class="sortic">' + glyph + '</span></button>');
+  if (active) th.setAttribute('aria-sort', dir > 0 ? 'ascending' : 'descending');
+  th.firstChild.onclick = () => {
+    state.kb.sort = { c:col, d:active ? -dir : 1 };
+    render();
+  };
+  return th;
+}
+function sortRows(rows, keyOf){
+  const { c, d } = state.kb.sort;
+  return rows.slice().sort((a, b) => {
+    const x = keyOf(a, c), y = keyOf(b, c);
+    if (typeof x === 'number' && typeof y === 'number') return (x - y) * d;
+    return String(x).localeCompare(String(y)) * d;
+  });
+}
+/* The glyph carries the file's type, so the extension does not have to be read
+   to know what a row is. */
+const EXT_ICON = {
+  xlsx:'table', csv:'table', json:'code', yaml:'code', yml:'code',
+  jsonl:'data', parquet:'data', md:'doc', docx:'doc', pdf:'doc'
+};
+const fileIcon = n => EXT_ICON[String(n).split('.').pop().toLowerCase()] || 'file';
+
+const DOT_FOR = { indexed:'dot--ok', queued:'dot--run is-live', failed:'dot--err',
+                  ok:'dot--ok', warn:'dot--warn', err:'dot--err', run:'dot--run is-live' };
+function stateCell(s){
+  return '<span style="display:inline-flex;align-items:center;gap:6px">' +
+         '<span class="dot ' + (DOT_FOR[s] || '') + '"></span>' + esc(s) + '</span>';
+}
+
+const KB_PANELS = {
+  /* ------------------------------------------------------------- files */
+  files(panel, k){
+    const sel = state.kb.sel;
+    const bar = el('div','toolbar');
+    bar.style.marginBottom = 'var(--s-3)';
+
+    if (sel.length){
+      bar.innerHTML = '<span class="toolbar__meta">' + plural(sel.length, 'file') + ' selected</span>' +
+                      '<div class="toolbar__spacer"></div>';
+      const rm = el('button','btn btn--danger btn--sm', ic('trash',13) + 'Remove');
+      rm.type = 'button';
+      rm.onclick = () => { toast(plural(sel.length,'file') + ' removed — prototype'); state.kb.sel = []; render(); };
+      const clear = el('button','btn btn--ghost btn--sm','Clear');
+      clear.type = 'button';
+      clear.onclick = () => { state.kb.sel = []; render(); };
+      bar.append(rm, clear);
+    } else {
+      bar.innerHTML = '<span class="toolbar__meta">Last updated ' + esc(k.updated) + '</span>' +
+                      '<div class="toolbar__spacer"></div>';
+      const existing = el('button','btn btn--secondary btn--sm', ic('library',13) + 'Add existing');
+      const add = el('button','btn btn--primary btn--sm', ic('plus',13) + 'Add files');
+      const refresh = el('button','btn btn--ghost btn--sm', ic('retry',13) + 'Refresh');
+      [existing, add, refresh].forEach(b => b.type = 'button');
+      existing.onclick = () => toast('Pick from another base — prototype');
+      add.onclick = () => toast('Upload — prototype');
+      refresh.onclick = () => toast('Re-scanned ' + k.name);
+      bar.append(existing, add, refresh);
+    }
+    panel.append(bar);
+
+    const rows = sortRows(k.files, (f, c) =>
+      c === 'size' ? f.b : c === 'added' ? f.ts : c === 'from' ? f.from : c === 'st' ? f.st : f.n);
+    const allOn = sel.length === k.files.length && sel.length > 0;
+
+    const sx = el('div','scroll-x');
+    const t = el('table','table table--rows');
+    const head = el('tr');
+    const pickTh = el('th','pick');
+    const all = el('input','check');
+    all.type = 'checkbox';
+    all.checked = allOn;
+    all.indeterminate = sel.length > 0 && !allOn;
+    all.setAttribute('aria-label','Select all files');
+    all.onchange = () => { state.kb.sel = all.checked ? k.files.map(f => f.n) : []; render(); };
+    pickTh.append(all);
+    head.append(pickTh, sortTh('n','Name'), sortTh('from','From'),
+                sortTh('size','Size', true), sortTh('added','Date added'), sortTh('st','Status'));
+    const thead = el('thead'); thead.append(head);
+
+    const tbody = el('tbody');
+    rows.forEach(f => {
+      const tr = el('tr');
+      const on = sel.indexOf(f.n) > -1;
+      tr.setAttribute('aria-selected', String(on));
+      const pick = el('td','pick');
+      const cb = el('input','check');
+      cb.type = 'checkbox';
+      cb.checked = on;
+      cb.setAttribute('aria-label','Select ' + f.n);
+      cb.onchange = () => {
+        state.kb.sel = on ? sel.filter(x => x !== f.n) : sel.concat([f.n]);
+        render();
+      };
+      pick.append(cb);
+      tr.append(pick);
+      tr.insertAdjacentHTML('beforeend',
+        '<td><span style="display:flex;align-items:center;gap:var(--s-2)">' +
+          '<span style="display:flex;color:var(--text-4)">' + ic(fileIcon(f.n),14) + '</span>' +
+          '<span style="font-family:var(--mono);color:var(--text)">' + esc(f.n) + '</span>' +
+        '</span></td>' +
+        '<td>' + esc(f.from) + '</td>' +
+        '<td class="num">' + esc(f.size) + '</td>' +
+        '<td>' + esc(f.added) + '</td>' +
+        '<td>' + stateCell(f.st) + '</td>');
+      tbody.append(tr);
+    });
+    t.append(thead, tbody);
+    sx.append(t);
+    panel.append(sx);
+    panel.append(el('p','t-mono','Showing ' + k.files.length + ' of ' + k.docs + ' documents'));
+    panel.lastChild.style.marginTop = 'var(--s-3)';
+  },
+
+  /* ------------------------------------------------------------ tables */
+  tables(panel, k){
+    panel.append(tableSection('Extracted tables', ['Table','Rows','Columns','Updated'],
+      k.tables.map(r => [
+        '<td style="font-family:var(--mono);color:var(--text)">' + esc(r[0]) + '</td>',
+        '<td class="num">' + esc(r[1]) + '</td>',
+        '<td>' + esc(r[2]) + '</td>',
+        '<td>' + esc(r[3]) + '</td>'
+      ]),
+      '<span class="t-mono">queryable</span>'));
+  },
+
+  /* ------------------------------------------------------------ series */
+  series(panel, k){
+    const card = el('section','card');
+    card.innerHTML = '<div class="card__head"><span class="card__title">Time series</span>' +
+                     '<span style="flex:1"></span><span class="t-mono">' + k.series.length + '</span></div>';
+    const b = el('div','card__body');
+    k.series.forEach((s, i) => {
+      const row = el('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:var(--s-4);padding:var(--s-3) 0' +
+                          (i ? ';border-top:1px solid var(--line)' : '');
+      row.innerHTML =
+        '<span style="flex:1;min-width:0">' +
+          '<span class="row__title" style="font-family:var(--mono)">' + esc(s.n) + '</span>' +
+          '<span class="row__sub">' + esc(s.cadence) + ' · ' + esc(s.span) + '</span>' +
+        '</span>' +
+        '<span class="sparkbars" style="width:120px;flex:none">' +
+          s.bars.map(v => '<i style="height:' + v + '%"></i>').join('') +
+        '</span>';
+      b.append(row);
+    });
+    card.append(b);
+    panel.append(card);
+  },
+
+  /* ---------------------------------------------------------- analysis */
+  analysis(panel, k){
+    const card = el('section','card');
+    card.innerHTML = '<div class="card__head"><span class="card__title">Derived from this base</span></div>';
+    const b = el('div','card__body');
+    b.style.padding = '0 var(--s-3)';
+    k.analysis.forEach(([title, kind, when]) => {
+      const r = el('div','artlist__row');
+      r.innerHTML =
+        '<span class="row__main" style="flex:1">' +
+          '<span class="row__title">' + esc(title) + '</span>' +
+          '<span class="row__sub">' + esc(kind) + '</span>' +
+        '</span>' +
+        '<span class="artlist__v">' + esc(when) + '</span>';
+      b.append(r);
+    });
+    card.append(b);
+    panel.append(card);
+  },
+
+  /* ------------------------------------------------------------ access */
+  access(panel, k){
+    panel.append(tableSection('Who can read this base', ['Principal','Role','Scope'],
+      k.access.map(r => [
+        '<td style="color:var(--text)">' + esc(r[0]) + '</td>',
+        '<td><span class="badge' + (r[1] === 'No access' ? '' : ' badge--info') + '">' + esc(r[1]) + '</span></td>',
+        '<td>' + esc(r[2]) + '</td>'
+      ])));
+  },
+
+  /* ---------------------------------------------------------- activity */
+  activity(panel, k){
+    const card = el('section','card');
+    card.innerHTML = '<div class="card__head"><span class="card__title">Activity</span></div>';
+    const b = el('div','card__body');
+    k.activity.forEach(([when, who, what, st]) => {
+      const step = el('div','step');
+      step.innerHTML =
+        '<span class="dot ' + (DOT_FOR[st] || '') + '"></span>' +
+        '<span class="step__name">' + esc(who) + '</span>' +
+        '<span class="step__detail">' + esc(what) + '</span>' +
+        '<span class="step__t">' + esc(when) + '</span>';
+      b.append(step);
+    });
+    card.append(b);
+    panel.append(card);
+  }
+};
 
 function datasetView(body, d){
   const pad = el('div','pane__pad');
@@ -775,27 +1150,6 @@ function datasetView(body, d){
     d.schema.slice(0, d.preview[0].length).map(c => c[0]),
     d.preview.map(r => r.map(v => '<td style="font-family:var(--mono)">' + esc(v) + '</td>')),
     '<span class="t-mono">first ' + d.preview.length + ' rows</span>'));
-  body.append(pad);
-}
-
-function artifactMetaView(body, a){
-  const pad = el('div','pane__pad');
-  pad.append(pageHead(a.title,
-    'Produced by a turn in "' + a.from + '". The artifact itself is open in the pane on the right.',
-    '<span class="badge">' + esc(a.kind) + '</span>'));
-  pad.append(statGrid([
-    ['Kind', a.kind], ['Size', a.size], ['From', a.from], ['Created', a.when]
-  ], ['Kind','Size','From','Created']));
-  pad.lastChild.style.marginBottom = 'var(--s-6)';
-
-  const row = el('div');
-  row.style.cssText = 'display:flex;gap:var(--s-2)';
-  const open = el('button','btn btn--secondary', ic('open',13) + 'Open in pane');
-  open.onclick = () => openArtifact(a.id);
-  const goto = el('button','btn btn--ghost', ic('chat',13) + 'Go to thread');
-  goto.onclick = () => gotoThreadByTitle(a.from);
-  row.append(open, goto);
-  pad.append(row);
   body.append(pad);
 }
 
@@ -1355,6 +1709,9 @@ function closeApp(){
 
 /* ================================================================ routing */
 function select(section, itemId){
+  /* Row selections belong to the thing they were made in, so moving off it
+     drops them rather than carrying them somewhere they mean nothing. */
+  if (itemId != null && itemId !== state.item[section]) state.kb.sel = [];
   state.section = section;
   if (itemId != null) state.item[section] = itemId;
   render();
@@ -1383,6 +1740,9 @@ function render(){
   $('#mainTitle').textContent = head.title;
   $('#mainSub').textContent = head.sub || '';
   const mb = $('#mainBody');
+  /* The hero borrows the composer. Take it back before clearing, or emptying
+     the pane would delete it along with its listeners. */
+  detachComposer();
   mb.innerHTML = '';
   S.main(mb);
 
@@ -1430,6 +1790,7 @@ async function runTurn(userText){
      reading column. The first turn replaces it with one. */
   let inner = $('.pane__measure', $('#mainBody'));
   if (!inner){
+    detachComposer();          /* the hero has it — see render() */
     $('#mainBody').innerHTML = '';
     inner = el('div','pane__measure');
     $('#mainBody').append(inner);
@@ -1577,7 +1938,7 @@ function palRender(q){
   D.DATASETS.forEach(d => { if (hitOnly(d.name))
     items.push({ g:'Sources', nm:d.name, sub:d.source, run:() => select('knowledge', key('ds', d.id)) }); });
   D.ARTIFACTS.forEach(a => { if (hitOnly(a.title))
-    items.push({ g:'Artifacts', nm:a.title, sub:a.kind, run:() => { select('knowledge', key('art', a.id)); openArtifact(a.id); } }); });
+    items.push({ g:'Artifacts', nm:a.title, sub:a.kind, run:() => openArtifact(a.id) }); });
   D.SKILLS.forEach(s => { if (hitOnly(s.name))
     items.push({ g:'Skills', nm:s.name, sub:s.calls, run:() => select('build', key('sk', s.id)) }); });
   D.AGENTS.forEach(a => { if (hitOnly(a.name))

@@ -6,9 +6,9 @@ window.DATA = (function(){
 'use strict';
 
 /* ------------------------------------------------------------- artifacts
-   One object serves three places now: the reference card inside a thread,
-   the artifact pane on the right, and the Artifacts group under Knowledge.
-   They share an id, so opening from any of the three lands on the same thing. */
+   One object serves two places: the reference card inside a thread and the
+   artifact pane on the right. They share an id, so opening from either lands
+   on the same thing. */
 const ARTIFACTS = [
   {
     id:'a1', kind:'table', title:'Q3 variance by segment',
@@ -315,35 +315,114 @@ const SCHEDULE = [
 ];
 
 /* -------------------------------------------------------- knowledge bases */
+/* A knowledge base is six kinds of thing at once — the files in it, the tables
+   and series extracted from them, what the model has derived, who may read it,
+   and what has happened to it. Hence one tab per kind. `b` is a byte count so
+   Size sorts numerically rather than alphabetically; `ts` does the same for
+   Date Added. */
 const KBS = [
   { id:'k1', name:'Finance corpus', docs:'12,408', updated:'12 min ago', health:'ok', embed:'nebula-embed-3',
     desc:'Ledgers, board decks, pricing memos and the FY25 plan. Everything the revenue analyst is allowed to cite.',
     files:[
-      ['FY25_targets.xlsx','spreadsheet','2.1 MB','indexed'],
-      ['pricing-changes.md','markdown','14 KB','indexed'],
-      ['board-deck-Q2.pdf','pdf','8.4 MB','indexed'],
-      ['q3-close-notes.md','markdown','22 KB','indexed'],
-      ['renewals-playbook.docx','document','340 KB','queued']
+      { n:'FY25_targets.xlsx',      from:'Drive',      size:'2.1 MB', b:2202010, added:'Aug 12, 2026 09:14', ts:20260812.0914, st:'indexed' },
+      { n:'pricing-changes.md',     from:'Repo',       size:'14 KB',  b:14336,   added:'Aug 11, 2026 16:02', ts:20260811.1602, st:'indexed' },
+      { n:'board-deck-Q2.pdf',      from:'Local File', size:'8.4 MB', b:8808038, added:'Aug 04, 2026 11:47', ts:20260804.1147, st:'indexed' },
+      { n:'q3-close-notes.md',      from:'Local File', size:'22 KB',  b:22528,   added:'Aug 13, 2026 08:31', ts:20260813.0831, st:'indexed' },
+      { n:'renewals-playbook.docx', from:'Drive',      size:'340 KB', b:348160,  added:'Aug 13, 2026 17:19', ts:20260813.1719, st:'queued' }
+    ],
+    tables:[
+      ['fy25_targets','1,204 rows','8 cols','Aug 12, 2026'],
+      ['q3_close_lines','18,402 rows','14 cols','Aug 13, 2026'],
+      ['pricing_cohorts','96 rows','6 cols','Aug 11, 2026']
+    ],
+    series:[
+      { n:'arr_monthly',      cadence:'monthly', span:'Jan 2025 – Jul 2026', bars:[42,46,51,47,55,58,61,66] },
+      { n:'churn_bps',        cadence:'monthly', span:'Jan 2025 – Jul 2026', bars:[28,24,26,31,29,35,38,40] },
+      { n:'renewal_coverage', cadence:'weekly',  span:'last 12 weeks',       bars:[74,78,71,80,83,79,86,88] }
+    ],
+    analysis:[
+      ['Q3 variance by segment','table · Q3 revenue analysis','2m'],
+      ['FY25 forecast bridge','table · Q3 revenue analysis','2d'],
+      ['Services timing is not growth','note · flagged twice','3d']
+    ],
+    access:[
+      ['Cong Yu','Owner','every document'],
+      ['Revenue analyst','Reader','ledgers, plans, pricing'],
+      ['Board Digest (agent)','Reader','board decks only'],
+      ['Support team','No access','—']
+    ],
+    activity:[
+      ['17:19','Cong Yu','added renewals-playbook.docx','run'],
+      ['08:31','Cong Yu','added q3-close-notes.md','ok'],
+      ['Aug 12','Nebulas','re-embedded 1,204 chunks','ok'],
+      ['Aug 11','Ravi','revoked support team access','warn']
     ] },
+
   { id:'k2', name:'Engineering docs', docs:'3,902', updated:'1 h ago', health:'ok', embed:'nebula-embed-3',
     desc:'ADRs, runbooks and the service catalogue. Scoped to the platform repos, not product code.',
     files:[
-      ['ADR-014.md','markdown','9 KB','indexed'],
-      ['ingest-runbook.md','markdown','31 KB','indexed'],
-      ['service-catalogue.yaml','config','78 KB','indexed']
+      { n:'ADR-014.md',            from:'Repo',       size:'9 KB',  b:9216,  added:'Aug 10, 2026 14:20', ts:20260810.1420, st:'indexed' },
+      { n:'ingest-runbook.md',     from:'Repo',       size:'31 KB', b:31744, added:'Aug 13, 2026 10:05', ts:20260813.1005, st:'indexed' },
+      { n:'service-catalogue.yaml',from:'Repo',       size:'78 KB', b:79872, added:'Aug 09, 2026 09:00', ts:20260809.0900, st:'indexed' },
+      { n:'oncall-handover.pdf',   from:'Local File', size:'1.2 MB',b:1258291,added:'Aug 13, 2026 16:44', ts:20260813.1644, st:'indexed' }
+    ],
+    tables:[
+      ['service_catalogue','142 rows','9 cols','Aug 09, 2026'],
+      ['adapter_budgets','38 rows','5 cols','Aug 13, 2026']
+    ],
+    series:[
+      { n:'ingest_throughput', cadence:'hourly', span:'last 24 h', bars:[61,68,72,70,79,84,82,88] },
+      { n:'queue_depth',       cadence:'hourly', span:'last 24 h', bars:[22,31,44,52,61,74,86,91] }
+    ],
+    analysis:[
+      ['pipeline.py — bounded queue','diff · Refactor the ingestion pipeline','1h'],
+      ['Adapter credit scheme','doc · ADR-014 is unimplemented','3d']
+    ],
+    access:[
+      ['Platform team','Editor','every document'],
+      ['Cong Yu','Owner','every document'],
+      ['Pipeline Health (app)','Reader','runbooks, catalogue']
+    ],
+    activity:[
+      ['16:44','Ravi','added oncall-handover.pdf','ok'],
+      ['10:05','Repo sync','updated ingest-runbook.md','ok'],
+      ['Aug 12','Nebulas','indexed 8 new ADRs','ok']
     ] },
+
   { id:'k3', name:'Support corpus', docs:'96,551', updated:'4 h ago', health:'warn', embed:'nebula-embed-2',
     desc:'Ticket history and macros. Still on the previous embedding model — the re-embed run is blocked on quota.',
     files:[
-      ['tickets-90d.jsonl','export','412 MB','indexed'],
-      ['macros.json','config','96 KB','indexed'],
-      ['june-backfill.jsonl','export','—','failed']
+      { n:'tickets-90d.jsonl',   from:'Warehouse',  size:'412 MB', b:431947776, added:'Aug 13, 2026 04:00', ts:20260813.0400, st:'indexed' },
+      { n:'macros.json',         from:'Repo',       size:'96 KB',  b:98304,     added:'Jul 28, 2026 12:10', ts:20260728.1210, st:'indexed' },
+      { n:'june-backfill.jsonl', from:'Warehouse',  size:'—',      b:0,         added:'Aug 01, 2026 02:00', ts:20260801.0200, st:'failed' }
+    ],
+    tables:[
+      ['tickets_90d','96,551 rows','22 cols','Aug 13, 2026'],
+      ['macro_usage','412 rows','4 cols','Jul 28, 2026']
+    ],
+    series:[
+      { n:'ticket_volume',  cadence:'daily', span:'last 30 days', bars:[54,61,58,72,66,81,77,69] },
+      { n:'reopen_rate',    cadence:'daily', span:'last 30 days', bars:[12,14,11,18,22,19,26,31] }
+    ],
+    analysis:[
+      ['Churn model — feature importance','chart · Churn signals in enterprise accounts','1d'],
+      ['Reopen rate is climbing in billing','note · unresolved','5d']
+    ],
+    access:[
+      ['Support team','Editor','every document'],
+      ['Churn Radar (app)','Reader','tickets only'],
+      ['Revenue analyst','Reader','tickets only']
+    ],
+    activity:[
+      ['04:00','Warehouse sync','refreshed tickets-90d.jsonl','ok'],
+      ['Aug 01','Nebulas','backfill failed — quota exceeded','err'],
+      ['Jul 28','Ana','added macros.json','ok']
     ] }
 ];
 
 /* ----------------------------------------------------------- data sources */
 const DATASETS = [
-  { id:'d1', name:'q3_ledger', source:'warehouse', rows:'2,431,004', updated:'12 min ago', health:'ok',
+  { id:'d1', name:'q3_ledger', source:'warehouse', rows:'2,431,004', updated:'12 min ago', health:'ok', grant:'Editor',
     desc:'Line-level revenue ledger for the Q3 close, one row per invoice line.',
     schema:[
       ['invoice_id','string','no','INV-2026-0001'],
@@ -359,7 +438,7 @@ const DATASETS = [
       ['INV-2026-0003','Enterprise','services','96,500.00'],
       ['INV-2026-0004','SMB','subscription','3,900.00']
     ] },
-  { id:'d2', name:'accounts_health', source:'warehouse', rows:'41,208', updated:'1 h ago', health:'ok',
+  { id:'d2', name:'accounts_health', source:'warehouse', rows:'41,208', updated:'1 h ago', health:'ok', grant:'Reader',
     desc:'Per-account health scores, usage rollups and admin history.',
     schema:[
       ['account_id','string','no','ACC-0042'],
@@ -368,7 +447,7 @@ const DATASETS = [
       ['seats_active','int','no','118']
     ],
     preview:[ ['ACC-0042','72','2026-05-02','118'], ['ACC-0043','44','—','9'] ] },
-  { id:'d3', name:'support_tickets', source:'zendesk', rows:'96,551', updated:'4 h ago', health:'warn',
+  { id:'d3', name:'support_tickets', source:'zendesk', rows:'96,551', updated:'4 h ago', health:'warn', grant:'Reader',
     desc:'Ticket export, last 90 days. Backfill for June is incomplete.',
     schema:[
       ['ticket_id','string','no','TCK-91002'],
@@ -377,7 +456,7 @@ const DATASETS = [
       ['created_at','timestamp','no','2026-08-01 11:02:00']
     ],
     preview:[ ['TCK-91002','billing','high','2026-08-01'], ['TCK-91003','api','normal','2026-08-01'] ] },
-  { id:'d4', name:'renewals_export', source:'upload', rows:'812', updated:'2 d ago', health:'ok',
+  { id:'d4', name:'renewals_export', source:'upload', rows:'812', updated:'2 d ago', health:'ok', grant:null,
     desc:'Manual CSV upload of the FY25 renewal book.',
     schema:[ ['account','string','no','Northwind'], ['renews_on','date','no','2026-11-04'], ['acv','decimal(12,2)','no','214000.00'] ],
     preview:[ ['Northwind','2026-11-04','214,000.00'], ['Contoso','2026-12-01','88,500.00'] ] }
@@ -624,6 +703,20 @@ const APP_PANELS = {
     ] }
 };
 
+/* ------------------------------------------------------------- dashboards
+   Built in Data Discovery, off a source the user has a grant on. `ds` points
+   at DATASETS, so a dashboard can never outlive its source or claim access
+   the user does not have. */
+const DASHBOARDS = [
+  { id:'db1', name:'Q3 revenue by segment', ds:'d1', kind:'Breakdown', updated:'12 min ago',
+    tiles:[['ARR','$41.2M'],['vs plan','+12.4%']], bars:[42,48,51,47,55,61,58,66] },
+  { id:'db2', name:'Account health drift', ds:'d2', kind:'Trend', updated:'1 h ago',
+    tiles:[['Accounts','41,208'],['At risk','312']], bars:[31,29,34,38,41,44,49,52] },
+  { id:'db3', name:'Ticket reopen rate', ds:'d3', kind:'Trend', updated:'4 h ago',
+    tiles:[['Tickets','96,551'],['Reopened','7.4%']], bars:[12,14,11,18,22,19,26,31] }
+];
+const DASH_KINDS = ['Trend','Breakdown','Table'];
+
 /* ----------------------------------------------------------------- cloud */
 const CLOUD = [
   { id:'c1', name:'Routing defaults', desc:'Which model handles a request when the thread does not override it.' },
@@ -699,7 +792,7 @@ const REPLIES = [
 
 return {
   ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, SCHEDULE,
-  KBS, DATASETS, SKILLS, AGENTS, SOLUTIONS, APPS, APP_PANELS, CLOUD, CONNECTIONS,
+  KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, SOLUTIONS, APPS, APP_PANELS, CLOUD, CONNECTIONS,
   ACCOUNT, MODELS, REPLIES
 };
 })();

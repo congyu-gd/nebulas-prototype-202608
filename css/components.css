@@ -186,6 +186,74 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .seg button[aria-selected="true"]{ background:var(--bg); color:var(--text); box-shadow:var(--shadow-sm) }
 
+/* ================================================================== tabs
+   For a detail surface that is several kinds of thing at once. Each tab takes
+   a glyph as well as a label: six labels in a row read as a list, six labels
+   with glyphs read as a set of places. Selected takes the system's selected
+   surface rather than a contrast jump, and its glyph takes the accent — the
+   same thing the active rail marker does. */
+.tabs{
+  display:flex; align-items:center; gap:var(--s-1);
+  overflow-x:auto;
+  padding-bottom:var(--s-2);
+  border-bottom:var(--border) solid var(--line);
+}
+.tab{
+  flex:none;
+  display:inline-flex; align-items:center; gap:var(--s-2);
+  height:var(--ctl-md); padding:0 var(--s-3);
+  border-radius:var(--r-md);
+  color:var(--text-3);
+  font-size:var(--t-12); font-weight:var(--w-medium);
+  white-space:nowrap;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.tab:hover{ background:var(--raised); color:var(--text) }
+.tab[aria-selected="true"]{ background:var(--raised-2); color:var(--text) }
+.tab svg{ color:var(--text-4) }
+.tab[aria-selected="true"] svg{ color:var(--accent) }
+
+/* A tab's own toolbar: what the content was last synced, and what you can do
+   to it. One primary action per toolbar, because only one of them is the
+   reason you came. */
+.toolbar{
+  display:flex; align-items:center; gap:var(--s-2);
+  flex-wrap:wrap;
+}
+.toolbar__meta{ font-size:var(--t-11); color:var(--text-4) }
+.toolbar__spacer{ flex:1 }
+
+/* ============================================================== checkbox
+   The switch is for settings that apply immediately; this is for selecting
+   rows, where nothing happens until you act on the selection. */
+.check{
+  appearance:none; -webkit-appearance:none;
+  flex:none;
+  display:grid; place-items:center;
+  width:15px; height:15px;
+  border:var(--border) solid var(--line-strong);
+  border-radius:var(--r-xs);
+  background:var(--bg);
+  cursor:pointer;
+  transition:background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.check:hover{ border-color:var(--text-4) }
+.check:checked{ background:var(--accent); border-color:var(--accent) }
+.check:indeterminate{ background:var(--accent); border-color:var(--accent) }
+.check:checked::after,.check:indeterminate::after{
+  content:"";
+  width:9px; height:9px;
+  background:var(--accent-fg);
+  -webkit-mask:var(--tick) center/contain no-repeat;
+          mask:var(--tick) center/contain no-repeat;
+}
+.check{
+  --tick:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><path d='m5 13 4 4L19 7'/></svg>");
+}
+.check:indeterminate{
+  --tick:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round'><path d='M6 12h12'/></svg>");
+}
+
 /* ================================================================= meter */
 .meter{ display:block; height:4px; border-radius:var(--r-full); background:var(--raised-2); overflow:hidden }
 .meter > i{
@@ -272,6 +340,22 @@ button.chip--plain:hover{ background:var(--raised) }
 .delta-dn,.table .delta-dn{ color:var(--err) }
 .table--rows tbody tr{ transition:background var(--fast) var(--ease) }
 .table--rows tbody tr:hover{ background:var(--raised) }
+
+/* A sortable header is a button, so it can be reached by keyboard and says so
+   on hover. The glyph shows both directions until the column is the one being
+   sorted, then only the direction in force. */
+.table th button{
+  display:inline-flex; align-items:center; gap:5px;
+  font:inherit; letter-spacing:inherit; text-transform:inherit;
+  color:inherit;
+}
+.table th button:hover{ color:var(--text-2) }
+.table th .sortic{ display:flex; color:var(--line-strong) }
+.table th[aria-sort] button{ color:var(--text-2) }
+.table th[aria-sort] .sortic{ color:var(--accent) }
+/* The select column is sized to its control, and never carries a label. */
+.table th.pick,.table td.pick{ width:34px; padding-right:0 }
+.table tbody tr[aria-selected="true"]{ background:var(--accent-soft) }
 
 /* Horizontal overflow container — wide tables scroll, the page never does. */
 .scroll-x{ overflow-x:auto; max-width:100% }

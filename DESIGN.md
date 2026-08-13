@@ -197,7 +197,7 @@ should land next to the thing it affects.
 | Was | Now |
 |---|---|
 | Inline artifact in the message | Artifact pane, with a reference card in the thread |
-| Library section (own rail icon) | Knowledge → Artifacts, next to the bases and sources |
+| Library section (own rail icon) | ~~Knowledge → Artifacts~~ → nowhere of its own. An artifact is addressed by the pane that renders it and the turn that produced it; a third list of the same objects was one nobody opened. The palette still finds them by name. |
 | Sources panel | citation chips on the response that used them |
 | Model routing | the composer, next to the message it governs — first-party or not, which is why the status strip's "Nebulas Pro" is the platform and the composer's label is the model |
 | Token / cost readout | the status strip |
@@ -209,6 +209,40 @@ should land next to the thing it affects.
 | Artifact title (pane header) | the content itself; the header names the pane |
 | Copy artifact | gone — the Source pane is selectable text |
 | "Nothing here yet" empty thread | the hero: a question, two modes, and starters |
+
+## The knowledge detail is tabbed
+
+A base is six kinds of thing at once — the files in it, the tables and series
+extracted from them, what the model derived from it, who may read it, and what
+has happened to it. As one scroll that is a report; as tabs it is a place you
+work.
+
+| Tab | Holds |
+|---|---|
+| Files | the documents, selectable and sortable |
+| Tables | tables extracted from those documents |
+| Time Series | series, each with a sparkline and its cadence |
+| Analysis | what the model has derived, and from which thread |
+| Access | principals, roles and the scope each one sees |
+| Activity | what happened to the base, most recent first |
+
+Each tab takes a glyph as well as a label: six labels in a row read as a list,
+six labels with glyphs read as a set of places. The selected tab takes the
+system's selected surface (`--raised-2`) rather than a filled dark pill, and
+only its glyph takes the accent — the same move the active rail marker makes.
+
+**Base-level facts stay above the tabs.** Document count, embedding model, when
+it last changed and how many assistants use it belong to the base, not to any
+one view of it, so they do not move when the tab does.
+
+**The tab survives switching bases; a selection does not.** You opened Files
+for a reason, and it still applies to the next base. A set of picked rows
+refers to rows that are no longer there.
+
+Sorting is real, not decorative: Size sorts on a byte count and Date added on a
+timestamp, both carried in the fixture beside the display string, because
+`"2.1 MB"` and `"412 MB"` sort backwards as text. Ascending points up and
+descending points down, from one rotated glyph so the two cannot drift apart.
 
 ## An app is a layer, not a destination
 
@@ -251,10 +285,38 @@ modes it can be asked in, and starters that write themselves into the composer
 directly below. The workspace opens here rather than on the last conversation —
 history is one click away in the sidebar.
 
+**The composer sits in the hero, directly under the starters** — a starter is a
+half-written message, and the place it lands should be the next thing beneath
+it. It is the *same node*, moved: the composer carries bound listeners, so
+anything that clears the pane hands it back to its pinned position first
+(`detachComposer`) rather than rebuilding it. Inside the hero it drops the
+gradient and the pinned padding; on the first turn it returns to the foot of
+the pane, because from then on it is a bar over a scroll.
+
 Mode (`Work` / `Data Discovery`) is view state, not app state: it dies with the
-empty thread, because it only selects which starters are offered. The first
-turn replaces the hero with the reading column, since a centred block and a
-measured column are different layouts, not one layout with content added.
+empty thread. The first turn replaces the hero with the reading column, since a
+centred block and a measured column are different layouts, not one layout with
+content added.
+
+### Data Discovery carries dashboards
+
+Asking about data produces something that outlives the question, so the mode
+holds those things below the input: one card per dashboard, each bound to one
+source, with its two headline figures, a sparkline whose last bar is the
+current value, and the source name in mono.
+
+**A dashboard can only be built on a source the user holds a grant on.** The
+picker lists each source with the grant beside it (`q3_ledger · Editor`), so it
+says what you may *do* with a source rather than only that you may see it. The
+sources you cannot use are **named, not hidden** — "3 sources shared with you.
+`renewals_export` is not." A picker that silently omits them reads as a missing
+source rather than as a permission, and the user is left wondering whether the
+data exists.
+
+A new dashboard starts with a flat sparkline rather than an invented one: it
+has measured nothing yet. The mode also stops centring itself once dashboards
+are below the input (`.hero--tall`), because vertical centring with more
+content than height clips the top.
 
 ## Turn structure
 
