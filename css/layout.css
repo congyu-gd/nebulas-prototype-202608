@@ -20,9 +20,17 @@
     var(--art-w)
     var(--app-w);
   grid-template-rows:minmax(0,1fr) var(--status-h);
-  transition:grid-template-columns var(--base) var(--ease);
+  /* The widths animate, not the template — see the @property block in
+     tokens.css for why the difference is load-bearing. */
+  transition:--list-w var(--base) var(--ease),
+             --art-w  var(--base) var(--ease),
+             --app-w  var(--base) var(--ease);
 }
 .app[data-list="closed"]{ --list-w:0px }
+/* Build navigates in Miller columns, so its sidebar is two columns wide. The
+   section widens the shell by redefining the token — no other rule changes. */
+.app[data-section="build"]{ --list-w:var(--list-w-mill) }
+.app[data-section="build"][data-list="closed"]{ --list-w:0px }
 .app[data-art="closed"] { --art-w:0px }
 .app[data-apps="closed"]{ --app-w:0px }
 .app[data-apps="wide"]  { --app-w:var(--app-w-wide) }
@@ -118,7 +126,10 @@
   font-size:var(--t-13); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.listcol__body{ flex:1 1 0; min-height:0; overflow-y:auto; padding:var(--s-2) }
+/* overflow-y:auto alone makes overflow-x compute to auto, which leaves a
+   phantom horizontal scrollbar under a column whose rows are exactly its
+   width. Rows truncate; they never scroll sideways. */
+.listcol__body{ flex:1 1 0; min-height:0; overflow:hidden auto; padding:var(--s-2) }
 
 /* Group header. The trailing rule fills whatever the label leaves. */
 .listcol__group{
@@ -130,6 +141,45 @@
   order:1;
 }
 .listcol__group > .iconbtn{ order:2 }
+/* How many are under this label. In Build a group can be three rows or sixteen,
+   and the number says which before the scroll does. */
+.listcol__count{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
+/* ------------------------------------------------------- miller columns
+   Build's sidebar. Kinds on the left, that kind's items beside them, and the
+   pane itself as the last column — which is why there are two here and not
+   three. Each column scrolls on its own, so the body stops being the scroller
+   and gives up its padding to the columns. */
+.listcol__body--miller{ padding:0; overflow:hidden }
+.miller{
+  display:grid;
+  grid-template-columns:var(--mill-w) minmax(0,1fr);
+  height:100%; min-height:0;
+}
+.miller__col{ min-width:0; overflow:hidden auto; padding:var(--s-2) }
+/* The hairline is the only thing dividing them. A second surface step would
+   make the left column read as chrome rather than as the first column. */
+.miller__col + .miller__col{ border-left:var(--border) solid var(--line) }
+/* A kind row is a glyph and a name; the chevron says it opens a column. The
+   count is not repeated here — the item column's head carries it. */
+.row--mill .row__chev{ display:flex; flex:none; color:var(--line-strong) }
+.row--mill[aria-current="true"] .row__chev{ color:var(--text-4) }
+.miller__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-1) var(--s-1) var(--s-2) var(--s-3);
+}
+.miller__head .listcol__count{ margin-right:auto }
+
+/* The item column's filter: whose things are listed. Full width because it
+   governs everything below it, and three equal buttons because the three
+   answers are equally likely. */
+.listcol__filter{ padding:0 var(--s-2) var(--s-2) }
+.listcol__filter .seg{ width:auto }
+.listcol__filter .seg button{ flex:1; min-width:0 }
+.listcol__note{
+  padding:var(--s-2) var(--s-3) var(--s-3);
+  font-size:var(--t-11); color:var(--text-4); line-height:var(--lh-ui);
+}
 .listcol__group:first-child{ padding-top:var(--s-1) }
 
 /* The pinned actions at the top of the chat sidebar — new chat, assistant,
@@ -215,6 +265,13 @@
 /* Data Discovery carries dashboards below the input, so the block stops being
    centred — vertical centring with more content than height clips the top. */
 .hero--tall{ justify-content:flex-start; padding-top:var(--s-8) }
+/* What a starter will actually do. It sits under the row it explains and above
+   the input, because by the time you reach the input you have already chosen. */
+.hero__note{
+  margin:0;
+  max-width:52ch;
+  font-size:var(--t-11); color:var(--text-4); line-height:var(--lh-ui);
+}
 
 /* ------------------------------------------------------------- dashboards */
 .hero__dash{ width:100%; max-width:var(--measure); text-align:left; margin-top:var(--s-4) }
@@ -298,6 +355,63 @@
 /* Below this the shortlist stops being a column and becomes a section. */
 @media (max-width:1080px){
   .asst{ grid-template-columns:minmax(0,1fr) }
+}
+
+/* ================================================================= builder
+   Every build surface is the same two-part shape: the thing on the left, and
+   an inspector on the right holding what it will become and the one action
+   that commits it. Config on the right is where anyone who has used a design
+   tool looks for it, and it means the thing being built keeps the wide column.
+*/
+.build{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 288px;
+  gap:var(--s-6);
+  align-items:start;
+}
+.build__main{ min-width:0 }
+/* Sticky, because the inspector's job is to stay true while you scroll the
+   thing it describes. */
+.build__side{
+  min-width:0;
+  position:sticky; top:0;
+  padding:var(--s-3);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+}
+.build__sidehead{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding-bottom:var(--s-2);
+  margin-bottom:var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+}
+.build__sidehead .t-mono{ margin-left:auto }
+.build__note{
+  margin:var(--s-3) 0 0;
+  font-size:var(--t-11); color:var(--text-3); line-height:var(--lh-ui);
+}
+/* Inside a section the section's own bottom margin carries the gap. Standing
+   directly in the column it needs its own, or the next heading lands on it. */
+.build__main > .build__note{ margin-bottom:var(--s-8) }
+/* The inspector's actions are the last thing in it and the only full-width
+   controls in the app, because a commit should not have to be aimed at. */
+.build__acts{
+  display:grid; gap:var(--s-2);
+  margin-top:var(--s-4);
+  padding-top:var(--s-3);
+  border-top:var(--border) solid var(--line);
+}
+.build__acts .btn{ width:100% }
+/* Two-up form fields, so a name and a team do not each take a whole row. */
+.build__pair{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--s-3);
+}
+@media (max-width:1080px){
+  .build{ grid-template-columns:minmax(0,1fr) }
+  .build__side{ position:static }
+  .build__pair{ grid-template-columns:minmax(0,1fr) }
 }
 
 /* ================================================================ messages */

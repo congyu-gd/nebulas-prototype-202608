@@ -13,7 +13,8 @@ css/base.css         reset, document defaults, .prose (model output)
 css/components.css   reusable parts. None know where they sit on screen.
 css/layout.css       the shell only: rail · sidebar · chat · artifact · apps
 js/data.js           fixtures for every surface
-js/app.js            routing, section renderers, artifact pane, simulated turns
+js/app.js            routing, section renderers, the builder, artifact pane,
+                     app sheets, simulated turns
 index.html           shell markup; everything inside is rendered by app.js
 v1-single-file.html  the earlier single-file conversation-only prototype
 
@@ -46,6 +47,12 @@ answer or two pages of argument. So the language recedes.
    *which app*, never *act here* — which is why it appears on the tile and
    nowhere else: not on chrome, not on text, not on state. The two channels
    stay legible because they never occupy the same surface.
+
+   **The design-element canvas is the other exception, and for the same
+   reason.** Inside `.canvas__frame` a widget or website template carries the
+   *customer's* brand (`--wgt-a`, chosen from the same six tokens). It is not
+   our accent and not our identity — it is someone else's, quarantined to the
+   frame. Outside that frame it does not exist.
 2. **Separation by hairline, not shadow.** A 1px `--line` does the structural
    work. Shadows appear only on things that genuinely float: palette, toasts,
    the composer at rest.
@@ -63,6 +70,14 @@ of ~20 variables and nothing else changes.
 
 Dark is not an inversion: `--bg` is `#0d0d0f` rather than black so elevation
 has somewhere to go, and the accent lightens to hold contrast.
+
+**The palette is scopable; the metrics are not.** `tokens.css` declares colour
+on `:root, [data-theme="light"]` and the dark overrides on
+`:root[data-theme="dark"], [data-theme="dark"]`, so putting `data-theme` on any
+element re-themes that subtree — which is how a design element previews in dark
+inside a light workspace. Type, space, radius and shell metrics stay in a
+`:root`-only block: a scoped block that re-declared `--density` would silently
+reset density inside the scope.
 
 ### Space and density
 
@@ -130,7 +145,15 @@ Five columns plus a status strip spanning all of them.
 
 Each of the four outer columns collapses to zero through a data attribute on
 `.app`, which redefines its width token rather than restating the whole grid
-template.
+template. Build widens the sidebar the same way
+(`.app[data-section="build"]`), so a section can change the shell without
+anything in it knowing a pixel.
+
+The three collapsing widths are **registered** (`@property`, `<length>`) and the
+shell transitions *those* rather than `grid-template-columns`: interpolating a
+whole track list to move one column animates every column whenever any one of
+them changes. Where `@property` is unsupported the panels snap, which is the
+right fallback.
 
 ### Why the artifact moved out of the thread
 
@@ -179,7 +202,8 @@ evals:{
   list(body){ /* rows in the sidebar */ },
   head(){ return { title, sub } },      // chat-pane topbar
   main(body){ /* the chat pane body */ },
-  composer:false                        // bool, or a function for per-view
+  composer:false,                       // bool, or a function for per-view
+  miller:false                          // true hands the sidebar body to columns
 }
 ```
 …then add the key to `ORDER`. The rail button, routing, palette entry and
@@ -209,6 +233,12 @@ should land next to the thing it affects.
 | Artifact title (pane header) | the content itself; the header names the pane |
 | Copy artifact | gone — the Source pane is selectable text |
 | "Nothing here yet" empty thread | the hero: a question, two modes, and starters |
+| Cloud → Connections as its own fixture | derived from `CONNECTORS`. Configured in Build, reported in Cloud — one object, two views, because two lists of the same endpoints drift on the second edit |
+| Solution "Composition" read-out | the solution builder: the same facts, but editable, plus the checklist that says whether they add up to something shippable |
+| Build → Skills, Build → Agents | gone. A skill is chosen inside an assistant; scheduled runs are Chat → Schedule. Neither needed a page of its own, and six flat groups made the sidebar unnavigable |
+| Build's folding groups | Miller columns. An accordion asks you to manage what is open; columns just show the path you are on |
+| Build → Connectors | Cloud → Connections, as an index whose rows open the connector. Build grants one; Cloud connects it |
+| An assistant's definition living only in Chat | Build → Assistants. Chat still chooses one; the definition has an address of its own, and the two write to the same record |
 
 ## The knowledge detail is tabbed
 
@@ -279,6 +309,165 @@ Two consequences of binding one, both deliberate:
   of the model's. That is what binding one means; the model it routes to is
   still shown in the composer.
 
+## Build is where things are made, and it has one shape
+
+Build holds **three** kinds of thing: the **assistant** that answers, the
+**solution** that ships it, and the **design setting** it renders as. The first
+cut of this section had six, and six flat lists came to forty-six rows — a
+sidebar you scroll to navigate is not a sidebar. What went, and why it did not
+need a page:
+
+| Was a group | Now |
+|---|---|
+| Skills | chosen inside an assistant, never authored. A skill's signature and body are platform facts, not something a builder edits, so the pick list is the whole interaction. |
+| Agents | scheduled runs are already visible in Chat → Schedule. Two lists of "things that run on a clock" was one too many. |
+| Connectors | Cloud → Connections. Connecting a system is an administrative act, usually by a different person than the one composing an assistant. Build *grants* a connector; Cloud makes the grant mean something. |
+
+### The sidebar is Miller columns
+
+Build navigates the way a Finder column view does — kind, then item, then the
+thing itself:
+
+```
+┌──────────────────┬───────────────────────┬──────────────────────────┐
+│ ◈ Assistants   › │ ASSISTANTS      16  + │  Revenue analyst         │
+│ ▣ Solutions    › │ ┌ Mine ┬ Teams ┬ All┐ │  ┌ form ────┬ inspector ┐│
+│ ▤ Design set…  › │  Revenue analyst      │  │ name…    │ becomes   ││
+│                  │  Code reviewer        │  │ skills…  │ test      ││
+│                  │  Support triage   Ana │  └──────────┴───────────┘│
+└──────────────────┴───────────────────────┴──────────────────────────┘
+   --mill-w 176      the rest of --list-w      the pane = last column
+```
+
+- **Two columns in the sidebar, not three.** The last Miller column is the
+  *preview* of the selected leaf, and here that preview is the whole builder —
+  form plus inspector. Repeating it in a narrow third column would be a worse
+  version of something already on screen.
+- **The section widens the shell**, it does not restate it:
+  `.app[data-section="build"] { --list-w: var(--list-w-mill) }`. `render()`
+  stamps `data-section` on `.app`; one token changes and the grid follows, the
+  same move density makes.
+- **Selecting a kind returns you to where you were in it** (`state.build.last`),
+  the way reopening a folder does. It never lands you on an empty pane.
+- **Only a hairline divides the columns.** A second surface step would make the
+  left column read as chrome rather than as the first column.
+- The kind row carries a glyph, a name and a chevron — no count. Three counts
+  nobody asked for cost the labels their width, and the item column's head
+  carries the count for the kind you are actually in.
+
+### The scope filter
+
+- **It answers the two questions a list this size provokes**: *where is the one
+  I made* and *what has the rest of the company built*. Hence `Mine · Teams ·
+  All`, at the top of the item column because it governs what is below it.
+  Ownership is stored on the record as `owner: 'me'`, so the filter needs no
+  notion of the signed-in user beyond the label.
+- **The count says how much of the pile is showing** — `16` unfiltered,
+  `7/16` filtered.
+- **Your own things are not labelled as yours.** The row shows an owner only
+  when it is someone else's, so the column stays quiet for the common case, and
+  the page head repeats it as `Ravi · Support` next to the state badge.
+- **The filter never hides the row you are on.** `scoped(list, keep)` keeps the
+  current selection in the list even when it falls outside the scope: a filter
+  one row loose beats a selection with no visible home.
+- Scope starts at `All`. A filter that hides content on arrival reads as missing
+  content.
+
+Every build surface is the same two-part shape — `.build`:
+
+| Left (`.build__main`) | Right (`.build__side`, 288px, sticky) |
+|---|---|
+| the thing being built | what it becomes, and the one action that commits it |
+
+Config on the right is where anyone who has used a design tool looks for it,
+and it leaves the wide column to the thing itself. Below 1080px the inspector
+stops being sticky and becomes the last section. The inspector's buttons are
+the only full-width controls in the app: a commit should not have to be aimed
+at.
+
+**Selection is a checkbox; a setting is a switch.** Which skills an assistant
+composes is a selection (`.picklist`, whole row as the target). Whether it
+cites every claim is a setting (`.switch`). The distinction is not cosmetic —
+one is a list you are assembling, the other takes effect as you touch it.
+
+### An assistant is defined in Build and chosen in Chat
+
+One record, two verbs. Nothing is duplicated: starring in Chat and editing here
+write to the same object, the assistant card in Chat carries an **Edit in
+Build** button, and the builder's **Test in a thread** binds the assistant and
+opens a new one. The palette lands on the definition, because that is the
+address that can do both.
+
+Two gaps are shown rather than hidden:
+
+- **A skill an assistant names but the workspace has not defined** stays in the
+  list, marked *not defined in this workspace*, with a banner saying calls to it
+  will fail at run time. Filtering it out would turn a broken assistant into a
+  tidy one.
+- **A connector granted but not connected** is allowed. A grant states what the
+  assistant will need; the connection is a separate act, on a separate page,
+  usually by a different person.
+
+### Connectors hold credentials, never data
+
+So the page has no preview — there is nothing to look at, only what it may
+reach and who reaches through it. `usedBy` is **derived** (assistants whose
+`conn` contains it, solutions that require it), never stored: the builder mutates
+these objects, so a cached list of dependents would be wrong by the second edit.
+The same connector is *reported* in Cloud → Connections and *configured* here;
+two fixtures for one endpoint would have drifted immediately.
+
+Disconnecting leaves every grant in place, and the toast says how many just
+stopped working. Grants do not disappear when the connection does.
+
+### Design elements: two kinds, one canvas
+
+A **widget** is embedded in a page someone else owns; a **website template** is
+the page. `shape` picks the renderer, `cfg` is what the inspector edits.
+
+| Shape | Reads as |
+|---|---|
+| `kpi` | one number, its delta, the period |
+| `chart` | a value over a sparkline whose last bar takes the brand |
+| `ask` | a question field and the three questions worth starting from |
+| `rows` | a ranked list where the bar *is* the score |
+| `portal` | signed-in page: side nav, card grid |
+| `landing` | public page: one claim, three supports, one action |
+| `docs` | three columns — what exists, what you are reading, where you are |
+
+**A template preview is a wireframe, not a mockup.** Bars stand in where text
+goes, so the reader judges the layout instead of reading placeholder prose. Only
+one nav line takes the brand: branding all of them would say every page is the
+current one.
+
+**Theme is a real decision, not a preview toggle.** `Follow` inherits the host
+page; `Light` and `Dark` stamp `data-theme` on the frame and fix it. The widget
+ships its own tokens, which is why it can look like itself inside a page whose
+CSS we have never seen — and why the scoped palette in `tokens.css` had to exist.
+
+### A solution is publishable, or it says why not
+
+The checklist is the substantive part. A solution binds an assistant, the skills
+it may call, the knowledge it may cite, the connectors it needs, what it renders
+as, and where it reaches — all by id, so it cannot claim a part that does not
+exist. Publish is disabled until every line is met, and the button's tooltip
+names the first gap.
+
+Two of the six checks are conditional, which is the whole point:
+
+- **Design element** is required only if a chosen surface *renders*. `App rail`,
+  `Embedded widget` and `Public website` need one; `Webhook` and
+  `Scheduled digest` answer in JSON and do not. That is why `SURFACES` carries a
+  `renders` flag rather than a description.
+- **Skills** must be a subset of the bound assistant's. One it does not have
+  would ship a call that cannot resolve, so the row reads *not on Revenue
+  analyst* rather than being quietly droppable.
+
+The chosen design element is previewed inside the solution, because that page
+is where someone decides what the answer looks like and a name is not enough to
+decide from. Publishing bumps the minor version and states every surface it went
+to.
+
 ## An app is a layer, not a destination
 
 Clicking an app used to navigate to the solution behind it, which meant opening
@@ -316,13 +505,21 @@ the accent, because **a date is not an action**.
 
 A new chat is the one moment the reader is deciding what to ask, so the pane
 does not spend it saying the thread is empty. It shows the question, the two
-modes it can be asked in, and starters that write themselves into the composer
-directly below. The workspace opens here rather than on the last conversation —
-history is one click away in the sidebar.
+modes it can be asked in, and starters that **run a worked example**. The
+workspace opens here rather than on the last conversation — history is one click
+away in the sidebar.
 
-**The composer sits in the hero, directly under the starters** — a starter is a
-half-written message, and the place it lands should be the next thing beneath
-it. It is the *same node*, moved: the composer carries bound listeners, so
+**A starter runs its case; it does not type a word into the box.** The first
+version wrote the label into the composer and left the reader to press Send,
+which is half an offer: someone opening this to evaluate it needs a way *into* a
+conversation, not a head start on writing one. Clicking one now names the
+thread, streams a real turn, and lands something to act on. The chip carries a
+play glyph and the question as its tooltip, and a line under the row says what
+will happen — a button that runs something should say so before it is pressed.
+
+**The composer still sits in the hero, directly under the starters** — a starter
+is the shape of a message, and the place a typed one lands should be the next
+thing beneath it. It is the *same node*, moved: the composer carries bound listeners, so
 anything that clears the pane hands it back to its pinned position first
 (`detachComposer`) rather than rebuilding it. Inside the hero it drops the
 gradient and the pinned padding; on the first turn it returns to the foot of
@@ -352,6 +549,57 @@ A new dashboard starts with a flat sparkline rather than an invented one: it
 has measured nothing yet. The mode also stops centring itself once dashboards
 are below the input (`.hero--tall`), because vertical centring with more
 content than height clips the top.
+
+## A turn can hand back something to act on
+
+Most answers are read. Some of them should be *worked*, and a prototype that
+only renders prose cannot be tested for the thing it is actually for. So a
+scripted case can end in a **live widget** — one per turn, deliberately, because
+two things to act on in one answer means neither gets acted on.
+
+| Kind | The interaction | Where it turns up |
+|---|---|---|
+| `form` | fill fields, add rows, undo the last one | Sales insight — add the new admin |
+| `quiz` | choose an answer; the outcome is built from what was chosen | Slide, CV filter, Explain a metric |
+| `chart` | switch series; negative bars take the loss colour | Visualization, Chart a trend |
+| `table` | sort any column, numerically where the column is numeric | Explanation, Profile a table, Find anomalies |
+| `code` | switch runtime or dialect, copy | Documentation, Join two sources |
+
+**Answering has to change something**, or a questionnaire is a form nobody
+completes. The outcome block appears when the last question is answered and is
+assembled from the answers — `{1}` in the outcome text is the first answer, and
+`outcomeBy` lets one answer select a different outcome entirely (three deck
+shapes, three real outlines). Clicking a chosen answer again clears it: an answer
+you cannot take back is one people hesitate to give.
+
+**The chosen option takes the accent.** This is the one-accent rule working, not
+an exception to it — choosing is exactly the "you can act / you acted" the accent
+is reserved for.
+
+### Moving a widget to the artifact pane
+
+The widget's head carries one control, and it relocates the widget. Promoting it
+uses the mechanism that already existed for artifacts rather than a second one:
+the pane holds the widget, and the thread keeps the same one-line reference card
+any other artifact leaves behind. The button reverses in the pane, so the trip is
+symmetrical.
+
+That is possible because **widget state lives in the instance, never in the
+DOM** (`LIVE[id]`). Half-typed fields, chosen answers, the sorted column and the
+selected series all survive being re-rendered in a different column — or being
+rebuilt from scratch after you navigate to Build and come back. `rerender(w)`
+repaints the widget wherever it happens to be, and nothing else on the page has
+to know which of the two columns that is.
+
+Two consequences worth stating:
+
+- **The artifact record is created on promotion, not in the fixture.** Until
+  someone moves it there is nothing to reference, so `D.ARTIFACTS` gains an entry
+  (`kind: 'live'`) at that moment and loses it on the way back.
+- **A turn is now written into the thread.** Before this, simulated turns lived
+  only in the DOM and were lost on navigation — which is fine for a scripted
+  demo and useless for a tester who wants to fill a form, look at something else,
+  and come back to it.
 
 ## Turn structure
 
@@ -390,11 +638,15 @@ skills, agents, solutions and commands into one ranked list.
 
 ## Scope of the prototype
 
-- Responses are **simulated from a fixed script**; two canned replies cycle.
-  No network calls.
+- Responses are **simulated from a fixed script**. The eleven starters run
+  written cases; anything typed cycles two canned replies. No network calls.
 - Row-level actions (retry, branch, export, launching an app) fire a toast.
 - Live controls: theme, density, model, panel state, artifact width, tabs,
-  New chat. The rest are visual only.
+  New chat, every build form, and the live widgets — form, questionnaire, chart,
+  sortable table, code — including moving one between the thread and the
+  artifact pane. The rest are visual only.
+- Turns are held in memory for the session. Nothing is stored except theme,
+  density, artifact width and the app-rail state.
 
 ## Next
 
@@ -405,6 +657,17 @@ skills, agents, solutions and commands into one ranked list.
   call mid-turn, an artifact that fails to render, zero search results.
 - ~~The app rail is a launcher with nowhere to launch to.~~ Resolved: apps open
   as a sheet beside the rail. What is still missing is any *state* inside one —
-  every surface is read-only, and a queue you cannot triage from is a report.
+  every app surface is read-only, and a queue you cannot triage from is a report.
+  The live widgets in the thread are the pattern to copy: state in the instance,
+  the same node renderable in either column.
+- A live widget cannot be produced by a typed message, only by a scripted case.
+  A tester who writes their own question gets prose, which makes the widgets feel
+  like a rail rather than a capability.
 - Keyboard traversal of the sidebar, and focus management when the palette
   closes.
+- Build has no draft state and no version history. Edits apply as you make them,
+  which is honest for a prototype and wrong for a product: publishing a solution
+  should promote a draft, not mutate the live thing in place.
+- A design element cannot yet be previewed against real data from the solution
+  that renders it — the fixture values are typed into the inspector, so a widget
+  can claim a number its assistant could not produce.

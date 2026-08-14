@@ -135,10 +135,24 @@ button.chip--plain:hover{ background:var(--raised) }
   appearance:none;
   transition:border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
 }
-.input:focus,.select:focus{
+.input:focus,.select:focus,.textarea:focus{
   outline:none;
   border-color:var(--accent-line);
   box-shadow:0 0 0 3px var(--accent-soft);
+}
+/* Instructions are prose the model reads, so the control that holds them is
+   sized for prose: monospace, a fixed line height, and no resize handle
+   fighting the layout. */
+.textarea{
+  width:100%;
+  min-height:calc(var(--ctl-md) * 3);
+  padding:var(--s-2);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-md);
+  background:var(--bg); color:var(--text);
+  font-family:var(--mono); font-size:var(--t-12); line-height:var(--lh-ui);
+  resize:vertical;
+  transition:border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
 }
 .select{
   padding-right:26px;
@@ -697,6 +711,300 @@ button.chip--plain:hover{ background:var(--raised) }
   font-size:var(--t-11); color:var(--text-4);
 }
 .palette__foot span{ display:flex; align-items:center; gap:5px }
+
+/* ============================================================ live widget
+   Something in an answer you can act on: a form, a questionnaire, a chart to
+   switch, a table to sort, a snippet to read. It reads as a panel rather than a
+   card, because it is part of the turn — the head names it and carries the one
+   control that relocates it. */
+.live{
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--bg);
+  overflow:hidden;
+}
+/* In the artifact pane the pane is already the frame. */
+.live--pane{ border:0; border-radius:0; background:transparent }
+.live__host{ display:block; margin:var(--s-4) 0 0 }
+.live__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--ctl-lg);
+  padding:0 var(--s-2) 0 var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.live--pane .live__head{ background:transparent; padding-left:0 }
+.live__ico{ display:flex; flex:none; color:var(--accent) }
+.live__title{
+  flex:1; min-width:0;
+  font-size:var(--t-12); font-weight:var(--w-medium); color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.live__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.live__body{ padding:var(--s-3) }
+.live--pane .live__body{ padding:var(--s-3) 0 }
+.live__foot{
+  padding:6px var(--s-3);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+  font-family:var(--mono); font-size:var(--t-11); color:var(--text-4);
+}
+.live--pane .live__foot{ background:transparent; padding-left:0; padding-right:0 }
+
+/* ---------------------------------------------------------------- a form */
+.live__grid{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--s-3);
+}
+.live__field{ display:block; min-width:0 }
+.live__lab{ display:block; font-size:var(--t-11); color:var(--text-3); margin-bottom:5px }
+.live__acts{ display:flex; align-items:center; gap:var(--s-2); margin-top:var(--s-3) }
+@media (max-width:640px){ .live__grid{ grid-template-columns:minmax(0,1fr) } }
+
+/* ------------------------------------------------------- a questionnaire */
+.live__q + .live__q{ margin-top:var(--s-4) }
+.live__qt{ font-size:var(--t-12); color:var(--text-2); margin-bottom:var(--s-2) }
+.live__opts{ display:flex; flex-wrap:wrap; gap:var(--s-2) }
+/* An unanswered option is an outline; the chosen one takes the accent, because
+   choosing it is the act the accent is reserved for. */
+.live__opt{
+  padding:5px var(--s-3);
+  border:var(--border) solid var(--line-strong);
+  border-radius:var(--r-full);
+  background:var(--bg);
+  font-size:var(--t-12); color:var(--text-2);
+  transition:background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+             color var(--fast) var(--ease);
+}
+.live__opt:hover{ border-color:var(--text-4); color:var(--text) }
+.live__opt[aria-pressed="true"]{
+  background:var(--accent); border-color:var(--accent); color:var(--accent-fg);
+}
+.live__out{
+  margin-top:var(--s-4);
+  padding-top:var(--s-3);
+  border-top:var(--border) solid var(--line);
+}
+.live__outt{
+  font-size:var(--t-12); color:var(--text); line-height:var(--lh-ui);
+  margin-bottom:var(--s-2);
+}
+/* A negative bar is a loss, not a smaller gain. */
+.meter--down > i{ background:var(--err) }
+
+/* ============================================================== pick list
+   Choosing which skills an assistant composes, or which connectors a package
+   needs, is selection — so it takes the checkbox, not the switch. The row is
+   the hit area: a name three words long is a bad target. */
+.picklist{
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--bg);
+  overflow:hidden;
+}
+.picklist__row{
+  display:flex; align-items:center; gap:var(--s-2);
+  width:100%;
+  padding:var(--s-2) var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+  text-align:left;
+  transition:background var(--fast) var(--ease);
+}
+.picklist__row:last-child{ border-bottom:0 }
+.picklist__row:hover{ background:var(--raised) }
+.picklist__main{ flex:1; min-width:0 }
+.picklist__nm{
+  display:block;
+  font-size:var(--t-12); color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.picklist__sub{
+  display:block;
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.picklist__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
+/* ============================================================= checklist
+   What a package still needs before it can ship. Status colour carries the
+   meaning here because this IS data about state — the accent stays out of it. */
+.checklist{ display:grid; gap:2px }
+.checklist__row{
+  display:flex; align-items:flex-start; gap:var(--s-2);
+  padding:var(--s-2) 0;
+  border-bottom:var(--border) solid var(--line);
+  font-size:var(--t-12);
+}
+.checklist__row:last-child{ border-bottom:0 }
+.checklist__ico{ display:flex; flex:none; margin-top:1px; color:var(--text-4) }
+.checklist__row[data-ok="true"]  .checklist__ico{ color:var(--ok) }
+.checklist__row[data-ok="false"] .checklist__ico{ color:var(--warn) }
+.checklist__nm{ color:var(--text-2); flex:none }
+.checklist__val{
+  margin-left:auto; text-align:right;
+  font-size:var(--t-11); color:var(--text-4); line-height:var(--lh-ui);
+}
+
+/* ============================================================== canvas
+   Where a design element is previewed. The stage is deliberately inert — a
+   flat recessed surface, no grid, no shadow theatre — because everything
+   inside it belongs to someone else's brand and must not compete with ours. */
+.canvas{
+  display:flex; justify-content:center;
+  padding:var(--s-6) var(--s-4);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+  overflow-x:auto;
+}
+.canvas__frame{ width:100%; flex:none }
+.canvas__frame[data-w="narrow"]{ max-width:320px }
+.canvas__frame[data-w="medium"]{ max-width:480px }
+.canvas__frame[data-w="wide"]  { max-width:720px }
+/* Only inside the frame does a second accent exist. --wgt-a is the customer's
+   brand, set per element; --wgt-r is the corner radius they chose. */
+.canvas__frame{ --wgt-a:var(--accent); --wgt-r:var(--r-lg) }
+
+/* ------------------------------------------------------------- widgets */
+.wgt{
+  border:var(--border) solid var(--line);
+  border-radius:var(--wgt-r);
+  background:var(--bg);
+  overflow:hidden;
+  box-shadow:var(--shadow-sm);
+}
+.wgt__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-2) var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+}
+.wgt__mark{
+  width:14px; height:14px; flex:none;
+  border-radius:var(--r-xs);
+  background:var(--wgt-a);
+}
+.wgt__title{
+  flex:1; min-width:0;
+  font-size:var(--t-12); font-weight:var(--w-medium); color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.wgt__sub{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.wgt__body{ padding:var(--s-3) }
+.wgt__foot{
+  padding:6px var(--s-3);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+  font-size:var(--t-11); color:var(--text-4);
+}
+.wgt__kpi{
+  font-size:var(--t-28); font-weight:var(--w-semi);
+  letter-spacing:var(--ls-tight); line-height:1.1;
+}
+.wgt__kpirow{ display:flex; align-items:baseline; gap:var(--s-2) }
+.wgt__delta{ font-family:var(--mono); font-size:var(--t-12) }
+.wgt__cap{ margin-top:var(--s-1); font-size:var(--t-11); color:var(--text-4) }
+.wgt__spark{ height:52px }
+.wgt__spark i{ background:var(--wgt-a); opacity:.26; border-radius:var(--r-xs) }
+.wgt__spark i:last-child{ opacity:1 }
+.wgt__rows{ display:grid; gap:var(--s-2) }
+.wgt__row{ display:grid; gap:5px }
+.wgt__rowtop{ display:flex; align-items:center; gap:var(--s-2); font-size:var(--t-12) }
+.wgt__rowtop b{ flex:1; min-width:0; font-weight:var(--w-normal); color:var(--text-2);
+                overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.wgt__rowtop span{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.wgt__bar{ height:4px; border-radius:var(--r-full); background:var(--raised-2); overflow:hidden }
+.wgt__bar i{ display:block; height:100%; background:var(--wgt-a); border-radius:var(--r-full) }
+/* The ask box is a real composer's silhouette without its behaviour — a field
+   and the starters under it, which is all an embedded one ever is. */
+.wgt__ask{
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--ctl-lg);
+  padding:0 var(--s-2) 0 var(--s-3);
+  border:var(--border) solid var(--line);
+  border-radius:var(--wgt-r);
+  background:var(--bg);
+  font-size:var(--t-12); color:var(--text-4);
+}
+.wgt__send{
+  margin-left:auto; flex:none;
+  display:grid; place-items:center;
+  width:var(--ctl-sm); height:var(--ctl-sm);
+  border-radius:var(--r-sm);
+  background:var(--wgt-a); color:var(--app-fg);
+}
+.wgt__starters{ display:flex; flex-wrap:wrap; gap:var(--s-1); margin-top:var(--s-2) }
+.wgt__starter{
+  padding:3px var(--s-2);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-full);
+  font-size:var(--t-11); color:var(--text-3);
+}
+
+/* ------------------------------------------------- website templates
+   A template preview is a wireframe, not a mockup: bars stand in for text so
+   the reader judges the layout instead of reading placeholder prose. */
+.tpl{
+  border:var(--border) solid var(--line);
+  border-radius:var(--wgt-r);
+  background:var(--bg);
+  overflow:hidden;
+  box-shadow:var(--shadow-sm);
+}
+.tpl__bar{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-2) var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.tpl__logo{ width:12px; height:12px; flex:none; border-radius:var(--r-xs); background:var(--wgt-a) }
+.tpl__nm{ font-size:var(--t-11); font-weight:var(--w-medium); color:var(--text-2) }
+.tpl__navs{ display:flex; gap:var(--s-2); margin-left:auto }
+.tpl__navs span{ font-size:var(--t-11); color:var(--text-4) }
+.tpl__cols{ display:grid; grid-template-columns:74px minmax(0,1fr); min-height:170px }
+.tpl__cols--docs{ grid-template-columns:74px minmax(0,1fr) 58px }
+.tpl__side{
+  display:grid; gap:6px; align-content:start;
+  padding:var(--s-3) var(--s-2);
+  border-right:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.tpl__toc{
+  display:grid; gap:6px; align-content:start;
+  padding:var(--s-3) var(--s-2);
+  border-left:var(--border) solid var(--line);
+}
+.tpl__main{ padding:var(--s-3); display:grid; gap:var(--s-3); align-content:start }
+.tpl__line{ height:5px; border-radius:var(--r-full); background:var(--raised-2) }
+.tpl__line--on{ background:var(--wgt-a); opacity:.7 }
+.tpl__line--h{ height:9px; background:var(--line-strong) }
+.tpl__grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--s-2) }
+.tpl__grid--3{ grid-template-columns:repeat(3,minmax(0,1fr)) }
+.tpl__cell{
+  display:grid; gap:6px; align-content:start;
+  padding:var(--s-2);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-md);
+  min-height:52px;
+}
+.tpl__dot{ width:10px; height:10px; border-radius:var(--r-xs); background:var(--wgt-a); opacity:.7 }
+.tpl__hero{
+  display:grid; gap:var(--s-2); justify-items:center;
+  padding:var(--s-6) var(--s-4);
+  text-align:center;
+  border-bottom:var(--border) solid var(--line);
+}
+.tpl__h1{
+  font-size:var(--t-18); font-weight:var(--w-semi);
+  letter-spacing:var(--ls-tight); line-height:var(--lh-tight);
+}
+.tpl__sub{ font-size:var(--t-11); color:var(--text-3); max-width:34ch }
+.tpl__btn{
+  padding:5px var(--s-3);
+  border-radius:var(--r-md);
+  background:var(--wgt-a); color:var(--app-fg);
+  font-size:var(--t-11); font-weight:var(--w-medium);
+}
+.tpl__pad{ padding:var(--s-3) }
 
 /* ================================================================ toasts */
 .toasts{

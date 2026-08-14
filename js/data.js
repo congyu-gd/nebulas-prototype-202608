@@ -337,6 +337,41 @@ const ASSISTANTS = [
 ];
 const ASSISTANT_TEAMS = ['Revenue','Engineering','Support','Product'];
 
+/* The builder edits these same objects — an assistant is defined in Build and
+   chosen in Chat, so there is one of each rather than a definition and a copy.
+   Instructions and connector grants are part of the definition, so they are
+   filled in here rather than invented by the form: a default the builder writes
+   on first open would be indistinguishable from something a person chose. */
+ASSISTANTS.forEach(a => {
+  a.conn = a.conn || [];
+  a.opts = a.opts || { cite:true, confirm:true, think:a.model.indexOf('extended') > -1 };
+  a.inst = a.inst ||
+    'Answer only from ' + a.kb + '. Name what is missing rather than filling it in, ' +
+    'and attach the source to every claim.';
+});
+/* Ownership. The Build sidebar filters on it, because in a workspace with more
+   of these than you made, "whose is this" is the first question — and `me` is
+   stored rather than a name so the fixture does not have to know who is signed
+   in. A row shows the owner only when it is not you: your own things do not
+   need to be labelled as yours. */
+const MINE   = ['as1','as2','as4','as5','as14','as16'];
+const OWNERS = { as3:'Ana', as6:'Ravi', as7:'Ana', as8:'Ravi', as9:'Marc',
+                 as10:'Marc', as11:'Ana', as12:'Ana', as13:'Ravi', as15:'Marc' };
+ASSISTANTS.forEach(a => { a.owner = MINE.indexOf(a.id) > -1 ? 'me' : (OWNERS[a.id] || 'Ravi'); });
+
+ASSISTANTS[0].conn = ['cn1','cn2'];
+ASSISTANTS[0].inst =
+  'Answer from the finance warehouse. Strip non-recurring lines before attributing growth, ' +
+  'and say so when you do. Never present a figure without the period it covers.';
+ASSISTANTS[1].conn = ['cn5'];
+ASSISTANTS[1].inst =
+  'Read the repository before answering. Order findings by consequence, not by file. ' +
+  'No style commentary unless it was asked for.';
+ASSISTANTS[2].conn = ['cn3','cn6'];
+ASSISTANTS[3].conn = ['cn2','cn4'];
+ASSISTANTS[4].conn = ['cn1'];
+ASSISTANTS[10].conn = ['cn1','cn3'];
+
 /* --------------------------------------------------------------- schedule */
 const SCHEDULE = [
   { id:'sc1', name:'Weekly revenue digest', cron:'Mon 07:00', next:'in 2 d', state:'ok',
@@ -601,25 +636,149 @@ const AGENTS = [
     ] }
 ];
 
-/* -------------------------------------------------------------- solutions
-   A solution is what ships to an end user: an assistant, its skills, its
-   knowledge and a surface. The app rail on the right is where they land. */
+/* ------------------------------------------------------------- connectors
+   What an assistant can reach. A connector is the credential and the scope,
+   never the data — the data arrives as a source or a knowledge base. Three at
+   the end are catalogue entries: available, not connected, which is a state
+   worth showing rather than a list worth hiding. */
+const CONNECTORS = [
+  { id:'cn1', name:'Snowflake', kind:'warehouse', state:'ok',
+    desc:'The finance warehouse. Every ledger figure in this workspace resolves through here.',
+    endpoint:'gd-prod.eu-west-1.snowflakecomputing.com', auth:'Service account',
+    scope:'read-only role, 40 GB scan cap', writes:false, calls:'2,104 / 7d', last:'2 min ago' },
+  { id:'cn2', name:'Google Drive', kind:'drive', state:'ok',
+    desc:'One shared folder. Scoped to Finance so the corpus cannot widen without someone widening it here.',
+    endpoint:'drive.google.com/drive/folders/Finance', auth:'Service account',
+    scope:'1 folder, read-only', writes:false, calls:'318 / 7d', last:'4 min ago' },
+  { id:'cn3', name:'Zendesk', kind:'ticketing', state:'warn',
+    desc:'Ticket history and macros. The June backfill never completed, so anything aggregating Q2 undercounts.',
+    endpoint:'gnomon.zendesk.com/api/v2', auth:'API key',
+    scope:'tickets, macros', writes:true, calls:'1,204 / 7d', last:'4 h ago',
+    note:'June backfill incomplete — 12,402 tickets missing.' },
+  { id:'cn4', name:'Notion', kind:'docs', state:'ok',
+    desc:'Product workspace, read-only. Pricing memos and specs are cited from here.',
+    endpoint:'api.notion.com/v1', auth:'Integration token',
+    scope:'Product workspace, read-only', writes:false, calls:'96 / 7d', last:'1 h ago' },
+  { id:'cn5', name:'GitHub', kind:'repo', state:'ok',
+    desc:'Platform repositories. ADRs, runbooks and the service catalogue are read from the default branch.',
+    endpoint:'github.com/gnomon-digital', auth:'App installation',
+    scope:'4 repositories, contents read', writes:false, calls:'204 / 7d', last:'10 min ago' },
+  { id:'cn6', name:'Ingest webhook', kind:'webhook', state:'ok',
+    desc:'The inbound edge. Signed requests only, and the signature is checked before the body is parsed.',
+    endpoint:'ingest.nebulas.app/v1/hooks/8f2c', auth:'Signed webhook',
+    scope:'signed POST, 318 calls today', writes:true, calls:'318 / 1d', last:'2 min ago' },
+  { id:'cn7', name:'Slack', kind:'messaging', state:'off',
+    desc:'Post digests into a channel and take questions from a thread.',
+    endpoint:'—', auth:'OAuth', scope:'—', writes:true, calls:'—', last:'—' },
+  { id:'cn8', name:'Stripe', kind:'payments', state:'off',
+    desc:'Invoices and subscription events, for revenue that never reaches the warehouse.',
+    endpoint:'—', auth:'API key', scope:'—', writes:false, calls:'—', last:'—' },
+  { id:'cn9', name:'HubSpot', kind:'crm', state:'off',
+    desc:'Accounts, owners and renewal dates — the churn signal that shows up before usage moves.',
+    endpoint:'—', auth:'OAuth', scope:'—', writes:false, calls:'—', last:'—' }
+];
+const CONNECTOR_AUTHS = ['OAuth','Service account','API key','Integration token','App installation','Signed webhook'];
+
+/* -------------------------------------------------------- design elements
+   What the answer looks like once it leaves the workspace. Two kinds only: a
+   widget, which is embedded in a page someone else owns, and a template, which
+   IS the page. `shape` picks the preview renderer; `cfg` is what the inspector
+   edits. The accent named here is the customer's brand, not ours. */
+const DESIGNS = [
+  { id:'de1', name:'Metric tile', kind:'widget', shape:'kpi', state:'live', owner:'me', team:'Revenue',
+    desc:'One number, its movement against plan, and the period it covers.',
+    cfg:{ title:'Q3 revenue', sub:'live', accent:'Amber', radius:'Soft', theme:'Follow',
+          width:'Narrow', header:true, credit:true,
+          value:'$41.2M', delta:'+12.4%', cap:'Against plan · quarter to date' } },
+
+  { id:'de2', name:'Trend card', kind:'widget', shape:'chart', state:'live', owner:'me', team:'Revenue',
+    desc:'A series and its latest value. The last bar takes the brand colour; the rest carry it at low opacity.',
+    cfg:{ title:'ARR by month', sub:'8 mo', accent:'Nebulas', radius:'Soft', theme:'Follow',
+          width:'Medium', header:true, credit:true,
+          value:'$66.0M', delta:'+8.2%', cap:'Monthly recurring, last eight months' },
+    bars:[42,46,51,47,55,58,61,66] },
+
+  { id:'de3', name:'Ask box', kind:'widget', shape:'ask', state:'live', owner:'Ravi', team:'Product',
+    desc:'A question field and the three questions worth starting from. The smallest surface a solution can ship as.',
+    cfg:{ title:'Ask the renewal book', sub:'', accent:'Indigo', radius:'Round', theme:'Follow',
+          width:'Medium', header:true, credit:true,
+          placeholder:'Ask about renewals, exposure or owners…',
+          starters:'What renews in November?, Which accounts are exposed?, Who owns Contoso?' } },
+
+  { id:'de4', name:'Watchlist', kind:'widget', shape:'rows', state:'live', owner:'Ana', team:'Support',
+    desc:'A ranked list where the bar is the score, so the order is legible before any number is read.',
+    cfg:{ title:'Accounts at risk', sub:'5', accent:'Red', radius:'Soft', theme:'Follow',
+          width:'Medium', header:true, credit:true, cap:'Churn probability, next quarter' },
+    rows:[['Northwind Traders','0.81',81],['Contoso Retail','0.74',74],
+          ['Fabrikam','0.63',63],['Tailspin Toys','0.61',61],['Adventure Works','0.22',22]] },
+
+  { id:'de5', name:'Internal portal', kind:'template', shape:'portal', state:'live', owner:'me', team:'Revenue',
+    desc:'A signed-in page: nav down the side, cards in the middle. What a team lands on rather than what a prospect reads.',
+    cfg:{ title:'Finance Portal', sub:'Everything feeding the close', accent:'Nebulas',
+          radius:'Soft', theme:'Follow', width:'Wide', header:true, credit:true,
+          nav:'Overview, Revenue, Renewals, Reports' } },
+
+  { id:'de6', name:'Product landing', kind:'template', shape:'landing', state:'draft', owner:'Marc', team:'Product',
+    desc:'A public page with one claim, three supports and one action. Still unwired — no package points at it.',
+    cfg:{ title:'Ask your revenue data anything', sub:'Answers with the source attached, from the ledger your finance team already trusts.',
+          accent:'Emerald', radius:'Round', theme:'Follow', width:'Wide', header:true, credit:true,
+          cta:'Request access', nav:'Product, Pricing, Docs' } },
+
+  { id:'de7', name:'Docs & FAQ', kind:'template', shape:'docs', state:'live', owner:'Ravi', team:'Product',
+    desc:'Three columns: what exists, what you are reading, and where you are in it.',
+    cfg:{ title:'Help Centre', sub:'Sources, assistants and the API', accent:'Blue',
+          radius:'Square', theme:'Follow', width:'Wide', header:true, credit:true,
+          nav:'Getting started, Sources, Assistants, API' } }
+];
+/* Six brands to pick from, each already a token. A colour picker would invite a
+   seventh that matches nothing. */
+const DESIGN_ACCENTS = [
+  ['Nebulas','var(--accent)'], ['Indigo','var(--app-1)'], ['Emerald','var(--app-2)'],
+  ['Amber','var(--app-3)'],    ['Blue','var(--app-4)'],   ['Red','var(--app-5)']
+];
+
+/* ---------------------------------------------------------------- surfaces
+   Where a package can ship. `renders` is the load-bearing field: a surface that
+   renders needs a design element, and one that answers in JSON does not. */
+const SURFACES = [
+  { id:'app',   name:'App rail',        renders:true,  desc:'A sheet in this workspace’s right rail.' },
+  { id:'embed', name:'Embedded widget', renders:true,  desc:'Dropped into a page another team owns.' },
+  { id:'site',  name:'Public website',  renders:true,  desc:'A hosted page on your own domain.' },
+  { id:'hook',  name:'Webhook',         renders:false, desc:'Called by another system, answers in JSON.' },
+  { id:'sched', name:'Scheduled digest',renders:false, desc:'Runs on a clock, writes into a thread or channel.' }
+];
+
+/* ------------------------------------------------------- solution packages
+   A package is what ships: an assistant, the skills it may call, the knowledge
+   it may cite, the connectors it needs, the design element it renders as, and
+   the surfaces it reaches. Every field is an id into one of the lists above, so
+   a package cannot claim a part that does not exist. */
 const SOLUTIONS = [
-  { id:'so1', name:'Revenue Cockpit', state:'live', app:'RC', users:'42 users',
+  { id:'so1', name:'Revenue Cockpit', state:'live', app:'RC', users:'42 users', version:'1.4.0',
+    owner:'me', team:'Revenue',
     desc:'The finance team\'s standing view: variance by segment, the forecast bridge, and a question box wired to the revenue analyst.',
-    parts:{ assistant:'Revenue analyst', skills:['warehouse.query','code.run','chart.build'], kb:'Finance corpus', surface:'App + scheduled digest' } },
-  { id:'so2', name:'Churn Radar', state:'live', app:'CR', users:'18 users',
+    assistant:'as1', skills:['sk1','sk2','sk4'], kb:'k1', conn:['cn1','cn2'],
+    design:'de1', surfaces:['app','sched'], audience:'Finance team' },
+  { id:'so2', name:'Churn Radar', state:'live', app:'CR', users:'18 users', version:'1.1.0',
+    owner:'Ana', team:'Support',
     desc:'Account watchlist ranked by churn probability, with the signal that put each account on the list.',
-    parts:{ assistant:'Revenue analyst', skills:['warehouse.query','code.run'], kb:'Support corpus', surface:'App + daily refresh' } },
-  { id:'so3', name:'Ticket Triage', state:'live', app:'TT', users:'64 users',
+    assistant:'as11', skills:['sk1'], kb:'k3', conn:['cn1','cn3'],
+    design:'de4', surfaces:['app'], audience:'Revenue and support leads' },
+  { id:'so3', name:'Ticket Triage', state:'live', app:'TT', users:'64 users', version:'2.0.1',
+    owner:'Ana', team:'Support',
     desc:'Labels inbound tickets and escalates the uncertain ones to a human queue instead of guessing.',
-    parts:{ assistant:'Support triage', skills:['classify','search.docs'], kb:'Support corpus', surface:'Webhook + review queue' } },
-  { id:'so4', name:'Board Digest', state:'beta', app:'BD', users:'6 users',
+    assistant:'as3', skills:['sk3'], kb:'k3', conn:['cn3','cn6'],
+    design:'de4', surfaces:['hook','app'], audience:'Support team' },
+  { id:'so4', name:'Board Digest', state:'beta', app:'BD', users:'6 users', version:'0.9.0',
+    owner:'me', team:'Revenue',
     desc:'Assembles the weekly leadership note from the week\'s analyses. Drafts only — a human sends it.',
-    parts:{ assistant:'Board writer', skills:['search.docs','doc.write'], kb:'Finance corpus', surface:'Scheduled draft' } },
-  { id:'so5', name:'Pricing Lab', state:'draft', app:'PL', users:'—',
+    assistant:'as4', skills:['sk3','sk5'], kb:'k1', conn:['cn2','cn4'],
+    design:null, surfaces:['sched'], audience:'Leadership' },
+  { id:'so5', name:'Pricing Lab', state:'draft', app:'PL', users:'—', version:'0.3.0',
+    owner:'Ravi', team:'Revenue',
     desc:'Scenario tool for the November pricing cohort. Still wiring the renewal exposure model.',
-    parts:{ assistant:'Revenue analyst', skills:['warehouse.query','code.run'], kb:'Finance corpus', surface:'App' } }
+    assistant:'as6', skills:['sk1','sk2'], kb:'k1', conn:['cn1'],
+    design:null, surfaces:['app','embed'], audience:'Revenue team' }
 ];
 
 /* ------------------------------------------------------------------- apps
@@ -766,13 +925,9 @@ const CLOUD = [
   { id:'c6', name:'Usage & billing', desc:'Token spend by surface, and the caps that stop it.' }
 ];
 
-const CONNECTIONS = [
-  ['warehouse', 'Snowflake · eu-west-1', 'ok',   'read-only role, 40 GB scan cap'],
-  ['drive',     'Google Drive · Finance', 'ok',   'service account, 1 folder'],
-  ['zendesk',   'Zendesk · support',      'warn', 'June backfill incomplete'],
-  ['notion',    'Notion · Product',       'ok',   'read-only integration token'],
-  ['webhook',   'ingest.nebulas.app',     'ok',   'signed, 318 calls today']
-];
+/* Cloud → Connections reads CONNECTORS rather than a second list of the same
+   endpoints. A connector is configured in Build and reported on here; two
+   fixtures would have drifted apart by the second edit. */
 
 /* ---------------------------------------------------------------- account */
 const ACCOUNT = {
@@ -793,6 +948,385 @@ const ACCOUNT = {
 /* The composer routes to whichever model suits the turn, first-party or not.
    "Nebulas Pro" in the status strip is the platform, not the model. */
 const MODELS = ['ChatGPT 5','Claude Opus 5','Qwen 3 Max','Nebula Pro','Nebula Fast'];
+
+/* ------------------------------------------------------------- chat cases
+   A starter is not a prompt suggestion. Clicking one runs a worked example, so
+   a tester can walk into a real conversation without having to invent one.
+
+   Each case carries the question, the tool trace, the answer — and exactly one
+   INTERACTIVE block: a form to fill, a questionnaire to answer, a chart to
+   switch, a table to sort or a snippet to read. `w.kind` picks the renderer.
+   One per turn, deliberately: two things to act on in one answer and neither
+   gets acted on.
+
+   Keys are the starter labels in app.js's STARTERS. */
+const CASES = {
+
+  /* ---------------------------------------------------------------- work */
+  'Documentation':{
+    title:'Document the ingest endpoint',
+    ask:'Write the quickstart for the ingest webhook. Include the signature check — everyone gets that wrong.',
+    steps:[
+      { n:'search.repo', d:'ingest/hooks.py, ADR-014, service catalogue', t:'1.2s' },
+      { n:'doc.write',   d:'draft quickstart, two runtimes', t:'0.9s' }
+    ],
+    md:[
+      'The endpoint takes a signed POST and nothing else. Three things are worth stating plainly, because all three are where integrations break.',
+      '',
+      '- **Verify before you parse.** The signature covers the raw body. Parsing first and re-serialising changes the bytes and the check fails for reasons nobody can debug.',
+      '- **Compare in constant time.** A plain `==` on the digest leaks timing.',
+      '- **The clock matters.** Requests older than five minutes are rejected, so a retry queue that sits for an hour will replay into a wall.'
+    ].join('\n'),
+    cites:[ { n:'ingest/hooks.py', s:'repo' }, { n:'ADR-014.md', s:'docs' } ],
+    w:{ kind:'code', title:'Verify a signed webhook', meta:'2 runtimes',
+        variants:{
+          Python:[
+            'import hmac, hashlib, time',
+            '',
+            'def verify(raw: bytes, sig: str, ts: str, secret: bytes) -> bool:',
+            '    # reject stale requests before spending a hash',
+            '    if abs(time.time() - int(ts)) > 300:',
+            '        return False',
+            '    mac = hmac.new(secret, ts.encode() + b"." + raw, hashlib.sha256)',
+            '    # constant time. a plain == leaks the digest one byte at a time',
+            '    return hmac.compare_digest(mac.hexdigest(), sig)'
+          ].join('\n'),
+          'Node.js':[
+            'import { createHmac, timingSafeEqual } from "node:crypto";',
+            '',
+            'export function verify(raw, sig, ts, secret) {',
+            '  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;',
+            '  const mac = createHmac("sha256", secret)',
+            '    .update(`${ts}.`).update(raw)   // raw body, not the parsed object',
+            '    .digest("hex");',
+            '  return timingSafeEqual(Buffer.from(mac), Buffer.from(sig));',
+            '}'
+          ].join('\n')
+        } }
+  },
+
+  'Slide':{
+    title:'Q3 board slides',
+    ask:'Turn the Q3 close into a short board deck. I have ten minutes and one ask.',
+    steps:[
+      { n:'search.docs', d:'Q3 close notes, forecast bridge, board deck Q2', t:'1.1s' },
+      { n:'code.run',    d:'pull the three figures the ask depends on', t:'0.7s' }
+    ],
+    md:[
+      'Ten minutes is six slides. The shape matters more than the content here, so pick one and I will fill it — the three figures are the same either way.',
+      '',
+      'What the deck has to survive is the question *"is the beat durable"*, which is why services timing gets its own line rather than being netted out quietly.'
+    ].join('\n'),
+    cites:[ { n:'q3-close-notes.md', s:'drive' } ],
+    w:{ kind:'quiz', title:'Deck shape', meta:'1 question',
+        questions:[
+          { q:'Which shape fits this board?',
+            options:['Problem → evidence → ask','Numbers first','Narrative'] }
+        ],
+        outcomeBy:{
+          'Problem → evidence → ask':{
+            text:'Six slides. The ask lands on slide five, once the evidence is in the room.',
+            rows:[
+              ['1','SMB churn is up 40bps'],
+              ['2','Q3 beat $41.2M, and half of it is timing'],
+              ['3','Enterprise renewals are the durable half'],
+              ['4','Q4 forecast $42.4M, November is the risk'],
+              ['5','Ask: two headcount for the renewals desk'],
+              ['6','What we will know by the next meeting']
+            ] },
+          'Numbers first':{
+            text:'Six slides, opening on the number. Works for a board that has read the pack.',
+            rows:[
+              ['1','$41.2M · +12.4% vs plan'],
+              ['2','Where it came from, by segment'],
+              ['3','What we would discount — services timing'],
+              ['4','Q4 $42.4M, and the November cohort'],
+              ['5','Ask: two headcount for the renewals desk'],
+              ['6','Appendix: the bridge']
+            ] },
+          Narrative:{
+            text:'Five slides and no table. Riskier: it needs the room to trust the telling.',
+            rows:[
+              ['1','The quarter in one sentence'],
+              ['2','The handover problem behind the churn'],
+              ['3','What the renewals desk changed'],
+              ['4','What it costs to keep doing it'],
+              ['5','Ask: two headcount']
+            ] }
+        } }
+  },
+
+  'Visualization':{
+    title:'Visualise the Q3 beat',
+    ask:'Chart the Q3 variance by segment, and show me expansion against new logo.',
+    steps:[
+      { n:'warehouse.query', d:'SELECT segment, kind, arr FROM q3_ledger', t:'1.3s' },
+      { n:'chart.build',     d:'infer marks from column types', t:'0.4s' }
+    ],
+    md:[
+      'Two views of the same quarter. Variance answers *where the beat came from*; expansion against new logo answers *whether it repeats*.',
+      '',
+      'The second one is the one I would put in front of the board: three consecutive quarters of expansion outpacing new logo is a trend, and a single quarter of variance is not.'
+    ].join('\n'),
+    cites:[ { n:'q3_ledger.parquet', s:'warehouse' } ],
+    w:{ kind:'chart', title:'Q3 by segment', meta:'2 series',
+        series:[
+          { n:'Variance vs plan', unit:'$M',
+            bars:[['Enterprise',3.1],['Mid-market',1.0],['Services',0.6],['SMB',-0.4]] },
+          { n:'Expansion vs new logo', unit:'$M',
+            bars:[['Expansion',8.4],['New logo',5.2],['Upsell',2.1],['Churn',-1.6]] }
+        ] }
+  },
+
+  'Explanation':{
+    title:'What the close terms mean',
+    ask:'Explain the terms in the Q3 close the way this company uses them, not the textbook way.',
+    steps:[
+      { n:'search.docs', d:'finance glossary, close notes, pricing memo', t:'0.8s' },
+      { n:'classify',    d:'flag the four that differ from standard usage', t:'0.6s' }
+    ],
+    md:[
+      'Four of these do not mean what they mean elsewhere, and every one of the four has caused a wrong number in the last two quarters.',
+      '',
+      'The one to watch is **recurring base**: it excludes services *and* the July pricing uplift, so it is smaller than any figure in the board pack. Sort by "differs" to see the four together.'
+    ].join('\n'),
+    cites:[ { n:'FY25_targets.xlsx', s:'drive' }, { n:'pricing-changes.md', s:'notion' } ],
+    w:{ kind:'table', title:'Close glossary', meta:'6 terms',
+        cols:['Term','How it is used here','Differs'],
+        rows:[
+          ['recurring base','Q3 actual less services and less the July uplift','yes'],
+          ['variance','actual less plan, after FX normalisation','no'],
+          ['expansion','seat growth inside an existing contract only','yes'],
+          ['bookings','signed, not invoiced — cash lags by a quarter','yes'],
+          ['churn (bps)','logo churn, not revenue churn','yes'],
+          ['coverage','pipeline over remaining quota','no']
+        ] }
+  },
+
+  'Sales insight':{
+    title:'Northwind renewal risk',
+    ask:'Northwind renews in November. What is the risk, and who should own it?',
+    steps:[
+      { n:'warehouse.query', d:'accounts_health, renewals_export, ticket history', t:'1.4s' },
+      { n:'code.run',        d:'score the account against the churn model', t:'1.0s' }
+    ],
+    md:[
+      '**$2.1M, renewing 24 November, and the highest churn score in the book at 0.81.** The signal is not usage — it is that the admin who ran the account left nine days ago.',
+      '',
+      'Accounts that lose their original admin churn at 4.1x the base rate, and the effect shows up in the CRM about ninety days before it shows up in usage. Usage here is still flat, which is exactly what the pattern looks like at this stage.',
+      '',
+      'The practical move is a named human on the new admin this week. Add them and I will put the renewal on the desk with the account.'
+    ].join('\n'),
+    cites:[ { n:'accounts_health.parquet', s:'warehouse' }, { n:'renewals_export.csv', s:'upload' } ],
+    w:{ kind:'form', title:'Add the new admin', meta:'writes to HubSpot',
+        note:'Goes to the renewals desk with the account attached. Nothing is sent to the contact.',
+        fields:[
+          { k:'Name',  ph:'Priya Raman' },
+          { k:'Email', ph:'priya@northwind.example' },
+          { k:'Role',  ph:'Head of Operations' },
+          { k:'Owner', ph:'Ana' }
+        ],
+        action:'Add contact', done:'contact added' }
+  },
+
+  'CV filter':{
+    title:'Screen the platform shortlist',
+    ask:'Twelve CVs for the platform role. Filter them on what actually matters for this team.',
+    steps:[
+      { n:'fs.read',  d:'12 CVs, the role brief, last two hires', t:'1.6s' },
+      { n:'classify', d:'score against the brief, flag the ambiguous', t:'1.1s' }
+    ],
+    md:[
+      'Twelve CVs, and the brief is doing most of the filtering badly — it asks for eight years and a language, which is why the last two good hires would not have passed it.',
+      '',
+      'Answer these three and I will rank against what you actually said rather than what the brief says. I will also tell you which candidates the brief would have dropped.'
+    ].join('\n'),
+    cites:[ { n:'platform-role-brief.md', s:'drive' } ],
+    w:{ kind:'quiz', title:'What matters for this hire', meta:'3 questions',
+        questions:[
+          { q:'Weight experience or evidence of shipping?',
+            options:['Evidence of shipping','Years of experience','Both equally'] },
+          { q:'Is the language a hard requirement?',
+            options:['No — any strong systems background','Yes','Preferred, not required'] },
+          { q:'On-call from day one?',
+            options:['Yes','After three months','Never'] }
+        ],
+        outcome:{
+          text:'Ranked on {1}, treating the language as "{2}", with on-call "{3}". Four clear, three worth a call, five out — and two of the four would have failed the brief as written.',
+          rows:[
+            ['R. Okonkwo','strong — shipped two ingest rewrites'],
+            ['M. Silva','strong — would fail the brief on years'],
+            ['J. Adeyemi','strong'],
+            ['T. Bauer','strong — would fail the brief on language'],
+            ['3 candidates','worth a call'],
+            ['5 candidates','out']
+          ] } }
+  },
+
+  /* ------------------------------------------------------ data discovery */
+  'Profile a table':{
+    title:'Profile q3_ledger',
+    ask:'Profile q3_ledger. I want to know what I cannot trust before I use it.',
+    steps:[
+      { n:'warehouse.query', d:'column stats, null counts, cardinality', t:'1.5s' },
+      { n:'code.run',        d:'distribution checks, outlier scan', t:'0.9s' }
+    ],
+    md:[
+      '2,431,004 rows, six columns, and two of them will hurt you.',
+      '',
+      '- **`fx_rate` is 4.1% null** and every null is a EUR line. Those rows are already in reporting currency, so multiplying by a default of 1.0 silently double-counts nothing and multiplying by anything else is wrong.',
+      '- **`line_item` has 41 distinct values** where the plan has 12. The extra 29 are free text from three integrations, which is why `services` never reconciles.'
+    ].join('\n'),
+    cites:[ { n:'q3_ledger.parquet', s:'warehouse' } ],
+    w:{ kind:'table', title:'q3_ledger — column profile', meta:'6 columns',
+        cols:['Column','Type','Null','Distinct','Trust'],
+        rows:[
+          ['invoice_id','string','0%','2,431,004','ok'],
+          ['segment','string','0%','4','ok'],
+          ['line_item','string','0%','41','check'],
+          ['arr','decimal','0%','1,204,882','ok'],
+          ['booked_at','timestamp','0%','92','ok'],
+          ['fx_rate','decimal','4.1%','38','check']
+        ] }
+  },
+
+  'Find anomalies':{
+    title:'Anomalies in the Q3 ledger',
+    ask:'Find anything in Q3 that looks wrong rather than just unusual.',
+    steps:[
+      { n:'warehouse.query', d:'daily aggregates by segment and line item', t:'1.2s' },
+      { n:'code.run',        d:'seasonal decomposition, residual scan', t:'1.7s' }
+    ],
+    md:[
+      'Five things break the pattern. Two are real and three are artefacts, which is the more useful half of the answer.',
+      '',
+      'The one to act on is **14 July**: a single $412k enterprise line booked twice, four minutes apart, with different invoice ids. It is in the Q3 number you are presenting.'
+    ].join('\n'),
+    cites:[ { n:'q3_ledger.parquet', s:'warehouse' } ],
+    w:{ kind:'table', title:'Residual outliers', meta:'5 rows',
+        cols:['When','What','Size','Verdict'],
+        rows:[
+          ['Jul 14','$412k line booked twice, 4 min apart','412,000','real'],
+          ['Aug 02','SMB volume −38% for one day','−184,000','real'],
+          ['Jul 31','Month-end batch lands at 00:04','2,104,000','artefact'],
+          ['Aug 09','FX reload changes 38 rows','12,400','artefact'],
+          ['Jul 22','Services line reclassified','96,500','artefact']
+        ] }
+  },
+
+  'Join two sources':{
+    title:'Join the ledger to the renewal book',
+    ask:'Join q3_ledger to renewals_export. The keys do not match — tell me what I lose.',
+    steps:[
+      { n:'warehouse.query', d:'key cardinality on both sides', t:'1.1s' },
+      { n:'code.run',        d:'fuzzy match account names, count the misses', t:'1.4s' }
+    ],
+    md:[
+      'There is no shared key. The ledger has `invoice_id` and a segment; the renewal book has an account *name* typed by a human. So the join is on name, and a name join always loses something.',
+      '',
+      '**812 renewal rows, 786 match, 26 do not** — 18 are legal-entity renames, 6 are subsidiaries billed separately, and 2 are typos. The 26 carry $1.9M, so they cannot be dropped quietly.',
+      '',
+      'Below is the join I would ship: normalise, match, and keep the misses in a table rather than discarding them.'
+    ].join('\n'),
+    cites:[ { n:'renewals_export.csv', s:'upload' }, { n:'q3_ledger.parquet', s:'warehouse' } ],
+    w:{ kind:'code', title:'The join, with the misses kept', meta:'2 dialects',
+        variants:{
+          SQL:[
+            'with l as (',
+            '  select regexp_replace(lower(account), \'[^a-z0-9]\', \'\') as k, *',
+            '  from q3_ledger',
+            '), r as (',
+            '  select regexp_replace(lower(account), \'[^a-z0-9]\', \'\') as k, *',
+            '  from renewals_export',
+            ')',
+            '-- full outer, not inner: the 26 misses are the finding',
+            'select coalesce(l.k, r.k) as k, l.arr, r.acv, r.renews_on,',
+            '       case when l.k is null then \'ledger miss\'',
+            '            when r.k is null then \'renewal miss\' end as gap',
+            'from l full outer join r using (k)'
+          ].join('\n'),
+          Python:[
+            'import pandas as pd',
+            '',
+            'norm = lambda s: s.str.lower().str.replace(r"[^a-z0-9]", "", regex=True)',
+            'l["k"], r["k"] = norm(l.account), norm(r.account)',
+            '',
+            '# indicator=True keeps the misses instead of dropping them',
+            'j = l.merge(r, on="k", how="outer", indicator=True)',
+            'misses = j[j._merge != "both"]',
+            'assert misses.acv.sum() < 2_000_000, "unmatched book grew"'
+          ].join('\n')
+        } }
+  },
+
+  'Chart a trend':{
+    title:'ARR and churn, month by month',
+    ask:'Chart ARR by month and put churn next to it. I want to see whether they move together.',
+    steps:[
+      { n:'warehouse.query', d:'monthly ARR and logo churn, 8 months', t:'1.2s' },
+      { n:'chart.build',     d:'two series, shared axis', t:'0.4s' }
+    ],
+    md:[
+      'They do not move together, and that is the finding. ARR is up 57% over the window while churn is up 43% — growth is outrunning a problem rather than fixing it.',
+      '',
+      'Switch to churn below: the line bends in April, which is the month the SMB self-serve tier opened.'
+    ].join('\n'),
+    cites:[ { n:'arr_monthly', s:'warehouse' } ],
+    w:{ kind:'chart', title:'Eight months', meta:'2 series',
+        series:[
+          { n:'ARR by month', unit:'$M',
+            bars:[['Jan',42],['Feb',46],['Mar',51],['Apr',47],['May',55],['Jun',58],['Jul',61],['Aug',66]] },
+          { n:'Logo churn', unit:'bps',
+            bars:[['Jan',28],['Feb',24],['Mar',26],['Apr',31],['May',29],['Jun',35],['Jul',38],['Aug',40]] }
+        ] }
+  },
+
+  'Explain a metric':{
+    title:'Which ARR do you mean?',
+    ask:'Explain ARR. Half the dashboards here disagree with each other.',
+    steps:[
+      { n:'search.docs',     d:'metric definitions across 4 dashboards', t:'0.9s' },
+      { n:'warehouse.query', d:'compute all three for Q3', t:'1.1s' }
+    ],
+    md:[
+      'They disagree because there are three definitions in use and none of them is labelled. For Q3 they are **$41.2M**, **$39.8M** and **$38.6M** — a $2.6M spread, which is larger than the beat everyone is discussing.',
+      '',
+      'Tell me which one you mean and I will show what it includes and which dashboards are using it.'
+    ].join('\n'),
+    cites:[ { n:'FY25_targets.xlsx', s:'drive' } ],
+    w:{ kind:'quiz', title:'Pick a definition', meta:'1 question',
+        questions:[
+          { q:'Which ARR are you asking about?',
+            options:['Booked ARR','Recurring base','Committed ARR'] }
+        ],
+        outcomeBy:{
+          'Booked ARR':{
+            text:'$41.2M. Everything signed in the period, including one-off services. The headline figure, and the flattering one.',
+            rows:[
+              ['Includes','subscriptions, services, uplift'],
+              ['Excludes','nothing'],
+              ['Used by','the board pack, Revenue Cockpit'],
+              ['Watch','services timing makes it lumpy quarter to quarter']
+            ] },
+          'Recurring base':{
+            text:'$39.8M. Booked less services and less the July uplift. The number a forecast should grow.',
+            rows:[
+              ['Includes','subscriptions only'],
+              ['Excludes','services, July pricing uplift'],
+              ['Used by','Forecast Studio'],
+              ['Watch','smaller than every figure in the board pack']
+            ] },
+          'Committed ARR':{
+            text:'$38.6M. Only contracts with a signed term remaining. The number to promise against.',
+            rows:[
+              ['Includes','multi-year and annual commitments'],
+              ['Excludes','services, uplift, monthly rolling'],
+              ['Used by','nothing yet — this is the gap'],
+              ['Watch','drops sharply in November as terms roll']
+            ] }
+        } }
+  }
+};
 
 /* Canned assistant turns, cycled. Deliberately about the prototype itself. */
 const REPLIES = [
@@ -831,7 +1365,8 @@ const REPLIES = [
 
 return {
   ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SCHEDULE,
-  KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, SOLUTIONS, APPS, APP_PANELS, CLOUD, CONNECTIONS,
-  ACCOUNT, MODELS, REPLIES
+  KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, SOLUTIONS, APPS, APP_PANELS, CLOUD,
+  CONNECTORS, CONNECTOR_AUTHS, DESIGNS, DESIGN_ACCENTS, SURFACES,
+  ACCOUNT, MODELS, CASES, REPLIES
 };
 })();

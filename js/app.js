@@ -90,6 +90,7 @@ const P = {
   file:'<path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13 3v6h6"/>',
   spark:'<path d="M12 3.5 13.6 9 19 10.6 13.6 12.2 12 17.7 10.4 12.2 5 10.6 10.4 9Z"/>',
   chevR:'<path d="m9 6 6 6-6 6"/>',
+  chevL:'<path d="m15 6-6 6 6 6"/>',
   chevD:'<path d="m6 9 6 6 6-6"/>',
   tool:'<path d="M14.5 6.5a3.5 3.5 0 0 0 4.6 4.6L21 13l-8 8-2-2 1.9-1.9a3.5 3.5 0 0 0-4.6-4.6L6.4 14.4l-2-2 8-8Z"/>',
   x:'<path d="M6 6l12 12M18 6 6 18"/>',
@@ -115,6 +116,13 @@ const P = {
   starOn:'<path d="m12 4.3 2.35 4.9 5.35.75-3.9 3.75.95 5.3-4.75-2.6-4.75 2.6.95-5.3L4.3 9.95l5.35-.75Z" fill="currentColor"/>',
   trash:'<path d="M4.5 7h15M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M6.5 7l.8 11.6A1.5 1.5 0 0 0 8.8 20h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/>',
 
+  /* builder kinds — connector, widget, website template, solution */
+  plug:'<path d="M9 3v5M15 3v5"/><path d="M7 8h10v3.5a5 5 0 0 1-5 5 5 5 0 0 1-5-5Z"/><path d="M12 16.5V21"/>',
+  widget:'<rect x="3" y="4" width="18" height="16" rx="2"/><rect x="6.5" y="8" width="7" height="8" rx="1"/><path d="M16 8h1.5M16 11h1.5"/>',
+  template:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>',
+  pkg:'<path d="m12 3 8 4v10l-8 4-8-4V7Z"/><path d="m4 7 8 4 8-4M12 11v10"/><path d="m8 5 8 4"/>',
+  alert:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16h.01"/>',
+
   /* app glyphs — the identity half of an app tile */
   calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>',
   filetext:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
@@ -136,8 +144,9 @@ const state = {
   item:{
     chat:'t1',                 /* thread id · 'assistants' · 'schedule' · 'p:id' */
     knowledge:key('kb','k1'),  /* 'kb:id' · 'ds:id' · 'art:id' */
-    build:key('sk','sk1'),     /* 'sk:id' · 'ag:id' · 'so:id' */
-    cloud:'c1',
+    /* 'as:id' assistant · 'so:id' solution · 'de:id' design element */
+    build:key('as','as1'),
+    cloud:'c1',              /* a settings page id, or 'cn:id' for a connector */
     account:'profile'
   },
   busy:false,
@@ -150,12 +159,20 @@ const state = {
      reason — but a selection does not. */
   kb:{ tab:'files', sel:[], sort:{ c:'added', d:-1 } },
   asst:{ tab:'All' },          /* which assistant filter is showing */
+  /* Build's sidebar is Miller columns: `open` is the kind showing in the second
+     column, `last` is where you were in each kind so returning to one puts you
+     back, and `scope` filters the second column. Scope starts at All — a filter
+     that hides content on arrival reads as missing content. */
+  build:{ open:'as', scope:'All', last:{} },
   assistant:null,              /* the assistant bound to the next message */
   /* null means "follow the viewport"; true/false is an explicit choice. */
   pref:{ list:null, art:null, apps:null },
   appsWide:false
 };
 let replyIx = 0, newThreadN = 0;
+/* Ids for things made in this session. Fixture ids are hand-written, so a
+   counter keeps the two from colliding. */
+let madeN = 0;
 
 function toast(msg){
   const t = el('div','toast','<span style="display:flex">' + ic('check',13) + '</span><span>' + esc(msg) + '</span>');
@@ -177,9 +194,12 @@ function listRow(opts){
   b.onclick = opts.onClick;
   return b;
 }
-/* A group header, optionally with the "+" that creates one of its members. */
-function groupLabel(text, add){
+/* A group header, optionally with a count and the "+" that creates one of its
+   members. The count exists because Build's groups are four rows or sixteen,
+   and knowing which before scrolling is the whole point of a label. */
+function groupLabel(text, add, count){
   const g = el('div','listcol__group', '<span class="t-eyebrow">' + esc(text) + '</span>');
+  if (count != null) g.append(el('span','listcol__count', String(count)));
   if (add){
     const b = el('button','iconbtn iconbtn--xs tip tip--below', ic('plus',12));
     b.setAttribute('data-tip', add.tip);
@@ -188,7 +208,7 @@ function groupLabel(text, add){
   }
   return g;
 }
-const STATE_DOT = { run:'dot--run is-live', ok:'dot--ok', live:'dot--ok', idle:'', warn:'dot--warn', err:'dot--err', beta:'', draft:'' };
+const STATE_DOT = { run:'dot--run is-live', ok:'dot--ok', live:'dot--ok', idle:'', warn:'dot--warn', err:'dot--err', beta:'', draft:'', off:'' };
 function dotLead(s){ return '<span class="dot ' + (STATE_DOT[s] || '') + '" style="margin-right:2px"></span>'; }
 
 /* =============================================================== sections */
@@ -297,59 +317,127 @@ const SECTIONS = {
   },
 
   /* ------------------------------------------------------------ build
-     "Build mode" in the sketch. Skills compose into assistants, agents
-     run them on a schedule, solutions package the result as an app. */
+     "Build mode" in the sketch, and the section where things are made rather
+     than used. Three kinds now: the assistant that answers, the solution that
+     ships it, and the design it renders as. Skills are chosen inside an
+     assistant rather than authored on a page of their own, and scheduled runs
+     are already visible in Chat → Schedule — so neither is a menu entry.
+
+     An assistant is defined here and *chosen* in Chat — one object, two verbs.
+     Nothing is duplicated between the two: starring in Chat and editing here
+     write to the same record. */
   build:{
-    label:'Build', icon:'build', listTitle:'Build',
+    label:'Build', icon:'build', listTitle:'Build', miller:true,
+    /* Miller columns: kinds on the left, that kind's items beside them, and the
+       pane itself as the last column. Two navigable columns is what the
+       structure actually is — a kind and a thing — and a Finder reader already
+       knows that the left column narrows and the right one lists. */
     list(body){
-      body.append(groupLabel('Skills', { tip:'New skill', onClick:() => toast('New skill — prototype') }));
-      D.SKILLS.forEach(s => body.append(listRow({
-        lead:dotLead(s.state), title:s.name, sub:s.calls,
-        current:state.item.build === key('sk', s.id),
-        onClick:() => select('build', key('sk', s.id))
-      })));
+      const mill = el('div','miller');
+      const kinds = el('div','miller__col miller__col--kinds');
+      const items = el('div','miller__col');
 
-      body.append(groupLabel('Agents', { tip:'New agent', onClick:() => toast('New agent — prototype') }));
-      D.AGENTS.forEach(a => body.append(listRow({
-        lead:dotLead(a.state), title:a.name, sub:a.schedule,
-        current:state.item.build === key('ag', a.id),
-        onClick:() => select('build', key('ag', a.id))
-      })));
+      BUILD_GROUPS.forEach(g => {
+        const on = state.build.open === g.kind;
+        /* No count here: the second column's head carries it for the kind you
+           are in, and three counts nobody asked for cost the labels their
+           width. The chevron is the Finder signal that this opens a column. */
+        const b = el('button','row row--mill',
+          '<span class="row__icon">' + ic(g.icon, 13) + '</span>' +
+          '<span class="row__main"><span class="row__title">' + esc(g.label) + '</span></span>' +
+          '<span class="row__chev">' + ic('chevR', 12) + '</span>');
+        b.setAttribute('aria-current', String(on));
+        /* Opening a kind lands on whatever you last had open in it, the way
+           returning to a folder puts you back where you were. */
+        b.onclick = () => {
+          const list = g.items();
+          const want = state.build.last[g.kind];
+          const has = list.filter(x => x.id === want)[0];
+          state.build.open = g.kind;
+          select('build', key(g.kind, (has || list[0] || {}).id));
+        };
+        kinds.append(b);
+      });
 
-      body.append(groupLabel('Solutions', { tip:'New solution', onClick:() => toast('New solution — prototype') }));
-      D.SOLUTIONS.forEach(s => body.append(listRow({
-        lead:'<span class="row__icon">' + ic('layers',13) + '</span>',
-        title:s.name, sub:s.users,
-        current:state.item.build === key('so', s.id),
-        onClick:() => select('build', key('so', s.id))
-      })));
+      const g = BUILD_GROUPS.filter(x => x.kind === state.build.open)[0] || BUILD_GROUPS[0];
+      const all = g.items();
+      const shown = scoped(all, x => state.item.build === key(g.kind, x.id));
+
+      /* The second column's own head: what it is showing, how much of it, and
+         the "+" that makes another one of exactly this kind. */
+      const head = el('div','miller__head',
+        '<span class="t-eyebrow">' + esc(g.label) + '</span>' +
+        '<span class="listcol__count">' +
+          (shown.length !== all.length ? shown.length + '/' + all.length : String(all.length)) +
+        '</span>');
+      const add = el('button','iconbtn iconbtn--xs tip tip--below', ic('plus',12));
+      add.setAttribute('data-tip', g.addTip);
+      add.onclick = g.add;
+      head.append(add);
+      items.append(head);
+      items.append(scopeFilter());
+
+      if (!shown.length){
+        items.append(el('div','listcol__note', esc(g.empty)));
+      } else {
+        shown.forEach(x => items.append(listRow({
+          lead:g.lead(x), title:x.name, sub:g.sub(x),
+          /* Your own things are not labelled as yours — the absence is the
+             signal, and the column stays quiet for the common case. */
+          meta:x.owner === 'me' ? '' : x.owner,
+          current:state.item.build === key(g.kind, x.id),
+          onClick:() => select('build', key(g.kind, x.id))
+        })));
+      }
+
+      mill.append(kinds, items);
+      body.append(mill);
     },
     head(){
-      const v = state.item.build, id = idOf(v);
-      if (kindOf(v) === 'ag'){ const a = find(D.AGENTS, id); return { title:a.name, sub:a.owner }; }
-      if (kindOf(v) === 'so'){ const s = find(D.SOLUTIONS, id); return { title:s.name, sub:s.users }; }
-      const s = find(D.SKILLS, id);
-      return { title:s.name, sub:s.avg + ' avg' };
+      const v = state.item.build, id = idOf(v), k = kindOf(v);
+      if (k === 'de'){ const d = find(D.DESIGNS, id); return { title:d.name, sub:d.kind === 'widget' ? 'widget' : 'website template' }; }
+      if (k === 'so'){ const s = find(D.SOLUTIONS, id); return { title:s.name, sub:s.version + ' · ' + s.users }; }
+      const a = find(D.ASSISTANTS, id);
+      return { title:a.name, sub:a.team + ' · ' + a.model };
     },
     main(body){
-      const v = state.item.build, id = idOf(v);
-      if (kindOf(v) === 'ag') return agentView(body, find(D.AGENTS, id));
-      if (kindOf(v) === 'so') return solutionView(body, find(D.SOLUTIONS, id));
-      return skillView(body, find(D.SKILLS, id));
+      const v = state.item.build, id = idOf(v), k = kindOf(v);
+      if (k === 'de') return designView(body, find(D.DESIGNS, id));
+      if (k === 'so') return packageView(body, find(D.SOLUTIONS, id));
+      return assistantBuildView(body, find(D.ASSISTANTS, id));
     }
   },
 
-  /* ------------------------------------------------------------ cloud */
+  /* ------------------------------------------------------------ cloud
+     Connectors live here rather than in Build: connecting a system is an
+     administrative act, usually by a different person than the one composing an
+     assistant, and Connections is where they would look for it. Build grants a
+     connector; this section is what makes the grant mean anything. */
   cloud:{
     label:'Cloud & settings', icon:'cloud', listTitle:'Cloud',
     list(body){
+      const onConn = kindOf(state.item.cloud) === 'cn';
       D.CLOUD.forEach(c => body.append(listRow({
-        title:c.name, sub:c.desc, current:state.item.cloud === c.id,
+        title:c.name, sub:c.desc,
+        /* A connector is a page under Connections, so Connections stays the
+           current row while one is open. */
+        current:state.item.cloud === c.id || (onConn && c.id === 'c3'),
         onClick:() => select('cloud', c.id)
       })));
     },
-    head(){ const c = find(D.CLOUD, state.item.cloud); return { title:c.name, sub:'' }; },
-    main(body){ cloudView(body, find(D.CLOUD, state.item.cloud)); }
+    head(){
+      if (kindOf(state.item.cloud) === 'cn'){
+        const c = find(D.CONNECTORS, idOf(state.item.cloud));
+        return { title:c.name, sub:c.kind };
+      }
+      const c = find(D.CLOUD, state.item.cloud);
+      return { title:c.name, sub:'' };
+    },
+    main(body){
+      if (kindOf(state.item.cloud) === 'cn')
+        return connectorView(body, find(D.CONNECTORS, idOf(state.item.cloud)));
+      cloudView(body, find(D.CLOUD, state.item.cloud));
+    }
   },
 
   /* ---------------------------------------------------------- account */
@@ -374,6 +462,53 @@ const SECTIONS = {
 
 /* The rail order. Account is placed at the foot separately, as drawn. */
 const ORDER = ['chat','knowledge','build','cloud'];
+
+/* ---------------------------------------------------------- build groups
+   The three kinds Build makes, as data: one entry adds a group to the sidebar
+   with its own "+", its own row shape and its own empty line. */
+const BUILD_GROUPS = [
+  { kind:'as', label:'Assistants', icon:'agent', addTip:'New assistant', add:() => newAssistant(),
+    items:() => D.ASSISTANTS,
+    lead:a => dotLead(a.state), sub:a => a.model,
+    empty:'No assistant here matches this filter.' },
+
+  { kind:'so', label:'Solutions', icon:'pkg', addTip:'New solution', add:() => newPackage(),
+    items:() => D.SOLUTIONS,
+    lead:() => '<span class="row__icon">' + ic('pkg',13) + '</span>',
+    sub:s => s.version + ' · ' + s.state,
+    empty:'No solution here matches this filter.' },
+
+  { kind:'de', label:'Design settings', icon:'widget', addTip:'New design element', add:() => newDesign(),
+    items:() => D.DESIGNS,
+    lead:d => '<span class="row__icon">' + ic(d.kind === 'widget' ? 'widget' : 'template', 13) + '</span>',
+    sub:d => d.kind === 'widget' ? 'widget' : 'website template',
+    empty:'No design element here matches this filter.' }
+];
+
+/* Ownership scope. Two questions get asked of a list this size — "where is the
+   one I made" and "what has the rest of the company built" — so the filter
+   answers exactly those two, plus the union. `me` is stored on the record, so
+   this needs no notion of the signed-in user beyond the label. */
+const SCOPES = ['Mine','Teams','All'];
+const isMine = x => x.owner === 'me';
+/* `keep` survives the filter: the row you are looking at stays in the list even
+   when the scope excludes it, because a selection you cannot see is worse than
+   a filter that is one row loose. */
+function scoped(list, keep){
+  const s = state.build.scope;
+  if (s === 'All') return list;
+  const pred = s === 'Mine' ? isMine : x => !isMine(x);
+  return list.filter(x => pred(x) || (keep && keep(x)));
+}
+function scopeFilter(){
+  const wrap = el('div','listcol__filter');
+  const seg = segCtl(SCOPES, state.build.scope, v => { state.build.scope = v; render(); });
+  /* segCtl sizes to its content for forms; here it governs the list below it,
+     so it takes the column's width. */
+  seg.style.width = 'auto';
+  wrap.append(seg);
+  return wrap;
+}
 
 /* ------------------------------------------------------- small builders */
 function pageHead(title, desc, trailing){
@@ -494,6 +629,88 @@ function segCtl(options, value, onChange){
   return s;
 }
 
+function inputCtl(value, onChange, placeholder){
+  const i = el('input','input');
+  i.type = 'text';
+  i.value = value || '';
+  if (placeholder) i.placeholder = placeholder;
+  /* Committed on blur or Enter, not on every keystroke: a re-render per
+     character would take the caret with it. */
+  const commit = () => { if (i.value !== value) onChange(i.value); };
+  i.onblur = commit;
+  i.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); i.blur(); } };
+  return i;
+}
+function textareaCtl(value, onChange, placeholder){
+  const t = el('textarea','textarea');
+  t.value = value || '';
+  if (placeholder) t.placeholder = placeholder;
+  t.rows = 5;
+  t.onblur = () => { if (t.value !== value) onChange(t.value); };
+  return t;
+}
+
+/* ============================================================= build parts
+   Every build surface is the same shape — the thing on the left, an inspector
+   on the right — so the shell is written once. */
+function buildSplit(){
+  const wrap = el('div','build');
+  const main = el('div','build__main');
+  const side = el('aside','build__side');
+  wrap.append(main, side);
+  return { wrap:wrap, main:main, side:side };
+}
+function inspectorHead(side, title, meta){
+  side.append(el('div','build__sidehead',
+    '<span class="t-eyebrow">' + esc(title) + '</span>' +
+    (meta ? '<span class="t-mono">' + esc(meta) + '</span>' : '')));
+}
+function inspectorActs(side, buttons){
+  const acts = el('div','build__acts');
+  buttons.forEach(b => acts.append(b));
+  side.append(acts);
+}
+function noteP(text){
+  const p = el('p','build__note');
+  p.textContent = text;
+  return p;
+}
+
+/* Selection, not settings: nothing happens until the thing being built is
+   saved, so these are checkboxes and the whole row is the target. */
+function pickList(items, isOn, onToggle){
+  const list = el('div','picklist');
+  items.forEach(it => {
+    const row = el('label','picklist__row');
+    const box = el('input','check');
+    box.type = 'checkbox';
+    box.checked = isOn(it);
+    box.onchange = () => onToggle(it, box.checked);
+    row.append(box);
+    row.append(el('span','picklist__main',
+      '<span class="picklist__nm">' + esc(it.nm) + '</span>' +
+      (it.sub ? '<span class="picklist__sub">' + esc(it.sub) + '</span>' : '')));
+    if (it.meta) row.append(el('span','picklist__meta', esc(it.meta)));
+    list.append(row);
+  });
+  return list;
+}
+
+/* What is still missing, stated as a condition rather than a score. Status
+   colour carries it — this is data about state, so the accent stays out. */
+function checkList(rows){
+  const list = el('div','checklist');
+  rows.forEach(r => {
+    const row = el('div','checklist__row',
+      '<span class="checklist__ico">' + ic(r.ok ? 'check' : 'alert', 14) + '</span>' +
+      '<span class="checklist__nm">' + esc(r.nm) + '</span>' +
+      '<span class="checklist__val">' + esc(r.val) + '</span>');
+    row.dataset.ok = String(!!r.ok);
+    list.append(row);
+  });
+  return list;
+}
+
 /* ================================================================ messages */
 function traceNode(steps, dur, open){
   const t = el('div','trace');
@@ -533,14 +750,19 @@ function citesNode(cites){
 /* The artifact itself lives in the right pane. What stays in the thread is
    a one-line reference, so a long answer does not push the next turn off
    the screen. */
+/* A promoted widget keeps its own glyph and says what kind of widget it is,
+   rather than reading as the generic "live". */
+const artGlyph = a => a.kind === 'live' ? (WIDGET_ICON[a.wkind] || 'file') : (KIND_ICON[a.kind] || 'file');
+const artKind  = a => a.kind === 'live' ? a.wkind : a.kind;
+
 function artRefNode(a){
   const b = el('button','artref msg__ref');
   b.dataset.art = a.id;
   b.setAttribute('aria-current', String(state.art.id === a.id));
   b.innerHTML =
-    '<span class="artref__ico">' + ic(KIND_ICON[a.kind] || 'file',14) + '</span>' +
+    '<span class="artref__ico">' + ic(artGlyph(a),14) + '</span>' +
     '<span class="artref__title">' + esc(a.title) + '</span>' +
-    '<span class="artref__meta">' + esc(a.kind) + ' · ' + esc(a.size) + '</span>';
+    '<span class="artref__meta">' + esc(artKind(a)) + ' · ' + esc(a.size) + '</span>';
   b.onclick = () => openArtifact(a.id);
   return b;
 }
@@ -578,12 +800,329 @@ function msgNode(m){
     wrap.append(t);
   }
   wrap.append(el('div','prose', m.role === 'user' ? '<p>' + inline(m.text) + '</p>' : md(m.md)));
+  /* A live widget sits in the thread until someone moves it, at which point the
+     reference card below takes its place — the same card every other artifact
+     leaves behind, because that is what has happened to it. */
+  if (m.liveId && LIVE[m.liveId] && LIVE[m.liveId].placed === 'thread'){
+    wrap.append(liveHost(LIVE[m.liveId], 'thread'));
+  }
   if (m.artifactId){
     const a = D.ARTIFACT_BY_ID(m.artifactId);
     if (a) wrap.append(artRefNode(a));
   }
   if (m.cites && m.cites.length) wrap.append(citesNode(m.cites));
   return wrap;
+}
+
+/* ========================================================== live widgets
+   A turn can hand back something to act on rather than only something to read:
+   a form, a questionnaire, a chart to switch, a table to sort, a snippet to
+   read. One per turn — two things to act on in one answer and neither gets
+   acted on.
+
+   State lives in the instance, never in the DOM, so a widget can be re-rendered
+   anywhere without losing what has been typed or chosen. That is what makes
+   "move it to the artifact pane" a one-line state change rather than a DOM
+   transplant: the thread swaps the widget for the reference card it already
+   uses for artifacts, and the pane renders the same instance. */
+const LIVE = {};
+let liveN = 0;
+const WIDGET_ICON = { form:'filetext', quiz:'checksq', chart:'chart', table:'table', code:'code' };
+
+function makeLive(spec, from){
+  const w = Object.assign({}, spec, {
+    id:'w' + (++liveN),
+    from:from,
+    placed:'thread',
+    answers:{},      /* quiz: question index -> chosen option */
+    added:[],        /* form: rows submitted so far */
+    series:spec.series, ser:0,
+    variant:spec.variants ? Object.keys(spec.variants)[0] : null,
+    sort:null,
+    msg:null         /* the message that produced it, set by runTurn */
+  });
+  LIVE[w.id] = w;
+  return w;
+}
+/* What the pane's footer says it is holding. */
+function liveSize(w){
+  if (w.kind === 'form')  return plural(w.fields.length, 'field');
+  if (w.kind === 'quiz')  return plural(w.questions.length, 'question');
+  if (w.kind === 'chart') return plural(w.series.length, 'series', 'series');
+  if (w.kind === 'table') return plural(w.rows.length, 'row');
+  return plural(Object.keys(w.variants).length, 'variant');
+}
+
+/* Promote: the widget moves to the artifact pane and the thread keeps the same
+   one-line reference card any other artifact leaves behind. The artifact record
+   is created here rather than in the fixture, because until someone moves it
+   there is nothing to reference. */
+function liveToArtifact(w){
+  const a = {
+    id:'la-' + w.id, kind:'live', wkind:w.kind, live:w.id,
+    title:w.title, from:w.from, when:'now', size:liveSize(w)
+  };
+  D.ARTIFACTS.push(a);
+  w.placed = 'artifact';
+  if (w.msg) w.msg.artifactId = a.id;
+  render();
+  openArtifact(a.id);
+  toast(w.title + ' moved to the artifact pane');
+}
+function liveToThread(w){
+  const id = 'la-' + w.id;
+  const i = D.ARTIFACTS.map(x => x.id).indexOf(id);
+  if (i > -1) D.ARTIFACTS.splice(i, 1);
+  w.placed = 'thread';
+  if (w.msg) delete w.msg.artifactId;
+  if (state.art.id === id) state.art.id = null;
+  render();
+  renderArtifact();
+  toast(w.title + ' moved back into the thread');
+}
+
+function liveNode(w, where){
+  const wrap = el('section','live' + (where === 'pane' ? ' live--pane' : ''));
+  wrap.dataset.kind = w.kind;
+
+  const head = el('div','live__head',
+    '<span class="live__ico">' + ic(WIDGET_ICON[w.kind] || 'file', 14) + '</span>' +
+    '<span class="live__title">' + esc(w.title) + '</span>' +
+    '<span class="live__meta">' + esc(w.meta || w.kind) + '</span>');
+  const move = el('button','iconbtn iconbtn--sm',
+    ic(where === 'pane' ? 'chevL' : 'open', 13));
+  move.type = 'button';
+  move.title = where === 'pane' ? 'Move back into the thread' : 'Move to the artifact pane';
+  move.onclick = () => where === 'pane' ? liveToThread(w) : liveToArtifact(w);
+  head.append(move);
+  wrap.append(head);
+
+  const body = el('div','live__body');
+  LIVE_KIND[w.kind](body, w);
+  wrap.append(body);
+
+  const foot = liveFoot(w);
+  if (foot) wrap.append(foot);
+  return wrap;
+}
+function liveFoot(w){
+  let text = '';
+  if (w.kind === 'form')  text = w.added.length ? plural(w.added.length, w.done) : w.note || '';
+  if (w.kind === 'quiz'){
+    const n = Object.keys(w.answers).length;
+    text = n === w.questions.length ? 'answered' : n + ' of ' + w.questions.length + ' answered';
+  }
+  if (w.kind === 'chart') text = w.series[w.ser].n + ' · ' + w.series[w.ser].unit;
+  if (w.kind === 'table') text = plural(w.rows.length, 'row') + (w.sort ? ' · sorted by ' + w.cols[w.sort.c] : '');
+  if (w.kind === 'code')  text = w.variant;
+  return text ? el('div','live__foot', esc(text)) : null;
+}
+
+/* --------------------------------------------------------------- the kinds */
+const LIVE_KIND = {
+
+  /* A form writes somewhere, so it says where in its own footer and confirms
+     each row it accepted rather than only announcing success once. */
+  form(body, w){
+    const grid = el('div','live__grid');
+    const inputs = {};
+    w.fields.forEach(f => {
+      const wrap = el('label','live__field', '<span class="live__lab">' + esc(f.k) + '</span>');
+      const i = el('input','input');
+      i.type = 'text';
+      i.placeholder = f.ph;
+      i.value = w['v_' + f.k] || '';
+      i.oninput = () => { w['v_' + f.k] = i.value; sync(); };
+      inputs[f.k] = i;
+      wrap.append(i);
+      grid.append(wrap);
+    });
+    body.append(grid);
+
+    const row = el('div','live__acts');
+    const add = el('button','btn btn--primary btn--sm', ic('plus',13) + esc(w.action));
+    const first = w.fields[0].k;
+    function sync(){ add.disabled = !(w['v_' + first] || '').trim(); }
+    add.onclick = () => {
+      w.added.push(w.fields.map(f => (w['v_' + f.k] || '').trim() || '—'));
+      w.fields.forEach(f => { delete w['v_' + f.k]; });
+      rerender(w);
+      toast(w.action + ' — ' + w.added[w.added.length - 1][0]);
+    };
+    sync();
+    row.append(add);
+    if (w.added.length){
+      const undo = el('button','btn btn--ghost btn--sm','Undo last');
+      undo.onclick = () => { w.added.pop(); rerender(w); };
+      row.append(undo);
+    }
+    body.append(row);
+
+    if (w.added.length){
+      const list = el('div','artlist');
+      list.style.marginTop = 'var(--s-3)';
+      w.added.forEach(r => list.append(el('div','artlist__row',
+        '<span class="artlist__k">' + esc(r[0]) + '</span>' +
+        '<span class="artlist__v">' + esc(r.slice(1).filter(x => x !== '—').join(' · ')) + '</span>')));
+      body.append(list);
+    }
+  },
+
+  /* A questionnaire is only worth answering if answering changes something, so
+     the outcome block appears when the last question is answered — and it is
+     built from what was chosen, not from a fixed script. */
+  quiz(body, w){
+    w.questions.forEach((q, i) => {
+      const box = el('div','live__q');
+      box.append(el('div','live__qt', esc(q.q)));
+      const opts = el('div','live__opts');
+      q.options.forEach(o => {
+        const b = el('button','live__opt', esc(o));
+        b.type = 'button';
+        b.setAttribute('aria-pressed', String(w.answers[i] === o));
+        b.onclick = () => {
+          /* Clicking the chosen answer again clears it — an answer you cannot
+             take back is an answer you hesitate to give. */
+          if (w.answers[i] === o) delete w.answers[i]; else w.answers[i] = o;
+          rerender(w);
+        };
+        opts.append(b);
+      });
+      box.append(opts);
+      body.append(box);
+    });
+
+    const done = w.questions.every((q, i) => w.answers[i]);
+    if (!done) return;
+    const out = w.outcomeBy ? w.outcomeBy[w.answers[0]] : w.outcome;
+    if (!out) return;
+    const block = el('div','live__out');
+    block.append(el('div','live__outt',
+      inline(String(out.text).replace(/\{(\d)\}/g, (m, d) => w.answers[Number(d) - 1] || ''))));
+    /* A definition list, not the artifact pane's label-against-right-aligned
+       value: an outline's keys are "1" and "2" and its text has to start at a
+       column, not end at one. */
+    if (out.rows) block.append(defList(out.rows.map(r => [r[0], esc(r[1])])));
+    body.append(block);
+  },
+
+  /* Two series of the same quarter is two answers, so the switch is part of the
+     chart rather than a second chart below it. */
+  chart(body, w){
+    if (w.series.length > 1){
+      const seg = segCtl(w.series.map(s => s.n), w.series[w.ser].n, v => {
+        w.ser = w.series.map(s => s.n).indexOf(v);
+        rerender(w);
+      });
+      seg.style.marginBottom = 'var(--s-3)';
+      body.append(seg);
+    }
+    const s = w.series[w.ser];
+    /* Negative values exist in a variance chart, so the scale is the largest
+       magnitude either way and the bar takes the loss colour when it is one. */
+    const max = Math.max.apply(null, s.bars.map(b => Math.abs(b[1]))) || 1;
+    /* One decimal for the whole series or none for the whole series: $1M beside
+       $3.1M reads as a different unit. */
+    const dec = s.bars.some(b => b[1] % 1 !== 0) ? 1 : 0;
+    const list = el('div','barlist');
+    s.bars.forEach(([k, v]) => {
+      const neg = v < 0;
+      const row = el('div','barlist__row',
+        '<span class="barlist__k">' + esc(k) + '</span>' +
+        '<span class="meter' + (neg ? ' meter--down' : '') + '">' +
+          '<i style="width:' + Math.round(Math.abs(v) / max * 100) + '%"></i></span>' +
+        '<span class="barlist__v' + (neg ? ' delta-dn' : '') + '">' +
+          esc((neg ? '' : '+') + v.toFixed(dec)) + '</span>');
+      list.append(row);
+    });
+    body.append(list);
+  },
+
+  /* Sorting is the interaction a table wants. It sorts numerically when the
+     column is numeric, because "412,000" and "96,500" sort backwards as text. */
+  table(body, w){
+    /* A typographic minus (U+2212) is what a figure written by a human carries,
+       and treating it as text is how "−184,000" sorts above "12,400". Both the
+       test and the parse normalise it. */
+    const plain = v => String(v).replace(/−/g, '-');
+    const num = i => w.rows.every(r => /^[-+$\d.,%\s]+$/.test(plain(r[i])));
+    const rows = w.sort
+      ? w.rows.slice().sort((a, b) => {
+          const c = w.sort.c, d = w.sort.d;
+          if (num(c)){
+            const f = v => parseFloat(plain(v).replace(/[^\d.-]/g,'')) || 0;
+            return (f(a[c]) - f(b[c])) * d;
+          }
+          return String(a[c]).localeCompare(String(b[c])) * d;
+        })
+      : w.rows;
+
+    const sx = el('div','scroll-x');
+    const t = el('table','table table--rows');
+    const thead = el('thead');
+    const tr = el('tr');
+    w.cols.forEach((c, i) => {
+      const active = w.sort && w.sort.c === i;
+      const glyph = active
+        ? ic('chevD',12).replace('<svg','<svg style="rotate:' + (w.sort.d > 0 ? '180deg' : '0deg') + '"')
+        : ic('sort',13);
+      const th = el('th', num(i) && i ? 'num' : null,
+        '<button type="button">' + esc(c) + '<span class="sortic">' + glyph + '</span></button>');
+      if (active) th.setAttribute('aria-sort', w.sort.d > 0 ? 'ascending' : 'descending');
+      th.firstChild.onclick = () => {
+        w.sort = { c:i, d:active ? -w.sort.d : 1 };
+        rerender(w);
+      };
+      tr.append(th);
+    });
+    thead.append(tr);
+    t.append(thead);
+    const tb = el('tbody');
+    rows.forEach(r => {
+      const row = el('tr');
+      r.forEach((v, i) => {
+        const last = i === r.length - 1;
+        const flag = last && /^(real|check|yes)$/.test(String(v));
+        row.append(el('td', (num(i) && i ? 'num' : '') + (flag ? ' t-mono' : ''),
+          flag ? '<span style="color:var(--warn)">' + esc(v) + '</span>' : esc(v)));
+      });
+      tb.append(row);
+    });
+    t.append(tb);
+    sx.append(t);
+    body.append(sx);
+  },
+
+  code(body, w){
+    const names = Object.keys(w.variants);
+    if (names.length > 1){
+      const seg = segCtl(names, w.variant, v => { w.variant = v; rerender(w); });
+      seg.style.marginBottom = 'var(--s-3)';
+      body.append(seg);
+    }
+    body.append(el('pre','code', highlight(w.variants[w.variant])));
+    const row = el('div','live__acts');
+    const copy = el('button','btn btn--secondary btn--sm', ic('copy',13) + 'Copy');
+    copy.onclick = () => toast('Copied ' + w.variant + ' to clipboard');
+    row.append(copy);
+    body.append(row);
+  }
+};
+
+/* A widget re-renders in place — wherever it happens to be. Nothing else on the
+   page has to know which of the two columns that is. */
+function rerender(w){
+  const host = $('[data-live="' + w.id + '"]');
+  if (!host) return;
+  host.innerHTML = '';
+  host.append(liveNode(w, host.dataset.where));
+}
+function liveHost(w, where){
+  const host = el('div','live__host');
+  host.dataset.live = w.id;
+  host.dataset.where = where;
+  host.append(liveNode(w, where));
+  return host;
 }
 
 /* ================================================================== views */
@@ -616,20 +1155,29 @@ function heroNode(){
   const modes = Object.keys(STARTERS);
   h.append(segCtl(modes, heroMode, m => { heroMode = m; heroNew = false; render(); }));
 
+  /* A starter runs its case rather than typing a word into the box. Half a
+     prompt is not an offer — a tester needs a way into a conversation, not a
+     head start on writing one. */
   const row = el('div','hero__starters');
   STARTERS[heroMode].forEach(s => {
-    const b = el('button','chip chip--plain', '<span>' + esc(s) + '</span>');
+    const c = D.CASES[s];
+    const b = el('button','chip chip--plain', ic('play',11) + '<span>' + esc(s) + '</span>');
     b.type = 'button';
+    b.title = c ? c.ask : 'Start a message';
     b.onclick = () => {
-      const i = $('#composerInput');
-      i.value = s;
-      autosize();
-      $('#sendBtn').disabled = false;
-      i.focus();
+      if (!c){
+        const i = $('#composerInput');
+        i.value = s; autosize();
+        $('#sendBtn').disabled = false; i.focus();
+        return;
+      }
+      runCase(s);
     };
     row.append(b);
   });
   h.append(row);
+  h.append(el('p','hero__note',
+    'Each one runs a worked example — with something in the answer you can fill in, answer, sort or move to the artifact pane.'));
 
   /* The input follows the starters, because a starter is a half-written
      message and the place it lands should be the next thing under it. */
@@ -811,6 +1359,14 @@ function asstCard(a){
       '<span style="flex:1"></span>' +
       '<span class="t-mono">' + esc(a.threads) + ' threads</span>' +
     '</div>';
+  /* Chat chooses an assistant; Build defines it. The card carries the way
+     across so the two are one object with two verbs, not two lists. */
+  const edit = el('button','iconbtn iconbtn--sm', ic('build',14));
+  edit.type = 'button';
+  edit.title = 'Edit in Build';
+  edit.onclick = e => { e.stopPropagation(); select('build', key('as', a.id)); };
+  c.firstChild.append(edit);
+
   const star = el('button','iconbtn iconbtn--sm star', ic(a.fav ? 'starOn' : 'star', 14));
   star.type = 'button';
   star.setAttribute('aria-pressed', String(a.fav));
@@ -833,7 +1389,7 @@ function asstCard(a){
     '<div style="display:flex;align-items:center;gap:var(--s-2)">' +
       '<span class="badge badge--mono">' + esc(a.team) + '</span>' +
       '<span style="flex:1"></span>' +
-      '<span class="t-mono">' + esc(a.kb) + '</span>' +
+      '<span class="t-mono">' + esc(a.kb || 'no knowledge base') + '</span>' +
     '</div>';
   c.append(b);
   return c;
@@ -1253,92 +1809,710 @@ function datasetView(body, d){
   body.append(pad);
 }
 
-function skillView(body, s){
-  const pad = el('div','pane__pad');
-  const badge = { ok:'badge--ok', warn:'badge--warn', err:'badge--err' }[s.state] || '';
-  const text  = { ok:'Enabled', warn:'Asks first', err:'Blocked' }[s.state];
-  pad.append(pageHead(s.name, s.desc, '<span class="badge ' + badge + '">' + text + '</span>'));
+/* ==================================================================== build
+   Three kinds of thing are built here, and they point at each other by id: an
+   assistant grants connectors, a solution binds an assistant and renders as a
+   design element. Strict lookups, not `find()` — `find()` falls back to the
+   first item, which would quietly turn "nothing bound" into "the first one". */
+const byId = (list, id) => list.filter(x => x.id === id)[0] || null;
+const skillById   = id => byId(D.SKILLS, id);
+const connById    = id => byId(D.CONNECTORS, id);
+const kbById      = id => byId(D.KBS, id);
+const designById  = id => byId(D.DESIGNS, id);
+const asstById    = id => byId(D.ASSISTANTS, id);
+const surfaceById = id => byId(D.SURFACES, id);
 
-  const sig = el('div','card');
-  sig.innerHTML = '<div class="card__head"><span class="card__title">Signature</span></div>' +
-                  '<div class="card__body" style="padding:var(--s-3)"><pre class="code">' + esc(s.sig) + '</pre></div>';
-  sig.style.marginBottom = 'var(--s-6)';
-  pad.append(sig);
-
-  pad.append(statGrid([['Calls', s.calls], ['Average', s.avg], ['State', text]], ['Calls','Average','State']));
-  pad.lastChild.style.marginBottom = 'var(--s-8)';
-
+/* Referenced-by is derived, never stored. The builder mutates these objects, so
+   a cached list of dependents would be wrong by the second edit. */
+function usedBySection(title, entries, emptyText){
   const sec = el('section','section');
-  sec.append(sectionHead('Definition'));
-  sec.append(codeCard(s.code));
-  pad.append(sec);
-  body.append(pad);
-}
-
-function agentView(body, a){
-  const pad = el('div','pane__pad');
-  const badge = { run:'badge--info', ok:'badge--ok', idle:'', err:'badge--err' }[a.state] || '';
-  const text  = { run:'Running', ok:'Healthy', idle:'Idle', err:'Failed' }[a.state];
-  pad.append(pageHead(a.name, a.desc, '<span class="badge ' + badge + '">' + text + '</span>'));
-
-  if (a.state === 'err'){
-    pad.append(banner('err','<strong>Last run failed.</strong> ' + esc(a.log[a.log.length - 1].m) +
-      ' Runs are paused until this is cleared.'));
-  }
-  pad.append(tableSection('Recent runs',
-    ['Started','Result','Items','Duration'],
-    a.runs.map(r => {
-      const label = { run:'running', ok:'ok', err:'failed' }[r.state];
-      return [
-        '<td style="font-family:var(--mono)">' + esc(r.started) + '</td>',
-        '<td><span style="display:inline-flex;align-items:center;gap:6px">' +
-          '<span class="dot ' + (STATE_DOT[r.state] || '') + '"></span>' + label + '</span></td>',
-        '<td>' + esc(r.items) + '</td>',
-        '<td class="num">' + esc(r.dur) + '</td>'
-      ];
+  sec.append(sectionHead(title, '<span class="t-mono">' + entries.length + '</span>'));
+  if (!entries.length){
+    sec.append(emptyState('link','Nothing references this yet', emptyText));
+  } else {
+    entries.forEach(e => sec.append(listRow({
+      lead:'<span class="row__icon">' + ic(e.ic, 13) + '</span>',
+      title:e.nm, sub:e.sub, onClick:e.go
     })));
+  }
+  return sec;
+}
+/* Who owns it, in the page head next to its state — the same two facts the
+   sidebar row carries, so arriving from a filtered list explains itself. */
+function ownerBadge(x){
+  return '<span class="badge badge--mono">' +
+    esc((isMine(x) ? 'You' : x.owner) + ' · ' + (x.team || '—')) + '</span>';
+}
+function stateBadge(s){
+  const badge = { live:'badge--ok', ok:'badge--ok', run:'badge--info', beta:'badge--info',
+                  warn:'badge--warn', err:'badge--err', idle:'', draft:'', off:'' }[s] || '';
+  const text  = { live:'Live', ok:'Live', run:'Running', beta:'Beta', warn:'Needs attention',
+                  err:'Failed', idle:'Idle', draft:'Draft', off:'Not connected' }[s] || s;
+  return '<span class="badge ' + badge + '">' + esc(text) + '</span>';
+}
 
-  const logSec = el('section','section');
-  logSec.append(sectionHead('Live log'));
-  const lvlColor = { info:'var(--text-3)', warn:'var(--warn)', err:'var(--err)' };
-  const card = el('div','card');
-  card.innerHTML = '<div class="card__body" style="padding:var(--s-3)"><pre class="code">' +
-    a.log.map(l =>
-      '<span class="c">' + esc(l.t) + '</span>  ' +
-      '<span style="color:' + lvlColor[l.lvl] + '">' + l.lvl.padEnd(4) + '</span>  ' +
-      esc(l.m)).join('\n') + '</pre></div>';
-  logSec.append(card);
-  pad.append(logSec);
+/* ------------------------------------------------------- assistant builder
+   The same record the chat sidebar lists. Chat picks one; this defines it. */
+function assistantBuildView(body, a){
+  const pad = el('div','pane__pad');
+  pad.append(pageHead(a.name, a.desc, ownerBadge(a) + stateBadge(a.state)));
+  const s = buildSplit();
+
+  const pair = el('div','build__pair');
+  pair.append(field('Name', inputCtl(a.name, v => { a.name = v.trim() || a.name; render(); })));
+  pair.append(field('Team', selectCtl(D.ASSISTANT_TEAMS, a.team, v => { a.team = v; render(); })));
+  s.main.append(pair);
+
+  const pair2 = el('div','build__pair');
+  /* An assistant can be pinned to a model this workspace does not offer in the
+     composer, so the current value is added rather than silently replaced by
+     the first option. */
+  const models = D.MODELS.indexOf(a.model) > -1 ? D.MODELS : D.MODELS.concat([a.model]);
+  pair2.append(field('Model', selectCtl(models, a.model, v => {
+    a.model = v; a.opts.think = v.indexOf('extended') > -1; render();
+  }), 'A thread can still route a single turn elsewhere.'));
+  const kbNames = ['— none —'].concat(D.KBS.map(k => k.name));
+  pair2.append(field('Knowledge base', selectCtl(kbNames, a.kb || '— none —', v => {
+    a.kb = v === '— none —' ? null : v; render();
+  }), 'The only corpus it may cite.'));
+  s.main.append(pair2);
+
+  s.main.append(field('Instructions', textareaCtl(a.inst, v => { a.inst = v; render(); },
+    'What it must do, and what it must refuse to do.'),
+    'Read before every turn. State the refusals — they are the half that holds under pressure.'));
+
+  /* Skills an assistant names but the workspace has not defined are shown as
+     such rather than dropped: the gap belongs on screen, not in a filter. */
+  const defined = D.SKILLS.map(x => x.name);
+  const undef = a.skills.filter(n => defined.indexOf(n) < 0);
+  const skillItems = D.SKILLS.map(x => ({ nm:x.name, sub:x.desc, meta:x.avg, id:x.name }))
+    .concat(undef.map(n => ({ nm:n, sub:'not defined in this workspace', meta:'—', id:n })));
+  const skillSec = el('section','section');
+  skillSec.append(sectionHead('Skills', '<span class="t-mono">' + a.skills.length + ' of ' + skillItems.length + '</span>'));
+  skillSec.append(pickList(skillItems,
+    it => a.skills.indexOf(it.id) > -1,
+    (it, on) => {
+      a.skills = on ? a.skills.concat([it.id]) : a.skills.filter(n => n !== it.id);
+      render();
+    }));
+  if (undef.length){
+    const b = banner('warn', '<strong>' + esc(undef.join(', ')) +
+      '</strong> ' + (undef.length === 1 ? 'is named here but has no definition' :
+      'are named here but have no definitions') + ' in Skills. Calls to ' +
+      (undef.length === 1 ? 'it' : 'them') + ' will fail at run time.');
+    b.style.margin = 'var(--s-3) 0 0';
+    skillSec.append(b);
+  }
+  s.main.append(skillSec);
+
+  const connSec = el('section','section');
+  connSec.append(sectionHead('Connectors', '<span class="t-mono">' + a.conn.length + '</span>'));
+  connSec.append(pickList(
+    D.CONNECTORS.map(c => ({
+      nm:c.name, sub:c.state === 'off' ? 'not connected — grant it here, connect it in Cloud' : c.scope,
+      meta:c.kind, id:c.id
+    })),
+    it => a.conn.indexOf(it.id) > -1,
+    (it, on) => {
+      a.conn = on ? a.conn.concat([it.id]) : a.conn.filter(x => x !== it.id);
+      render();
+    }));
+  connSec.append(noteP('A grant is not a connection. Granting one that is not connected is allowed — it states what this assistant will need. Connecting it is done in Cloud \u2192 Connections, usually by someone else.'));
+  s.main.append(connSec);
+
+  const optSec = el('section','section');
+  optSec.append(sectionHead('Behaviour'));
+  const opts = el('div');
+  [['cite','Attach a source to every claim'],
+   ['confirm','Confirm before writing anything outside the workspace'],
+   ['think','Extended thinking']].forEach(([k, label]) => {
+    const sw = switchCtl(label, a.opts[k]);
+    $('input', sw).onchange = e => { a.opts[k] = e.target.checked; };
+    opts.append(sw);
+  });
+  optSec.append(opts);
+  s.main.append(optSec);
+
+  const pkgs = D.SOLUTIONS.filter(p => p.assistant === a.id);
+  s.main.append(usedBySection('Shipped in', pkgs.map(p => ({
+    ic:'pkg', nm:p.name, sub:p.version + ' · ' + p.state, go:() => select('build', key('so', p.id))
+  })), 'Bind it to a solution and it reaches someone other than you.'));
+
+  /* ------------------------------------------------------------ inspector */
+  inspectorHead(s.side, 'Becomes', plural(a.threads, 'thread'));
+  s.side.append(defList([
+    ['State', dotLead(a.state) + esc({ ok:'live', idle:'idle', draft:'draft' }[a.state] || a.state)],
+    ['Model', esc(a.model)],
+    ['Skills', a.skills.length ? esc(String(a.skills.length)) : '<span style="color:var(--warn)">none</span>'],
+    ['Knowledge', esc(a.kb || 'none')],
+    ['Connectors', esc(String(a.conn.length))],
+    ['In composer', a.fav ? 'yes' : 'no']
+  ]));
+  s.side.append(noteP('Edits apply as you make them — this prototype keeps no draft and no version history.'));
+
+  const test = el('button','btn btn--primary', ic('play',13) + 'Test in a thread');
+  test.onclick = () => {
+    state.assistant = a.id;
+    renderComposer();
+    newThread();
+    toast('New thread bound to ' + a.name);
+  };
+  const star = el('button','btn btn--secondary',
+    ic(a.fav ? 'starOn' : 'star', 13) + (a.fav ? 'In the composer' : 'Add to composer'));
+  star.onclick = () => { a.fav = !a.fav; render(); renderComposer(); };
+  const dup = el('button','btn btn--ghost', ic('copy',13) + 'Duplicate');
+  dup.onclick = () => {
+    const c = Object.assign({}, a, {
+      id:'as-n' + (++madeN), name:a.name + ' copy', state:'draft', fav:false, threads:0,
+      skills:a.skills.slice(), conn:a.conn.slice(), opts:Object.assign({}, a.opts)
+    });
+    D.ASSISTANTS.push(c);
+    select('build', key('as', c.id));
+    toast('Duplicated as ' + c.name);
+  };
+  inspectorActs(s.side, [test, star, dup]);
+
+  pad.append(s.wrap);
   body.append(pad);
 }
 
-function solutionView(body, s){
+/* Anything made here is yours, which is what puts it under Mine in the filter
+   without anyone having to say so. */
+function newAssistant(){
+  const a = {
+    id:'as-n' + (++madeN), name:'Untitled assistant', state:'draft', model:D.MODELS[0],
+    team:D.ASSISTANT_TEAMS[0], owner:'me', fav:false, threads:0,
+    desc:'No description yet.', skills:[], kb:null, conn:[],
+    opts:{ cite:true, confirm:true, think:false }, inst:''
+  };
+  D.ASSISTANTS.push(a);
+  select('build', key('as', a.id));
+}
+
+function newDesign(){
+  const d = {
+    id:'de-n' + (++madeN), name:'Untitled widget', kind:'widget', shape:'kpi',
+    state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
+    desc:'A new metric tile. Everything about it is set in the inspector.',
+    cfg:{ title:'Untitled', sub:'', accent:'Nebulas', radius:'Soft', theme:'Follow',
+          width:'Narrow', header:true, credit:true,
+          value:'—', delta:'', cap:'' }
+  };
+  D.DESIGNS.push(d);
+  select('build', key('de', d.id));
+}
+
+/* -------------------------------------------------------------- connectors
+   A connector is a credential and a scope. It never holds data, which is why
+   this page has no preview — there is nothing to look at, only what it may
+   reach and who may reach through it. */
+function connectorView(body, c){
   const pad = el('div','pane__pad');
-  const badge = { live:'badge--ok', beta:'badge--info', draft:'' }[s.state] || '';
-  pad.append(pageHead(s.name, s.desc,
-    '<span class="badge ' + badge + '">' + esc(s.state) + '</span>'));
+  /* A connector is a page *under* Connections, so it carries the way back up.
+     The sidebar keeps Connections marked current, but a page one level down
+     should not depend on the sidebar being open to be escapable. */
+  const up = el('button','btn btn--ghost btn--sm', ic('chevL',12) + 'All connections');
+  up.style.marginBottom = 'var(--s-3)';
+  up.onclick = () => select('cloud','c3');
+  pad.append(up);
+  pad.append(pageHead(c.name, c.desc, stateBadge(c.state)));
 
-  const card = el('div','card');
-  card.innerHTML = '<div class="card__head"><span class="card__title">Composition</span></div>';
-  const cb = el('div','card__body');
-  cb.append(defList([
-    ['Assistant', esc(s.parts.assistant)],
-    ['Skills', s.parts.skills.map(x => '<span class="chip" style="margin-right:4px">' + esc(x) + '</span>').join('')],
-    ['Knowledge', esc(s.parts.kb)],
-    ['Surface', esc(s.parts.surface)],
-    ['Reach', esc(s.users)]
+  if (c.state === 'off'){
+    pad.append(banner('info','<strong>Not connected.</strong> Assistants can already be granted this connector — ' +
+      'the grant says what they will need. Nothing reaches it until the connection is made.'));
+  } else if (c.note){
+    pad.append(banner('warn', esc(c.note) + ' Anything aggregating that period will undercount.'));
+  }
+
+  pad.append(statGrid([
+    ['Auth', c.auth], ['Calls', c.calls], ['Last sync', c.last],
+    ['Writes', c.writes ? 'allowed, with confirmation' : 'read-only']
+  ], ['Auth','Calls','Last sync','Writes']));
+  pad.lastChild.style.marginBottom = 'var(--s-6)';
+
+  const s = buildSplit();
+  s.main.append(field('Endpoint', inputCtl(c.endpoint, v => { c.endpoint = v; render(); }),
+    'Host only. Credentials are held by the platform and never shown here.'));
+  const pair = el('div','build__pair');
+  pair.append(field('Authentication', selectCtl(D.CONNECTOR_AUTHS, c.auth, v => { c.auth = v; render(); })));
+  pair.append(field('Scope', inputCtl(c.scope, v => { c.scope = v; render(); })));
+  s.main.append(pair);
+
+  const wr = switchCtl('Allow writes through this connector', c.writes);
+  $('input', wr).onchange = e => { c.writes = e.target.checked; render(); };
+  s.main.append(wr);
+  s.main.append(noteP('Writes always ask for confirmation at the point of writing, whatever this says. ' +
+    'Turning it off removes the option; it does not make the confirmation optional.'));
+
+  const grants = D.ASSISTANTS.filter(a => a.conn.indexOf(c.id) > -1).map(a => ({
+    ic:'agent', nm:a.name, sub:a.team + ' · ' + a.model, go:() => select('build', key('as', a.id))
+  }));
+  const inPkgs = D.SOLUTIONS.filter(p => p.conn.indexOf(c.id) > -1).map(p => ({
+    ic:'pkg', nm:p.name, sub:p.version + ' · ' + p.state, go:() => select('build', key('so', p.id))
+  }));
+  s.main.append(usedBySection('Granted to', grants.concat(inPkgs),
+    'No assistant or solution reaches through this connector.'));
+
+  /* ------------------------------------------------------------ inspector */
+  inspectorHead(s.side, 'Connection', c.kind);
+  s.side.append(defList([
+    ['State', dotLead(c.state) + esc(c.state === 'off' ? 'not connected' : c.state === 'warn' ? 'degraded' : 'live')],
+    ['Auth', esc(c.auth)],
+    ['Direction', esc(c.writes ? 'read and write' : 'read only')],
+    ['Granted to', esc(String(grants.length + inPkgs.length))],
+    ['Last sync', esc(c.last)]
   ]));
-  card.append(cb);
-  card.style.marginBottom = 'var(--s-6)';
-  pad.append(card);
 
-  const row = el('div');
-  row.style.cssText = 'display:flex;gap:var(--s-2)';
-  const open = el('button','btn btn--secondary', ic('play',13) + 'Open ' + esc(s.name));
-  open.onclick = () => toast('Launch ' + s.name + ' — prototype');
-  row.append(open);
-  pad.append(row);
+  const acts = [];
+  if (c.state === 'off'){
+    const conn = el('button','btn btn--primary', ic('plug',13) + 'Connect');
+    conn.onclick = () => {
+      c.state = 'ok'; c.last = 'just now'; c.calls = '0 / 7d';
+      if (c.endpoint === '—') c.endpoint = c.name.toLowerCase().replace(/\s+/g,'') + '.example.com';
+      if (c.scope === '—') c.scope = 'not scoped yet — narrow it before granting';
+      render();
+      toast(c.name + ' connected');
+    };
+    acts.push(conn);
+  } else {
+    const test = el('button','btn btn--primary', ic('retry',13) + 'Test connection');
+    test.onclick = () => { c.last = 'just now'; render(); toast(c.name + ' reachable · ' + c.auth); };
+    acts.push(test);
+    const off = el('button','btn btn--danger', ic('x',13) + 'Disconnect');
+    off.onclick = () => {
+      const n = grants.length + inPkgs.length;
+      c.state = 'off'; c.last = '—'; c.calls = '—';
+      render();
+      toast(n ? c.name + ' disconnected — ' + plural(n, 'grant') + ' now unreachable'
+              : c.name + ' disconnected');
+    };
+    acts.push(off);
+  }
+  inspectorActs(s.side, acts);
+  s.side.append(noteP(c.state === 'off'
+    ? 'Connecting here does not grant anything. Grants are made per assistant.'
+    : 'Disconnecting leaves every grant in place. They stop working; they do not disappear.'));
+
+  pad.append(s.wrap);
   body.append(pad);
+}
+
+/* --------------------------------------------------- design elements
+   What the answer looks like once it leaves the workspace. The canvas is on the
+   left and the inspector on the right, which is where anyone who has used a
+   design tool looks for it.
+
+   Inside the canvas a second accent exists — the customer's brand. It is
+   confined to the frame and never touches our chrome, which is the same rule
+   the app tiles follow: colour as identity, not as emphasis. */
+const RADII  = { Square:'var(--r-xs)', Soft:'var(--r-lg)', Round:'var(--r-2xl)' };
+const accentVar = name => (D.DESIGN_ACCENTS.filter(x => x[0] === name)[0] || ['','var(--accent)'])[1];
+const deltaCls  = v => /^-/.test(String(v)) ? 'delta-dn' : 'delta-up';
+const commaList = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+
+function designCanvas(d){
+  const stage = el('div','canvas');
+  const frame = el('div','canvas__frame');
+  frame.dataset.w = String(d.cfg.width).toLowerCase();
+  frame.style.setProperty('--wgt-a', accentVar(d.cfg.accent));
+  frame.style.setProperty('--wgt-r', RADII[d.cfg.radius] || 'var(--r-lg)');
+  /* Follow means inherit the page; the other two re-declare the palette for
+     this subtree only — see the scoped block in tokens.css. */
+  if (d.cfg.theme === 'Light' || d.cfg.theme === 'Dark') frame.dataset.theme = d.cfg.theme.toLowerCase();
+  frame.append(d.kind === 'widget' ? widgetNode(d) : templateNode(d));
+  stage.append(frame);
+  return stage;
+}
+
+function widgetNode(d){
+  const c = d.cfg, w = el('div','wgt');
+  if (c.header){
+    w.append(el('div','wgt__head',
+      '<span class="wgt__mark"></span>' +
+      '<span class="wgt__title">' + esc(c.title) + '</span>' +
+      (c.sub ? '<span class="wgt__sub">' + esc(c.sub) + '</span>' : '')));
+  }
+  const b = el('div','wgt__body');
+
+  if (d.shape === 'kpi'){
+    b.innerHTML =
+      '<div class="wgt__kpirow">' +
+        '<span class="wgt__kpi">' + esc(c.value) + '</span>' +
+        (c.delta ? '<span class="wgt__delta ' + deltaCls(c.delta) + '">' + esc(c.delta) + '</span>' : '') +
+      '</div>' +
+      (c.cap ? '<div class="wgt__cap">' + esc(c.cap) + '</div>' : '');
+
+  } else if (d.shape === 'chart'){
+    b.innerHTML =
+      '<div class="wgt__kpirow" style="margin-bottom:var(--s-3)">' +
+        '<span class="wgt__kpi">' + esc(c.value) + '</span>' +
+        (c.delta ? '<span class="wgt__delta ' + deltaCls(c.delta) + '">' + esc(c.delta) + '</span>' : '') +
+      '</div>' +
+      '<div class="sparkbars wgt__spark">' +
+        (d.bars || []).map(v => '<i style="height:' + v + '%"></i>').join('') +
+      '</div>' +
+      (c.cap ? '<div class="wgt__cap">' + esc(c.cap) + '</div>' : '');
+
+  } else if (d.shape === 'ask'){
+    b.innerHTML =
+      '<div class="wgt__ask"><span>' + esc(c.placeholder) + '</span>' +
+        '<span class="wgt__send">' + ic('chevR',13) + '</span></div>' +
+      '<div class="wgt__starters">' +
+        commaList(c.starters).map(x => '<span class="wgt__starter">' + esc(x) + '</span>').join('') +
+      '</div>';
+
+  } else {
+    b.innerHTML =
+      '<div class="wgt__rows">' +
+        (d.rows || []).map(r =>
+          '<div class="wgt__row">' +
+            '<div class="wgt__rowtop"><b>' + esc(r[0]) + '</b><span>' + esc(r[1]) + '</span></div>' +
+            '<div class="wgt__bar"><i style="width:' + r[2] + '%"></i></div>' +
+          '</div>').join('') +
+      '</div>' +
+      (c.cap ? '<div class="wgt__cap" style="margin-top:var(--s-3)">' + esc(c.cap) + '</div>' : '');
+  }
+  w.append(b);
+  if (c.credit) w.append(el('div','wgt__foot','Answered by Nebulas · sources attached'));
+  return w;
+}
+
+/* A template preview is a wireframe on purpose: bars where the text goes, so
+   the layout is judged rather than the placeholder prose. */
+function lineRow(widths, cls){
+  return widths.map(w => '<div class="tpl__line ' + (cls || '') + '" style="width:' + w + '%"></div>').join('');
+}
+function templateNode(d){
+  const c = d.cfg, t = el('div','tpl');
+  const nav = commaList(c.nav);
+  if (c.header){
+    t.append(el('div','tpl__bar',
+      '<span class="tpl__logo"></span><span class="tpl__nm">' + esc(c.title) + '</span>' +
+      '<span class="tpl__navs">' + nav.map(n => '<span>' + esc(n) + '</span>').join('') + '</span>'));
+  }
+
+  if (d.shape === 'portal'){
+    const cols = el('div','tpl__cols');
+    /* One nav item is where you are; the rest are where you could go. Branding
+       all of them would say every page is the current one. */
+    cols.append(el('div','tpl__side', lineRow([90], 'tpl__line--on') + lineRow([70,80,60,75,85])));
+    const main = el('div','tpl__main');
+    main.innerHTML =
+      '<div>' + lineRow([46], 'tpl__line--h') + '</div>' +
+      '<div class="tpl__grid">' +
+        [0,1,2,3].map(() =>
+          '<div class="tpl__cell"><span class="tpl__dot"></span>' + lineRow([80,55]) + '</div>').join('') +
+      '</div>';
+    cols.append(main);
+    t.append(cols);
+
+  } else if (d.shape === 'landing'){
+    t.append(el('div','tpl__hero',
+      '<div class="tpl__h1">' + esc(c.title) + '</div>' +
+      '<div class="tpl__sub">' + esc(c.sub) + '</div>' +
+      '<span class="tpl__btn">' + esc(c.cta) + '</span>'));
+    const pad = el('div','tpl__pad');
+    pad.innerHTML = '<div class="tpl__grid tpl__grid--3">' +
+      [0,1,2].map(() => '<div class="tpl__cell"><span class="tpl__dot"></span>' +
+        lineRow([85,65,40]) + '</div>').join('') + '</div>';
+    t.append(pad);
+
+  } else {
+    const cols = el('div','tpl__cols tpl__cols--docs');
+    cols.append(el('div','tpl__side', nav.map((n, i) =>
+      '<div class="tpl__line ' + (i === 1 ? 'tpl__line--on' : '') + '" style="width:' +
+      (95 - i * 8) + '%"></div>').join('')));
+    const main = el('div','tpl__main');
+    main.innerHTML =
+      '<div>' + lineRow([58], 'tpl__line--h') + '</div>' +
+      '<div style="display:grid;gap:6px">' + lineRow([100,96,88,100,72]) + '</div>' +
+      '<div style="display:grid;gap:6px">' + lineRow([40], 'tpl__line--on') + lineRow([100,92,64]) + '</div>';
+    cols.append(main);
+    cols.append(el('div','tpl__toc', lineRow([100,80,90,70])));
+    t.append(cols);
+  }
+  return t;
+}
+
+function embedSnippet(d){
+  if (d.kind === 'widget'){
+    return [
+      '<div id="nebulas-' + d.id + '"></div>',
+      '<script src="https://embed.nebulas.app/v1.js"',
+      '        data-element="' + d.id + '"',
+      '        data-token="pk_live_9f2c…"></script>'
+    ].join('\n');
+  }
+  return [
+    'nebulas deploy ' + d.id + ' --domain help.example.com',
+    '  built 3 routes · tokens inlined · 41 kB'
+  ].join('\n');
+}
+
+function designView(body, d){
+  const c = d.cfg;
+  const pad = el('div','pane__pad');
+  pad.append(pageHead(d.name, d.desc,
+    '<span class="badge badge--mono">' + (d.kind === 'widget' ? 'Widget' : 'Website template') + '</span>' +
+    ownerBadge(d) + stateBadge(d.state)));
+
+  const s = buildSplit();
+  s.main.append(designCanvas(d));
+
+  const emb = el('section','section');
+  emb.style.marginTop = 'var(--s-6)';
+  /* A widget's meta is whose theme wins, because it lands in a page we do not
+     control. A template IS the page, so its meta is how many routes it has. */
+  emb.append(sectionHead(d.kind === 'widget' ? 'Embed' : 'Deploy',
+    '<span class="t-mono">' + esc(d.kind === 'widget'
+      ? (c.theme === 'Follow' ? 'inherits the host page' : c.theme.toLowerCase() + ', fixed')
+      : plural(commaList(c.nav).length, 'route')) + '</span>'));
+  emb.append(codeCard(embedSnippet(d)));
+  emb.append(noteP(d.kind === 'widget'
+    ? 'The widget ships its own tokens, so it looks like this inside a page whose CSS we have never seen.'
+    : 'A template is a hosted page. The routes come from the nav; the palette comes from the accent chosen here.'));
+  s.main.append(emb);
+
+  const pkgs = D.SOLUTIONS.filter(p => p.design === d.id);
+  s.main.append(usedBySection('Rendered by', pkgs.map(p => ({
+    ic:'pkg', nm:p.name, sub:p.version + ' · ' + p.state, go:() => select('build', key('so', p.id))
+  })), 'No solution renders as this yet, so nobody has seen it.'));
+
+  /* --------------------------------------------------- inspector = config */
+  inspectorHead(s.side, 'Design', d.shape);
+  const up = () => render();
+
+  s.side.append(field(d.kind === 'widget' ? 'Title' : 'Brand name',
+    inputCtl(c.title, v => { c.title = v; up(); })));
+
+  if (d.shape === 'kpi' || d.shape === 'chart'){
+    const p = el('div','build__pair');
+    p.append(field('Value', inputCtl(c.value, v => { c.value = v; up(); })));
+    p.append(field('Delta', inputCtl(c.delta, v => { c.delta = v; up(); })));
+    s.side.append(p);
+    s.side.append(field('Caption', inputCtl(c.cap, v => { c.cap = v; up(); })));
+  } else if (d.shape === 'ask'){
+    s.side.append(field('Placeholder', inputCtl(c.placeholder, v => { c.placeholder = v; up(); })));
+    s.side.append(field('Starters', inputCtl(c.starters, v => { c.starters = v; up(); }),
+      'Comma separated. Three is the most anyone reads.'));
+  } else if (d.shape === 'rows'){
+    s.side.append(field('Caption', inputCtl(c.cap, v => { c.cap = v; up(); })));
+  }
+  if (d.kind === 'template'){
+    if (d.shape === 'landing'){
+      s.side.append(field('Sub-headline', inputCtl(c.sub, v => { c.sub = v; up(); })));
+      s.side.append(field('Call to action', inputCtl(c.cta, v => { c.cta = v; up(); })));
+    }
+    s.side.append(field('Navigation', inputCtl(c.nav, v => { c.nav = v; up(); }),
+      'Comma separated. Each one becomes a route.'));
+  }
+
+  s.side.append(field('Brand colour', selectCtl(D.DESIGN_ACCENTS.map(x => x[0]), c.accent,
+    v => { c.accent = v; up(); }),
+    'The customer\'s colour, confined to the canvas. It never reaches our chrome.'));
+  s.side.append(field('Corners', segCtl(['Square','Soft','Round'], c.radius, v => { c.radius = v; up(); })));
+  s.side.append(field('Theme', segCtl(['Follow','Light','Dark'], c.theme, v => { c.theme = v; up(); }),
+    'Follow takes the host page\'s theme. The other two are a decision.'));
+  s.side.append(field('Width', segCtl(['Narrow','Medium','Wide'], c.width, v => { c.width = v; up(); })));
+
+  const hd = switchCtl('Show header', c.header);
+  $('input', hd).onchange = e => { c.header = e.target.checked; up(); };
+  const cr = switchCtl('Nebulas credit', c.credit);
+  $('input', cr).onchange = e => { c.credit = e.target.checked; up(); };
+  s.side.append(hd, cr);
+
+  /* Already live is a state, not an action, so the button stops being primary
+     rather than being a greyed-out primary pretending it could still be one. */
+  const live = d.state === 'live';
+  const pub = el('button','btn ' + (live ? 'btn--secondary' : 'btn--primary'),
+    ic('check',13) + (live ? 'Published' : 'Publish element'));
+  pub.disabled = live;
+  pub.onclick = () => { d.state = 'live'; render(); toast(d.name + ' published'); };
+  const copy = el('button','btn btn--secondary', ic('copy',13) + (d.kind === 'widget' ? 'Copy embed' : 'Copy command'));
+  copy.onclick = () => toast('Copied — prototype');
+  inspectorActs(s.side, [pub, copy]);
+
+  pad.append(s.wrap);
+  body.append(pad);
+}
+
+/* --------------------------------------------------------------- solutions
+   A solution is the shipping unit: an assistant, the skills it may call, the
+   knowledge it may cite, the connectors it needs, what it renders as, and where
+   it reaches. Everything is an id, so it cannot claim a part that does not
+   exist — and the checklist below is what "ready" actually means. */
+function packageChecks(p){
+  const a  = asstById(p.assistant);
+  const kb = kbById(p.kb);
+  const de = designById(p.design);
+  const conns   = p.conn.map(connById).filter(Boolean);
+  const offline = conns.filter(c => c.state === 'off');
+  const surf    = p.surfaces.map(surfaceById).filter(Boolean);
+  const renders = surf.filter(x => x.renders);
+  const skills  = p.skills.map(skillById).filter(Boolean);
+  const orphan  = skills.filter(x => !a || a.skills.indexOf(x.name) < 0);
+
+  return [
+    { nm:'Assistant', ok:!!a, val:a ? a.name : 'nothing to answer with' },
+    { nm:'Skills',
+      ok:skills.length > 0 && !orphan.length,
+      val:!skills.length ? 'none enabled'
+        : orphan.length ? orphan.map(x => x.name).join(', ') + ' not on ' + (a ? a.name : 'the assistant')
+        : plural(skills.length, 'skill') + ' enabled' },
+    { nm:'Knowledge', ok:!!kb, val:kb ? kb.name : 'model only, nothing to cite' },
+    { nm:'Connectors',
+      ok:!offline.length,
+      val:offline.length ? offline.map(c => c.name).join(', ') + ' not connected'
+        : conns.length ? plural(conns.length, 'connector') + ' live' : 'none needed' },
+    { nm:'Design element',
+      ok:!renders.length || !!de,
+      val:de ? de.name
+        : renders.length ? renders.map(x => x.name).join(' and ') + ' need one'
+        : 'not required by these surfaces' },
+    { nm:'Surface', ok:surf.length > 0,
+      val:surf.length ? surf.map(x => x.name).join(', ') : 'nowhere to ship' }
+  ];
+}
+function bumpMinor(v){
+  const n = String(v).split('.').map(Number);
+  return [n[0] || 0, (n[1] || 0) + 1, 0].join('.');
+}
+
+function packageView(body, p){
+  const pad = el('div','pane__pad');
+  pad.append(pageHead(p.name, p.desc,
+    '<span class="badge badge--mono">' + esc(p.version) + '</span>' +
+    ownerBadge(p) + stateBadge(p.state)));
+
+  const s = buildSplit();
+  const a = asstById(p.assistant);
+
+  const pair = el('div','build__pair');
+  pair.append(field('Name', inputCtl(p.name, v => { p.name = v.trim() || p.name; render(); })));
+  pair.append(field('Audience', inputCtl(p.audience, v => { p.audience = v; render(); })));
+  s.main.append(pair);
+
+  const pair2 = el('div','build__pair');
+  const asstNames = ['— none —'].concat(D.ASSISTANTS.map(x => x.name));
+  pair2.append(field('Assistant', selectCtl(asstNames, a ? a.name : '— none —', v => {
+    const picked = D.ASSISTANTS.filter(x => x.name === v)[0];
+    p.assistant = picked ? picked.id : null;
+    render();
+  }), 'The solution answers as this assistant.'));
+  const kbNames = ['— none —'].concat(D.KBS.map(k => k.name));
+  const curKb = kbById(p.kb);
+  pair2.append(field('Knowledge base', selectCtl(kbNames, curKb ? curKb.name : '— none —', v => {
+    const picked = D.KBS.filter(k => k.name === v)[0];
+    p.kb = picked ? picked.id : null;
+    render();
+  })));
+  s.main.append(pair2);
+
+  /* Skills are a subset of the assistant's, not a free choice: enabling one it
+     does not have would ship a call that cannot resolve. Shown, not hidden. */
+  const skSec = el('section','section');
+  skSec.append(sectionHead('Skills enabled', '<span class="t-mono">' + p.skills.length + '</span>'));
+  skSec.append(pickList(D.SKILLS.map(x => ({
+    nm:x.name,
+    sub:a && a.skills.indexOf(x.name) > -1 ? x.desc : 'not on ' + (a ? a.name : 'the bound assistant'),
+    meta:x.avg, id:x.id
+  })), it => p.skills.indexOf(it.id) > -1, (it, on) => {
+    p.skills = on ? p.skills.concat([it.id]) : p.skills.filter(x => x !== it.id);
+    render();
+  }));
+  s.main.append(skSec);
+
+  const cnSec = el('section','section');
+  cnSec.append(sectionHead('Connectors required', '<span class="t-mono">' + p.conn.length + '</span>'));
+  cnSec.append(pickList(D.CONNECTORS.map(c => ({
+    nm:c.name, sub:c.state === 'off' ? 'not connected' : c.scope, meta:c.kind, id:c.id
+  })), it => p.conn.indexOf(it.id) > -1, (it, on) => {
+    p.conn = on ? p.conn.concat([it.id]) : p.conn.filter(x => x !== it.id);
+    render();
+  }));
+  s.main.append(cnSec);
+
+  const surSec = el('section','section');
+  surSec.append(sectionHead('Surfaces', '<span class="t-mono">' + p.surfaces.length + '</span>'));
+  surSec.append(pickList(D.SURFACES.map(x => ({
+    nm:x.name, sub:x.desc, meta:x.renders ? 'renders' : 'no UI', id:x.id
+  })), it => p.surfaces.indexOf(it.id) > -1, (it, on) => {
+    p.surfaces = on ? p.surfaces.concat([it.id]) : p.surfaces.filter(x => x !== it.id);
+    render();
+  }));
+  surSec.append(noteP('A surface that renders needs a design element. One that answers in JSON does not — which is why the checklist asks for a design element only sometimes.'));
+  s.main.append(surSec);
+
+  /* The design element, chosen here and previewed here: this page is where
+     someone decides what the answer looks like, so it should not have to be
+     imagined from a name. */
+  const deSec = el('section','section');
+  deSec.append(sectionHead('Renders as'));
+  const deNames = ['— none —'].concat(D.DESIGNS.map(x => x.name));
+  const de = designById(p.design);
+  deSec.append(field('Design element', selectCtl(deNames, de ? de.name : '— none —', v => {
+    const picked = D.DESIGNS.filter(x => x.name === v)[0];
+    p.design = picked ? picked.id : null;
+    render();
+  })));
+  if (de){
+    deSec.append(designCanvas(de));
+    const openDe = el('button','btn btn--ghost btn--sm', ic('open',13) + 'Configure ' + de.name);
+    openDe.style.marginTop = 'var(--s-2)';
+    openDe.onclick = () => select('build', key('de', de.id));
+    deSec.append(openDe);
+  } else {
+    deSec.append(emptyState('widget','No design element',
+      'Pick a widget or a website template, or drop every surface that renders.'));
+  }
+  s.main.append(deSec);
+
+  /* ------------------------------------------------------------ inspector */
+  const checks = packageChecks(p);
+  const blocked = checks.filter(c => !c.ok);
+  inspectorHead(s.side, 'Ready to ship', (checks.length - blocked.length) + '/' + checks.length);
+  s.side.append(checkList(checks));
+
+  const ver = el('div');
+  ver.style.marginTop = 'var(--s-4)';
+  ver.append(field('Version', inputCtl(p.version, v => { p.version = v.trim() || p.version; render(); })));
+  s.side.append(ver);
+
+  const publish = el('button','btn btn--primary', ic('check',13) +
+    (p.state === 'live' ? 'Publish ' + bumpMinor(p.version) : 'Publish'));
+  publish.disabled = !!blocked.length;
+  publish.title = blocked.length ? blocked[0].nm + ': ' + blocked[0].val : 'Publish to ' +
+    p.surfaces.map(x => (surfaceById(x) || {}).name).join(', ');
+  publish.onclick = () => {
+    p.version = bumpMinor(p.version);
+    p.state = 'live';
+    render();
+    toast(p.name + ' ' + p.version + ' published to ' +
+      p.surfaces.map(x => (surfaceById(x) || {}).name).join(', '));
+  };
+  const open = el('button','btn btn--secondary', ic('play',13) + 'Open');
+  const app = D.APPS.filter(x => x.name === p.name)[0];
+  open.disabled = !app;
+  open.title = app ? 'Open ' + p.name + ' in the app rail' : 'Not on the app rail yet';
+  open.onclick = () => { if (app) openApp(app); };
+  inspectorActs(s.side, [publish, open]);
+  s.side.append(noteP(blocked.length
+    ? 'Publishing is blocked until every line above is met. The list is the specification, not a score.'
+    : 'Publishing bumps the minor version and pushes to every surface listed.'));
+
+  pad.append(s.wrap);
+  body.append(pad);
+}
+
+function newPackage(){
+  const p = {
+    id:'so-n' + (++madeN), name:'Untitled solution', state:'draft', app:'', users:'—', version:'0.1.0',
+    owner:'me', team:D.ASSISTANT_TEAMS[0],
+    desc:'Nothing bound yet. The checklist in the inspector is the shortest description of what a solution needs.',
+    assistant:null, skills:[], kb:null, conn:[], design:null, surfaces:[], audience:'—'
+  };
+  D.SOLUTIONS.push(p);
+  select('build', key('so', p.id));
 }
 
 function cloudView(body, c){
@@ -1362,16 +2536,36 @@ function cloudView(body, c){
     form.append(b);
 
   } else if (c.id === 'c3'){
+    /* An index, not a report: every row opens the connector it names, because
+       the reason to read this list is to change something in it. Connected and
+       available are one list — hiding what you could connect turns a decision
+       into a discovery problem. */
     form.style.maxWidth = '640px';
-    form.append(tableSection('Connections',
-      ['Kind','Endpoint','Status','Scope'],
-      D.CONNECTIONS.map(r => [
-        '<td style="font-family:var(--mono);color:var(--text)">' + esc(r[0]) + '</td>',
-        '<td>' + esc(r[1]) + '</td>',
-        '<td><span style="display:inline-flex;align-items:center;gap:6px">' +
-          '<span class="dot ' + (STATE_DOT[r[2]] || '') + '"></span>' + esc(r[2]) + '</span></td>',
-        '<td class="t-mono">' + esc(r[3]) + '</td>'
-      ])));
+    const connRow = x => listRow({
+      lead:dotLead(x.state),
+      title:x.name,
+      sub:x.state === 'off' ? 'not connected · ' + x.desc.split('.')[0] : x.endpoint,
+      meta:x.kind,
+      current:idOf(state.item.cloud) === x.id,
+      onClick:() => select('cloud', key('cn', x.id))
+    });
+    const live = D.CONNECTORS.filter(x => x.state !== 'off');
+    const avail = D.CONNECTORS.filter(x => x.state === 'off');
+
+    const secA = el('section','section');
+    secA.append(sectionHead('Connected', '<span class="t-mono">' + live.length + '</span>'));
+    live.forEach(x => secA.append(connRow(x)));
+    form.append(secA);
+
+    if (avail.length){
+      const secB = el('section','section');
+      secB.append(sectionHead('Available', '<span class="t-mono">' + avail.length + '</span>'));
+      avail.forEach(x => secB.append(connRow(x)));
+      form.append(secB);
+    }
+    form.append(banner('info','A connector is the credential and the scope, never the data. ' +
+      'An assistant is <em>granted</em> one in Build; connecting it is this page\'s job.'));
+    form.lastChild.style.margin = '0';
 
   } else if (c.id === 'c4'){
     form.append(field('Region', selectCtl(['eu-west-1 · Ireland','eu-central-1 · Frankfurt','us-east-1 · Virginia'],
@@ -1504,6 +2698,11 @@ function artProseNode(src){
   return el('div','prose', md(src));
 }
 function artPanes(a){
+  /* A live widget has one pane and it is the widget itself — there is no
+     "source" behind a form, and its state is the content. */
+  if (a.kind === 'live') return [
+    { label:'Interactive', render:() => liveHost(LIVE[a.live], 'pane') }
+  ];
   if (a.kind === 'table') return [
     { label:'Result', render:() => artListNode(a) },
     { label:'Source', render:() => artCodeNode(a.code) }
@@ -1539,7 +2738,7 @@ function renderArtifact(){
     return;
   }
 
-  $('#artIcon').innerHTML = ic(KIND_ICON[a.kind] || 'file',14);
+  $('#artIcon').innerHTML = ic(artGlyph(a),14);
 
   const panes = artPanes(a);
   if (state.art.pane >= panes.length) state.art.pane = 0;
@@ -1554,7 +2753,7 @@ function renderArtifact(){
   }
   body.append(panes[state.art.pane].render());
 
-  foot.innerHTML = '<span class="t-mono">' + esc(a.kind) + ' · ' + esc(a.size) + '</span>' +
+  foot.innerHTML = '<span class="t-mono">' + esc(artKind(a)) + ' · ' + esc(a.size) + '</span>' +
                    '<span style="flex:1"></span>';
   const from = el('button', null, 'from ' + esc(a.from));
   from.style.cssText = 'color:var(--text-4);font-size:var(--t-11)';
@@ -1814,6 +3013,13 @@ function select(section, itemId){
   if (itemId != null && itemId !== state.item[section]) state.kb.sel = [];
   state.section = section;
   if (itemId != null) state.item[section] = itemId;
+  /* Landing on a build item from anywhere — the palette, a cross-link, a
+     duplicate — expands the group it belongs to. A selected row inside a
+     collapsed group is a selection you cannot see. */
+  if (section === 'build' && itemId != null){
+    state.build.open = kindOf(itemId);
+    state.build.last[kindOf(itemId)] = idOf(itemId);
+  }
   render();
 }
 
@@ -1832,7 +3038,12 @@ function render(){
 
   $('#listTitle').textContent = S.listTitle;
   $('#listIco').innerHTML = ic(S.icon, 15);
+  /* The section is on the shell, so a section can widen the sidebar by
+     redefining --list-w rather than by anything here knowing a pixel. */
+  $('#app').dataset.section = state.section;
   const lb = $('#listBody');
+  /* Miller columns scroll per column, so the body stops being the scroller. */
+  lb.classList.toggle('listcol__body--miller', !!S.miller);
   lb.innerHTML = '';
   S.list(lb);
 
@@ -1880,11 +3091,43 @@ function scrollDown(){
     s.scrollTo({ top:s.scrollHeight, behavior:'instant' });
 }
 
-async function runTurn(userText){
+/* Run one of the scripted cases. The thread takes the case's title, because a
+   worked example that leaves the sidebar saying "New chat" is a tester's
+   problem three clicks later. */
+function runCase(label){
+  const c = D.CASES[label];
+  if (!c) return;
+  const t = find(D.THREADS, state.item.chat);
+  if (t && !t.msgs.length){
+    t.title = c.title;
+    t.when = 'now';
+    syncHead();
+    syncListcol();
+  }
+  runTurn(c.ask, c);
+}
+/* The sidebar and the topbar can be rebuilt without touching the pane, which
+   matters mid-turn: render() would wipe the answer being streamed into it. */
+function syncListcol(){
+  const lb = $('#listBody');
+  lb.innerHTML = '';
+  SECTIONS[state.section].list(lb);
+}
+function syncHead(){
+  const h = SECTIONS[state.section].head();
+  $('#mainTitle').textContent = h.title;
+  $('#mainSub').textContent = h.sub || '';
+}
+
+async function runTurn(userText, script){
   if (state.busy) return;
   state.busy = true;
   $('#sendBtn').disabled = true;
   syncStatus();
+
+  /* The thread this turn belongs to, resolved before anything is appended so
+     the turn can be written into it at the end. */
+  const thread = state.section === 'chat' ? find(D.THREADS, state.item.chat) : null;
 
   /* An empty thread is showing the hero, which is centred and therefore not a
      reading column. The first turn replaces it with one. */
@@ -1901,7 +3144,9 @@ async function runTurn(userText){
   inner.append(msgNode({ role:'user', text:userText }));
   scrollDown();
 
-  const reply = D.REPLIES[replyIx++ % D.REPLIES.length];
+  /* A scripted case supplies its own turn; anything typed cycles the canned
+     replies as before. */
+  const reply = script || D.REPLIES[replyIx++ % D.REPLIES.length];
 
   const wrap = el('div','msg');
   wrap.dataset.role = 'ai';
@@ -1993,9 +3238,31 @@ async function runTurn(userText){
     const a = D.ARTIFACT_BY_ID(reply.artifactId);
     if (a){ wrap.append(artRefNode(a)); openArtifact(a.id); }
   }
+  /* A live widget starts in the thread, where the question was asked. Moving it
+     to the pane is the reader's call, not the model's. */
+  let w = null;
+  if (reply.w){
+    w = makeLive(reply.w, thread ? thread.title : 'this thread');
+    wrap.append(liveHost(w, 'thread'));
+  }
   if (reply.cites) wrap.append(citesNode(reply.cites));
   $('[data-dur]', head).textContent = dur;
   head.append(actionsNode('ai'));
+
+  /* The turn is written into the thread, so navigating away and back rebuilds
+     it — including whatever has been typed into or chosen in the widget, which
+     lives in the instance rather than in these nodes. */
+  if (thread){
+    const ai = {
+      role:'ai', dur:dur, steps:reply.steps, md:reply.md, cites:reply.cites,
+      artifactId:reply.artifactId || null, liveId:w ? w.id : null
+    };
+    if (!ai.artifactId) delete ai.artifactId;
+    thread.msgs.push({ role:'user', text:userText }, ai);
+    if (w) w.msg = ai;
+    /* The topbar counted turns before this one existed. */
+    syncHead();
+  }
 
   state.turns += 2;
   state.busy = false;
@@ -2099,20 +3366,26 @@ function palRender(q){
 
   D.PROJECTS.forEach(p => { if (hitOnly(p.name))
     items.push({ g:'Projects', nm:p.name, sub:p.assistant, run:() => select('chat', key('p', p.id)) }); });
+  /* An assistant is defined in Build, so the palette lands on the definition —
+     the chat list is one click from there and is reached by name anyway. */
   D.ASSISTANTS.forEach(a => { if (hitOnly(a.name))
-    items.push({ g:'Assistants', nm:a.name, sub:a.model, run:() => select('chat','assistants') }); });
+    items.push({ g:'Assistants', nm:a.name, sub:a.model, run:() => select('build', key('as', a.id)) }); });
   D.KBS.forEach(k => { if (hitOnly(k.name))
     items.push({ g:'Knowledge', nm:k.name, sub:k.docs + ' docs', run:() => select('knowledge', key('kb', k.id)) }); });
   D.DATASETS.forEach(d => { if (hitOnly(d.name))
     items.push({ g:'Sources', nm:d.name, sub:d.source, run:() => select('knowledge', key('ds', d.id)) }); });
   D.ARTIFACTS.forEach(a => { if (hitOnly(a.title))
     items.push({ g:'Artifacts', nm:a.title, sub:a.kind, run:() => openArtifact(a.id) }); });
-  D.SKILLS.forEach(s => { if (hitOnly(s.name))
-    items.push({ g:'Skills', nm:s.name, sub:s.calls, run:() => select('build', key('sk', s.id)) }); });
-  D.AGENTS.forEach(a => { if (hitOnly(a.name))
-    items.push({ g:'Agents', nm:a.name, sub:a.schedule, run:() => select('build', key('ag', a.id)) }); });
+  /* Skills are chosen inside an assistant rather than authored, so the palette
+     lands on the assistants that hold one. */
+  D.CONNECTORS.forEach(c => { if (hitOnly(c.name))
+    items.push({ g:'Connectors', nm:c.name, sub:c.state === 'off' ? 'not connected' : c.kind,
+                 run:() => select('cloud', key('cn', c.id)) }); });
+  D.DESIGNS.forEach(d => { if (hitOnly(d.name))
+    items.push({ g:'Design settings', nm:d.name, sub:d.kind, run:() => select('build', key('de', d.id)) }); });
   D.SOLUTIONS.forEach(s => { if (hitOnly(s.name))
-    items.push({ g:'Solutions', nm:s.name, sub:s.state, run:() => select('build', key('so', s.id)) }); });
+    items.push({ g:'Solutions', nm:s.name, sub:s.version + ' · ' + s.state,
+                 run:() => select('build', key('so', s.id)) }); });
 
   COMMANDS.forEach(c => { if (hit(c.nm)) items.push(c); });
 

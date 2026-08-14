@@ -4,7 +4,12 @@
    color, a raw duration, or a size that isn't derived from these.
    ========================================================================= */
 
-:root{
+/* The palette is declared for the document AND for any element carrying
+   data-theme, so a subtree can hold a different theme than the page — that is
+   how a design element previews in dark while the workspace stays light. Only
+   colour lives here; type, space and metrics are root-only below, because a
+   scoped block that re-declared --density would reset it inside the scope. */
+:root, [data-theme="light"]{
   /* ------------------------------------------------------------ neutrals */
   --g-0:#ffffff;   --g-50:#fafafa;  --g-100:#f4f4f5; --g-150:#ededef;
   --g-200:#e4e4e7; --g-300:#d4d4d8; --g-400:#a1a1aa; --g-500:#71717a;
@@ -59,6 +64,15 @@
 
   --scrim:rgba(24,24,27,.34);
 
+  /* -------------------------------------------------------------- shadow
+     Part of the palette, not the metrics: dark redefines these. */
+  --shadow-sm:0 1px 2px rgba(24,24,27,.06), 0 0 0 1px rgba(24,24,27,.04);
+  --shadow-md:0 4px 12px rgba(24,24,27,.08), 0 0 0 1px rgba(24,24,27,.05);
+  --shadow-lg:0 16px 48px rgba(24,24,27,.14), 0 0 0 1px rgba(24,24,27,.06);
+}
+
+/* ------------------------------------------------- metrics · root only */
+:root{
   /* ---------------------------------------------------------------- type */
   --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
@@ -87,14 +101,10 @@
   --s-16:calc(var(--u) * 16 * var(--density));
 
   /* ------------------------------------------------------- radius / edge */
-  --r-xs:2px; --r-sm:4px; --r-md:6px; --r-lg:8px; --r-xl:10px; --r-full:999px;
+  --r-xs:2px; --r-sm:4px; --r-md:6px; --r-lg:8px; --r-xl:10px; --r-2xl:16px;
+  --r-full:999px;
   --border:1px;
   --ring:2px;
-
-  /* -------------------------------------------------------------- shadow */
-  --shadow-sm:0 1px 2px rgba(24,24,27,.06), 0 0 0 1px rgba(24,24,27,.04);
-  --shadow-md:0 4px 12px rgba(24,24,27,.08), 0 0 0 1px rgba(24,24,27,.05);
-  --shadow-lg:0 16px 48px rgba(24,24,27,.14), 0 0 0 1px rgba(24,24,27,.06);
 
   /* -------------------------------------------------------------- motion */
   --ease:cubic-bezier(.2,.7,.3,1);
@@ -112,6 +122,10 @@
      --art-w-user rather than being set directly. */
   --rail-w:56px;
   --list-w:264px;
+  /* Build's sidebar is two Miller columns: the kind list is sized to its three
+     labels, the item list keeps the width a name needs. */
+  --mill-w:176px;
+  --list-w-mill:376px;
   --art-w-min:320px;
   --art-w-max:720px;
   --app-w:64px;
@@ -124,6 +138,18 @@
   --app-tile:32px;
 }
 
+/* ------------------------------------------------- animatable shell widths
+   The three collapsing columns are registered as lengths so the shell can
+   transition the *widths* rather than `grid-template-columns`. Interpolating a
+   whole track list to move one column is more than the change deserves, and it
+   means every column's width is animating whenever any one of them changes.
+   Registered, each width animates on its own and the template stays purely
+   declarative. A browser without @property ignores the registration and the
+   panels snap, which is the right fallback. */
+@property --list-w{ syntax:"<length>"; inherits:true; initial-value:264px }
+@property --art-w { syntax:"<length>"; inherits:true; initial-value:440px }
+@property --app-w { syntax:"<length>"; inherits:true; initial-value:64px }
+
 /* --------------------------------------------------------------- density
    The proof that the space layer is real: one attribute, whole app reflows. */
 :root[data-density="compact"]{ --density:.8; --ctl-lg:30px; --ctl-md:27px; --topbar-h:42px; }
@@ -131,8 +157,13 @@
 
 /* ------------------------------------------------------------------ dark
    Not an inversion. --bg lifts off black so elevation has somewhere to go,
-   and the accent lightens to hold contrast. */
-:root[data-theme="dark"]{
+   and the accent lightens to hold contrast.
+
+   The selector is not root-only on purpose: the same attribute on any element
+   re-declares the palette for that subtree, which is how the design-element
+   preview shows a customer's widget in dark while the workspace around it
+   stays light. One palette, two scopes. */
+:root[data-theme="dark"], [data-theme="dark"]{
   --bg:#0d0d0f;
   --surface:#141417;
   --raised:#1b1b1f;
