@@ -11,10 +11,10 @@ The prototype is [index.html](index.html); the system lives in [css/](css/).
 css/tokens.css       every color, size, duration. The source of truth.
 css/base.css         reset, document defaults, .prose (model output)
 css/components.css   reusable parts. None know where they sit on screen.
-css/layout.css       the shell only: rail · sidebar · chat · artifact · apps
+css/layout.css       the shell only: rail · sidebar · chat · results · apps
 js/data.js           fixtures for every surface
-js/app.js            routing, section renderers, the builder, artifact pane,
-                     app sheets, simulated turns
+js/app.js            routing, section renderers, the builder, the results
+                     store, the app panel, simulated turns
 index.html           shell markup; everything inside is rendered by app.js
 v1-single-file.html  the earlier single-file conversation-only prototype
 
@@ -106,24 +106,24 @@ needs attention — and appear nowhere in chrome.
 
 ## Layout
 
-Five columns plus a status strip spanning all of them.
+Six columns plus a status strip spanning all of them.
 
 ```
-┌────┬───────────┬──────────────────┬───────────────┬────┐
-│    │ Chat    ⌕ │ Q3 revenue…  ▣▤⁘ │ ▤ FY25 bridge │ ⊞  │
-│ ▣  ├───────────┼──────────────────┼───────────────┤APPS│
-│ ▫  │ + New chat│  YOU             │ step   amt  Δ │ ⬤ │
-│ ◑  │ ◈ Assist. │  │ Pull Q3 rev…  │ actual 41.2 — │ ⬤ │
-│ ▤  │ ⏱ Schedule│                  │ timing 39.8 ↓ │ ⬤ │
-│    │ PROJECTS +│  NEBULA PRO 3.4s │ growth 41.9 ↑ │ ⬤ │
-│    │  Q3 close │  ▸ 3 steps       │               │ ⬤ │
-│    │ TODAY     │  Q3 landed at…   │               │ ⬤ │
-│ ⌄  │  Q3 rev…  │  ▤ Q3 variance   │               │ ⬤ │
-│ ◕  │  Refac…   ├──────────────────┤               │ ⌄ │
-├────┴───────────┤ [ ask anything ] ├───────────────┴────┤
-│ ● ready  Nebula Pro     16k/200k  $0.24  Light  Comfy  │
-└────────────────────────────────────────────────────────┘
-  56      264          fluid            440 (drag)     64
+┌────┬───────────┬──────────────┬───────────────┬───────────┬────┐
+│    │ Chat    ⌕ │ Q3 revenue…⁘ │ ▤ FY25 bridge │ ▣ Todo  × │ ⊞  │
+│ ▣  ├───────────┼──────────────┼───────────────┼───────────┤APPS│
+│ ▫  │ + New chat│  YOU         │ TODAY         │ 2 of 6    │ ⬤ │
+│ ◑  │ ◈ Assist. │  │ Pull Q3…  │ ▤ Q3 variance │ ☐ Send…   │ ⬤ │
+│ ▤  │ ⏱ Schedule│              │   Table 17:03 │ ☐ Confirm…│ ⬤ │
+│    │ PROJECTS +│  NEBULA 3.4s │ ▦ pipeline.py │ ☑ File…   │ ⬤ │
+│    │  Q3 close │  ▸ 3 steps   │   Diff  16:05 │           │ ⬤ │
+│    │ TODAY     │  Q3 landed…  │ YESTERDAY     │           │ ⬤ │
+│ ⌄  │  Q3 rev…  │  ▤ Q3 var…   │ ▥ Churn model │           │ ⬤ │
+│ ◕  │  Refac…   ├──────────────┤   Chart 14:05 │           │ ⌄ │
+├────┴───────────┤ [ ask… ]     ├───────────────┴───────────┴────┤
+│ ● ready  Nebula Pro       16k/200k  $0.24  Light  Comfortable  │
+└────────────────────────────────────────────────────────────────┘
+  56      264       fluid        440 (drag)     380 (on demand) 64
 ```
 
 - **Rail** — Chat & tasks · Knowledge · Build · Cloud, then Account at the
@@ -136,14 +136,15 @@ Five columns plus a status strip spanning all of them.
   actions, then projects, then threads.
 - **Chat** — `--measure` caps the reading column at 760px for prose; data
   views use the full width.
-- **Artifact** — see below. Draggable boundary, 320–720px, width persisted.
-- **Apps** — solutions as launchable surfaces. The chevron widens the rail
-  to show names rather than opening a screen of its own. Clicking a tile opens
-  the app **beside** the rail, not instead of the page — see below.
-- **Status strip** — spans all five columns, because usage belongs to none
+- **Results** — see below. Draggable boundary, 320–720px, width persisted.
+- **App panel** — zero-width until an app is opened, and then a column like any
+  other: it pushes the conversation rather than covering it — see below.
+- **App rail** — the workspace's own apps. Never collapses; the chevron widens it
+  to show names rather than opening a screen of its own.
+- **Status strip** — spans all six columns, because usage belongs to none
   of them.
 
-Each of the four outer columns collapses to zero through a data attribute on
+Every column but the two rails collapses to zero through a data attribute on
 `.app`, which redefines its width token rather than restating the whole grid
 template. Build widens the sidebar the same way
 (`.app[data-section="build"]`), so a section can change the shell without
@@ -155,16 +156,59 @@ whole track list to move one column animates every column whenever any one of
 them changes. Where `@property` is unsupported the panels snap, which is the
 right fallback.
 
-### Why the artifact moved out of the thread
+### The right column is one store for everything produced
 
 Previously a table or diff rendered inline, inside the message that produced
 it. That is fine for one artifact and wrong for a working session: the thing
 you are reading scrolls away the moment you ask a follow-up question, and a
 long output pushes the next turn off the screen entirely.
 
-So the artifact goes in a pane that survives the next question, and the turn
-keeps a one-line **reference card** you can scan past or click to bring the
-thing back. Opening a thread restores the last artifact it produced.
+So output leaves the thread, and the column that receives it is a **store**, not
+a viewer. Its resting state is a **list of names**, and a detail is one click
+away. That is the shape the column has to have once a session produces more than
+one thing: a viewer showing the most recent output makes everything before it
+unreachable.
+
+The store is **global** — every thread's results in one list, newest first,
+under the day they happened on:
+
+```
+┌─ Results ───────── 6 ─┐        ┌─ ‹ Q3 variance by segment ⤓⤒ ─┐
+│ TODAY                 │        │ 🔗 People in Gnomon Digital ·  │
+│ ▤ Q3 variance  🔗16:23│  click │    can view · expires in 7 days│
+│ ▦ pipeline.py    15:25│ ─────► │ Enterprise            $22.4M   │
+│ YESTERDAY             │        │ Mid-market            $12.8M   │
+│ ▥ Churn model    13:25│        │ SMB                    $4.6M   │
+└─ 6 results · 1 shared ┘        └ table · 4 rows · Today 16:23 · │
+                                   from Q3 revenue analysis ──────┘
+```
+
+It was per-thread first, and that was wrong twice over. A new chat opened on an
+empty column while six real results sat one click away in other threads; and
+people look for **the thing they made**, not for the conversation it happened
+in — "the variance table" is easier to remember than which of four threads
+produced it. So the thread became a property of the result (`from`, shown on
+every row and clickable in the footer) rather than a filing cabinet around it.
+
+- **A timestamp, not an age.** Every result carries `at`, a real millisecond
+  stamp; the day is a heading and the row says the time. Fixtures are authored
+  as an age (`2d 5h`) and converted once at boot, because a hand-written date
+  rots on the shelf. The stamp is when the result **first settled** — sorting a
+  table it already produced is not a new result, and a list that reshuffles
+  itself under the reader is a list nobody trusts.
+- **The type is named** on every row (Table, Chart, Document, Form, Source) and
+  again in the footer, because two results from the same thread otherwise look
+  identical.
+- **The column opens itself when there is something in it, and only then.** With
+  no explicit choice it stays shut while the store is empty, and the first
+  result filed opens it. An explicit toggle still wins both ways — opening an
+  empty column is how you reach the empty state — and emptying the store hands
+  the choice back so the next result opens it again.
+- **The header names the result in the detail view**, and "Results" in the list.
+  This reverses an earlier decision: with an index in front of the detail, the
+  list is no longer on screen to say which of six results you opened.
+- A turn that produces a definite artifact still leaves a one-line **reference
+  card** in the thread, so the answer and its output stay connected.
 
 The panes per kind differ, and the difference is the point:
 
@@ -174,23 +218,109 @@ The panes per kind differ, and the difference is the point:
 | Chart | Chart · **Data** · Source |
 | Diff | Diff |
 | Doc | Document |
+| Result (from a widget) | one — it *is* the outcome |
 
-A chart gets its data table because a bar nobody can check is decoration.
+A chart gets its data table because a bar nobody can check is decoration. A
+table artifact renders as a label against one muted value, with no column
+headers — with two columns a header row only names what the rows say. The full
+table survives where columns are worth labelling: the chart's Data pane.
 
-The pane header names the **pane**, not the artifact: an artifact says what it
-is through its content, and the thread that produced it is already in the
-footer. A table artifact renders as a label against one muted value, with no
-column headers — with two columns a header row only names what the rows say.
-The full table survives where columns are worth labelling: the chart's Data
-pane.
+### A result that cannot leave is a screenshot
+
+Three ways out: a file, a link, and the bin.
+
+**Download offers the formats the content can honestly take**, not a fixed list.
+The first is the one the result already is; the menu is anchored to the button
+that opened it and says what each format is for, because `.csv` and `.json` are
+not a choice most people should have to translate.
+
+| Result | Formats |
+|---|---|
+| Table, form, chart | `.csv` spreadsheet · `.md` table · `.txt` padded columns · `.json` a row per object · `.pdf` |
+| Document | `.md` source · `.txt` markers stripped · `.pdf` |
+| Snippet, diff | `.py` · `.js` · `.sql` · `.diff` as written · `.txt` · `.pdf` |
+
+Every serialiser reads the result **once** — what is tabular about it, or what
+its text is — so adding a format is a row in `formatsFor` rather than a branch in
+five places. Files are assembled in the page and handed to the browser; nothing
+is uploaded, and no format needs a library that is not here.
+
+**Including the PDF, which is written by hand.** There are no dependencies in
+this prototype, so `pdfBytes` emits PDF 1.4 itself: a text object per page,
+Courier because a table that loses its column alignment is not a table any more,
+Courier-Bold for the title and the header row, and an xref table whose offsets
+are counted as the string is assembled. Bytes are WinAnsi — the typographic
+characters this workspace actually uses (`—` `·` `€` `"`) have slots there, and
+anything else becomes `?`, which is honest where the alternative is embedding a
+font. Verified by rendering, not by inspection: macOS opens the output and the
+columns line up.
+
+Values are normalised on the way out — the typographic minus (U+2212) that
+belongs in prose becomes an ASCII `-`, or the spreadsheet reads `−184,000` as
+text (the same normalisation the table sort uses) — and the inline markers a
+document carries for the prose renderer (`**`, backticks, `<code>`) are taken off
+rather than printed.
+
+### Deleting is undoable, so it does not need a dialog
+
+A store you cannot delete from fills with mistakes, so a result can go: from the
+list, where a hovered row reveals its own bin, and from the detail, where it sits
+at the **far end of the footer**. That placement is deliberate — the header holds
+the two actions that hand the result to someone else, and a destructive one
+beside `Close` is one mis-click from being expensive. The footer holds the
+record's own facts, and deleting the record belongs with them.
+
+No confirmation dialog. Deletion is immediate and the toast that reports it
+carries `Undo` for six seconds; asking someone to be certain about something they
+can already reverse is what teaches people to click through dialogs. Undo
+restores the record whole — its share state and its original timestamp included —
+so it lands back in the same place in the timeline rather than at the top. A
+shared result says what deleting it costs: *the shared link no longer opens*.
+
+Two consequences worth stating:
+
+- **A result a live widget still produces comes back** the next time that widget
+  changes, because the widget is its source. The record is derived, and deleting
+  a derivation does not delete what derives it.
+- **Deleting the last result closes the column** — it has no claim on the width
+  with nothing in it — and a reference card in an older turn whose result has
+  been deleted says so rather than opening an empty pane.
+
+**Share** is where the substance is, and the substance is not the link. A link
+with no access control is not a share, it is a leak — so the dialog asks who may
+open it *first*, and mints nothing until that is answered. Three audiences,
+chosen because they differ in consequence rather than in wording:
+
+| Who can open it | Means |
+|---|---|
+| Only you | the link opens for nobody else, inside the workspace or out |
+| People in *the workspace* | signed in, any member — the default |
+| Anyone with the link | no sign-in; a warning banner says so in those words |
+
+Beside them: what they can do (view · comment) and when the link stops working
+(24 hours · **7 days** · never). An expiry is the default because a result is a
+snapshot of one moment in a conversation, and the conversation moves on.
+
+Once a link exists, the access state is stated **where the result is read** — a
+strip above the result naming the audience, the permission and the expiry, with
+`Manage` on it, and coloured as a warning when the audience is the internet.
+The list marks a shared result with a link glyph and counts them in the footer
+(`6 results · 1 shared`). Stop sharing takes the link away and says what that
+means. The URL is derived from the result id, not drawn at random: reopening the
+dialog has to show the same link, or the one already sent is a lie.
 
 ### Panel priority
 
-Four columns want more width than a laptop has, so each has a width below
-which it stops being worth the space it takes — `apps: 900`, `list: 1120`,
-`art: 1400`. An explicit toggle overrides that; `null` hands control back to
-the viewport. The artifact pane is first to go because it is the only one
-that can be re-opened from the content itself.
+Six columns want more width than a laptop has, so each collapsible one has a
+width below which it stops being worth the space it takes — `list: 1120`,
+`art: 1400`. An explicit toggle overrides that; `null` hands control back to the
+viewport. The results column is first to go because it is the only one that can
+be re-opened from the content itself.
+
+Two columns sit outside that ladder. The **app rail** never collapses: it is the
+only way in to the apps. The **app panel** is not viewport-managed either — it is
+opened deliberately, and what it takes, it takes from the conversation (see
+*Which column yields*).
 
 ### Adding a feature
 
@@ -230,7 +360,7 @@ should land next to the thing it affects.
 | Search button (topbar) | the sidebar header, as drawn |
 | Sidebar toggle (topbar) | `⌘\` and the palette — a column you are looking at needs no button to say so |
 | App-rail close button | the topbar toggle, which is always on screen |
-| Artifact title (pane header) | the content itself; the header names the pane |
+| Artifact title (pane header) | ~~the content itself; the header names the pane~~ → back in the header. Once the pane became a list of results, the header is the only thing that can say which one you opened |
 | Copy artifact | gone — the Source pane is selectable text |
 | "Nothing here yet" empty thread | the hero: a question, two modes, and starters |
 | Cloud → Connections as its own fixture | derived from `CONNECTORS`. Configured in Build, reported in Cloud — one object, two views, because two lists of the same endpoints drift on the second edit |
@@ -239,6 +369,13 @@ should land next to the thing it affects.
 | Build's folding groups | Miller columns. An accordion asks you to manage what is open; columns just show the path you are on |
 | Build → Connectors | Cloud → Connections, as an index whose rows open the connector. Build grants one; Cloud connects it |
 | An assistant's definition living only in Chat | Build → Assistants. Chat still chooses one; the definition has an address of its own, and the two write to the same record |
+| Results scoped to the open thread | one global store, sorted by day. The thread is a property of the result, not a cabinet around it — and a new chat no longer opens on an empty column while six results sit one click away |
+| The results column open by default | open only when there is something in it. The first result opens it; emptying the store closes it |
+| A result you could only look at | download in a format the content can take (csv · md · txt · json · pdf), share behind an access choice, or delete with an undo |
+| One format per result, chosen for you | a menu that says what each format is for. The PDF is written by hand, since there are no dependencies here |
+| App sheet floating over the page | a column of the shell. Opening an app takes width from the conversation instead of covering it, so nothing has to be dismissed before the page is usable again |
+| App-rail toggle (`⌘]`, topbar) | the rail is permanent; the shortcut and the button now open the *panel*, on the app you had last |
+| Apps as ten analytical solution front-ends | the workspace's own seven tools — calendar, two extractors, files, news, note, todo. What you want open beside a conversation, not another dashboard |
 
 ## The knowledge detail is tabbed
 
@@ -308,6 +445,76 @@ Two consequences of binding one, both deliberate:
 - **A bound assistant answers under its own name** in the turn header, instead
   of the model's. That is what binding one means; the model it routes to is
   still shown in the composer.
+
+### Clicking one opens the record, over the list
+
+A card says enough to tell two assistants apart. It does not say enough to trust
+one with a question — which model, at what temperature, what it may call, what it
+may reach, and what it was told to do. So the card opens an **overlay** on the
+list rather than navigating anywhere:
+
+```
+┌─────────────────────┬──────────────────────────────────────────┐
+│ ▣ Revenue analyst   │ Configuration  Logs  Activity  Access  × │
+│ bcf853b6-e2c6-…     ├──────────────────────────────────────────┤
+│ ID: f1633f7f-bad6-… │ MODEL CONFIGURATION                      │
+│                     │  ✦ Nebula Pro           Temperature 0.2  │
+│ Answers from the    │ CAPABILITIES ⓘ                           │
+│ finance warehouse…  │  warehouse.query  Read the warehouse     │
+│                     │   ( Q3 ARR by segment, plan vs actual )  │
+│ ( Q3 ARR by segm… ) │  code.run         Run Python over it     │
+│ ( Which segments… ) │ TOOLS ⓘ    Snowflake · Drive · corpus    │
+│ Gnomon · Cong Yu    │ INSTRUCTIONS ⓘ                           │
+│ Last updated 14 Aug │  Answer from the finance warehouse…      │
+└─────────────────────┴──────────────────────────────────────────┘
+```
+
+An overlay because of *why* it was opened: to decide whether this is the one you
+want and then get on with asking it something. A page would put a back button
+between the decision and the question.
+
+- **Identity on the left, configuration on the right.** The left column is the
+  record — glyph, name, both ids, what it is for, what to ask it, whose it is,
+  when it last changed. It is 340px because a uuid shown with an ellipsis in it
+  is a uuid nobody can read back over a call, and both ids copy on click.
+- **Two identifiers, because they answer different questions.** The endpoint id
+  is what an API call addresses; the record id is what a support ticket quotes.
+  Both are generated from the record id rather than hand-written, so they are
+  the same on every reload — a fixture uuid that changes when someone edits the
+  file is one nobody can quote.
+- **A capability says what it is called, what it is for, and what to ask it.**
+  The name is the skill (`warehouse.query`); the line beside it is the short form
+  — the long behavioural contract stays on the skill's own record. Under it sit
+  the examples.
+- **Tools are grants, so they show the kind of system and whether it can
+  write** — a glyph per kind rather than a vendor logo, because in a list of
+  grants what matters is *what kind* of thing it can reach. The knowledge base
+  sits with them: it is the one source every answer is allowed to cite.
+- **Logs and Activity are simulated, and say so.** They are derived from the
+  record — the skills it has, when it was last edited — rather than drawn at
+  random, so the same assistant shows the same runs twice and the list can be
+  talked about. Times are laid out unevenly on purpose: calls seven minutes apart
+  to the second are a template, not a log.
+
+### An example is the way out of the overlay
+
+The examples are the interaction, not decoration. Clicking one **closes the
+overlay, binds the assistant, lands in a thread and leaves the question in the
+composer** with the caret in it. Three steps become one, which is the whole
+argument for the overlay in the first place.
+
+It stops short of sending. The point of putting a question in the box rather than
+running it is that it can be edited first — and unlike a starter on the empty
+thread, this text is a *template* for the reader's own question, not a worked
+case with an answer waiting behind it.
+
+Where it lands: the thread you were in if you were in one, otherwise the first
+empty thread, and only then a new one — clicking three examples in a row should
+not leave three "New chat" rows in the sidebar. The examples appear twice, in the
+identity column and inside their capability, because the two answer different
+questions: *what can I ask this?* and *what is this capability for?*
+
+Every assistant has them, written per assistant. "Run a query" is not an example.
 
 ## Build is where things are made, and it has one shape
 
@@ -468,38 +675,80 @@ is where someone decides what the answer looks like and a name is not enough to
 decide from. Publishing bumps the minor version and states every surface it went
 to.
 
-## An app is a layer, not a destination
+## An app is a column, not a layer
 
 Clicking an app used to navigate to the solution behind it, which meant opening
-a calendar cost you the conversation you were having. So an app opens as a
-fixed sheet against the rail that launched it:
+a calendar cost you the conversation you were having. The fix after that was a
+fixed sheet floating against the rail — better, but still a layer over the page,
+with a shadow, and something you had to dismiss before the width underneath was
+usable again.
 
-- **It stops short of the rail** (`right: --app-w`), so the rail stays live and
-  one app can be swapped for another in a single click. Clicking the open app
-  again closes it — the tile is a toggle, and the rail marks which app is open.
-- **No scrim.** The thread behind stays readable, which is the entire reason an
-  app is a layer rather than a page. `Esc` and the header's close both dismiss.
-- **It sits inside `.app`** so it inherits `--app-w` and lands flush against the
-  edge when the rail is closed.
-- **The solution is still reachable** from the footer. The app is the front end
-  of a solution, not a replacement for it.
+So an app is now **a column of the shell**. Opening one takes width from the
+conversation instead of covering it:
 
-Six surfaces cover the ten apps, and every one is assembled from components
-that already exist elsewhere — an app is a new arrangement, not a new
-vocabulary:
+- **It is part of the grid** (`--sheet-w`, 0 when closed), not `position:fixed`.
+  No shadow and no scrim, because it is not floating above anything — the only
+  thing between it and the chat is the same hairline every other column uses.
+- **Both halves stay usable.** The composer is still on screen while an app is
+  open, which is the whole point: files attach to the next message, a headline
+  writes the question into the composer, an extraction files a result.
+- **The rail is permanent.** It is the only way in to the apps, and a launcher
+  you have to summon is one nobody uses — so the topbar toggle and `⌘]` now open
+  the *panel*, on whichever app you had last. The rail's own chevron still widens
+  it to show names.
+- **The tile is a toggle** and the rail marks which app is open, so swapping apps
+  is one click rather than close-then-open. `Esc` and the header's close dismiss.
+
+### The apps are the workspace's own tools
+
+Seven of them, and deliberately ordinary: a calendar, two extractors, files,
+news, a note, a todo list. These are the things worth having open *beside* a
+conversation. (Published solutions reach this rail through the App-rail surface;
+none of the fixtures is installed, which is what the builder's `Open` button
+says when it is disabled.)
+
+Six surfaces cover the seven, each assembled from components that already exist
+elsewhere — an app is a new arrangement, not a new vocabulary:
 
 | Surface | Built from | Apps |
 |---|---|---|
-| `ledger` | stat tiles + rows with a stated value | Revenue Cockpit, Forecast Studio, Pricing Lab |
-| `queue` | stat tiles + rows with a badge | Churn Radar, Ticket Triage |
-| `health` | `.barlist` meters + a source list with state dots | Pipeline Health, Data Quality |
-| `calendar` | a month grid, marked days carrying a value | Renewals Desk |
-| `note` | `.prose` | Board Digest |
-| `search` | an input + a result list | Corpus Explorer |
+| `agenda` | a month grid + a timed list | Calendar |
+| `extract` | a source card, a `.deflist` of fields, chips, and one action | CV extractor, Invoice extractor |
+| `files` | rows that attach to the next message | My files |
+| `news` | rows that wrap, unread marked, that ask the thread about themselves | News |
+| `note` | a list plus a `textarea`, first line as title | Note |
+| `todo` | `.picklist` rows with real checkboxes, a count and a meter | Todo |
 
-The calendar is where the colour rule gets tested: a marked day takes a
-neutral dot and a surface step, and today takes an inset hairline. Neither is
-the accent, because **a date is not an action**.
+**The month is generated from the clock**, and the fixture marks days by their
+offset from today rather than by date — a calendar pinned to August 2026 is
+wrong by September. The calendar is also where the colour rule gets tested: a
+marked day takes a neutral dot and a surface step, and today takes an inset
+hairline. Neither is the accent, because **a date is not an action**.
+
+**Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
+once and owned in JS after that — the same rule as a chat widget's state. A
+ticked box, a typed note and a headline marked read survive switching apps,
+changing section and coming back. A fixture the interface writes into is a
+fixture that lies after the first click.
+
+Two of the apps produce **results**, and they go where every other outcome goes:
+`fileResult` puts an extraction in the results store under a name, so a CV read
+in a panel is filed, shareable and downloadable exactly like a table a thread
+produced. Its `from` is the app rather than a thread, which is why the detail
+footer only offers navigation when the origin *is* one.
+
+### Which column yields
+
+Four columns can be open at once and only one of them is the conversation. On a
+laptop, the results column and an app panel cannot both have their width: at
+1560px, both open leaves the chat at 356px, narrower than either of them.
+
+So opening an app **borrows** the results column when the conversation would
+otherwise drop below 560px, says so in a toast that names the shortcut back, and
+returns it when the app closes. It is a loan, not a decision made on the
+reader's behalf — and asking for the results column yourself ends the loan, so
+closing the app cannot undo what you just asked for. For the same reason, a
+result filed while an app is open is announced but does not seize the width.
 
 ## The empty thread
 
@@ -576,30 +825,60 @@ you cannot take back is one people hesitate to give.
 an exception to it — choosing is exactly the "you can act / you acted" the accent
 is reserved for.
 
-### Moving a widget to the artifact pane
+### The widget stays; its outcome is what leaves
 
-The widget's head carries one control, and it relocates the widget. Promoting it
-uses the mechanism that already existed for artifacts rather than a second one:
-the pane holds the widget, and the thread keeps the same one-line reference card
-any other artifact leaves behind. The button reverses in the pane, so the trip is
-symmetrical.
+An earlier version let you move the widget itself into the right column. That was
+the wrong object to move: the widget is where the *working* happens, and the
+place the question was asked is where the thing you are working on belongs. What
+should travel is the **outcome**.
 
-That is possible because **widget state lives in the instance, never in the
-DOM** (`LIVE[id]`). Half-typed fields, chosen answers, the sorted column and the
-selected series all survive being re-rendered in a different column — or being
-rebuilt from scratch after you navigate to Build and come back. `rerender(w)`
-repaints the widget wherever it happens to be, and nothing else on the page has
-to know which of the two columns that is.
+So a widget is filed, not relocated. The moment its output is settled it appears
+in the results column under a name:
 
-Two consequences worth stating:
+| Widget | Settled when | Filed as |
+|---|---|---|
+| Form | at least one row added | the rows |
+| Questionnaire | every question answered | the outcome, as a document |
+| Chart | immediately; re-filed when you switch series | the chosen series |
+| Table | immediately | the table |
+| Code | immediately; re-filed when you switch runtime | the chosen variant |
 
-- **The artifact record is created on promotion, not in the fixture.** Until
-  someone moves it there is nothing to reference, so `D.ARTIFACTS` gains an entry
-  (`kind: 'live'`) at that moment and loses it on the way back.
-- **A turn is now written into the thread.** Before this, simulated turns lived
-  only in the DOM and were lost on navigation — which is fine for a scripted
-  demo and useless for a tester who wants to fill a form, look at something else,
-  and come back to it.
+**Settled is a real condition, not a timer.** An unanswered questionnaire and an
+empty form have no outcome, so they have no result — and undoing the last row
+takes the result away again. `liveResult(w)` returns `null` and the record is
+dropped, which is also why the pane falls back to the list if you were reading
+the result that just stopped existing, and why the column can close itself: a
+store with nothing in it has no claim on the width.
+
+A result appearing where there was none is also the moment the column has
+something to show, so that is when it opens — including after an undo took the
+last one away and a second answer brought one back. The toast fires **once** per
+widget: announcing every row added would train people to ignore it.
+
+None of this needs the widget to move, because **widget state lives in the
+instance, never in the DOM** (`LIVE[id]`). Half-typed fields, chosen answers, the
+sorted column and the selected series survive being rebuilt — after a re-render,
+or after you navigate to Build and come back.
+
+One more consequence worth stating: **a turn is now written into the thread.**
+Before this, simulated turns lived only in the DOM and were lost on navigation —
+fine for a scripted demo, useless for a tester who wants to fill a form, look at
+something else, and come back to it.
+
+### A user turn sits on the right
+
+It was a left-ruled block, on the argument that a user turn is a record of input
+rather than a bubble. That was right about the styling and wrong about the
+position: side is the cheapest possible way to say who spoke — no label to read,
+no colour to decode — and every messaging surface a reader already uses puts
+their own words on the right.
+
+So it moves right and keeps its restraint: a quiet `--raised` block at
+`min(78%, 54ch)`, not a saturated bubble. The accent is reserved, and a filled
+bubble would make the shortest turn on screen the loudest thing on it. The text
+inside stays left-aligned, because right-aligned prose is harder to read, and the
+`YOU` label with its row actions flips to follow the block rather than sitting
+across the empty half of the column.
 
 ## Turn structure
 
@@ -631,10 +910,10 @@ container. Those use a native `title` instead. The two columns that never
 collapse (`rail`, `chatpane`) stay `overflow:visible` so their tooltips can
 reach open space.
 
-**Keyboard.** `⌘K` palette · `⌘↵` send · `⌘\` sidebar · `⌘.` artifact pane ·
-`⌘]` app rail · `⌘J` theme · `/` focus composer · `Esc` dismiss. The palette
-merges threads, apps, projects, assistants, knowledge, sources, artifacts,
-skills, agents, solutions and commands into one ranked list.
+**Keyboard.** `⌘K` palette · `⌘↵` send · `⌘\` sidebar · `⌘.` results column ·
+`⌘]` app panel · `⌘J` theme · `/` focus composer · `Esc` dismiss. The palette
+merges threads, apps, projects, assistants, knowledge, sources, results,
+solutions and commands into one ranked list.
 
 ## Scope of the prototype
 
@@ -643,8 +922,8 @@ skills, agents, solutions and commands into one ranked list.
 - Row-level actions (retry, branch, export, launching an app) fire a toast.
 - Live controls: theme, density, model, panel state, artifact width, tabs,
   New chat, every build form, and the live widgets — form, questionnaire, chart,
-  sortable table, code — including moving one between the thread and the
-  artifact pane. The rest are visual only.
+  sortable table, code — each filing its outcome into the results column as it
+  settles. The rest are visual only.
 - Turns are held in memory for the session. Nothing is stored except theme,
   density, artifact width and the app-rail state.
 
@@ -659,10 +938,12 @@ skills, agents, solutions and commands into one ranked list.
   as a sheet beside the rail. What is still missing is any *state* inside one —
   every app surface is read-only, and a queue you cannot triage from is a report.
   The live widgets in the thread are the pattern to copy: state in the instance,
-  the same node renderable in either column.
+  and an outcome filed under a name.
 - A live widget cannot be produced by a typed message, only by a scripted case.
   A tester who writes their own question gets prose, which makes the widgets feel
   like a rail rather than a capability.
+- Results are never removed by hand and never renamed. A store you cannot prune
+  is a store that stops being read.
 - Keyboard traversal of the sidebar, and focus management when the palette
   closes.
 - Build has no draft state and no version history. Edits apply as you make them,

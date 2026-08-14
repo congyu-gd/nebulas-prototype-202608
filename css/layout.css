@@ -1,11 +1,13 @@
 /* ============================================================================
-   layout — the application shell only. Five columns, plus a status strip
+   layout — the application shell only. Six columns, plus a status strip
    spanning all of them. Components inside know nothing about this file.
 
-       rail · sidebar · chat · artifact · apps
+       rail · sidebar · chat · results · app panel · app rail
 
-   Each of the four outer columns collapses to 0 through a data attribute on
+   Every column except the rails collapses to 0 through a data attribute on
    .app, which redefines its width token rather than restating the template.
+   The app rail is the exception in the other direction: it never collapses,
+   because it is the only way in to the apps.
    ========================================================================= */
 
 .app{
@@ -18,13 +20,15 @@
     var(--list-w)
     minmax(0,1fr)
     var(--art-w)
+    var(--sheet-w)
     var(--app-w);
   grid-template-rows:minmax(0,1fr) var(--status-h);
   /* The widths animate, not the template — see the @property block in
      tokens.css for why the difference is load-bearing. */
-  transition:--list-w var(--base) var(--ease),
-             --art-w  var(--base) var(--ease),
-             --app-w  var(--base) var(--ease);
+  transition:--list-w  var(--base) var(--ease),
+             --art-w   var(--base) var(--ease),
+             --sheet-w var(--base) var(--ease),
+             --app-w   var(--base) var(--ease);
 }
 .app[data-list="closed"]{ --list-w:0px }
 /* Build navigates in Miller columns, so its sidebar is two columns wide. The
@@ -32,15 +36,18 @@
 .app[data-section="build"]{ --list-w:var(--list-w-mill) }
 .app[data-section="build"][data-list="closed"]{ --list-w:0px }
 .app[data-art="closed"] { --art-w:0px }
-.app[data-apps="closed"]{ --app-w:0px }
 .app[data-apps="wide"]  { --app-w:var(--app-w-wide) }
+/* The app panel is a column, so opening one is a width, not a layer. Capped
+   against the viewport: on a laptop the conversation has to survive it. Change
+   the cap and the mirror of it in app.js (sheetTarget) changes with it. */
+.app[data-sheet="open"]{ --sheet-w:min(var(--sheet-w-open),34vw) }
 
 /* A column that can collapse to zero must not leak its contents. The two
    that never collapse stay visible so their tooltips can escape sideways —
    which is also why anything sitting on a clipped edge uses a native
    title attribute instead of the styled .tip. */
 .app > *{ min-width:0 }
-.listcol,.artpane,.apprail{ overflow:hidden }
+.listcol,.artpane,.appsheet,.apprail{ overflow:hidden }
 .rail,.chatpane{ overflow:visible }
 
 /* ==================================================================== rail */
@@ -436,11 +443,26 @@
 .msg:hover .msg__actions,
 .msg:focus-within .msg__actions{ opacity:1 }
 
-/* A user turn is a record of input, not a bubble. */
+/* ------------------------------------------------------------- a user turn
+   Sent to the right, the way every messaging surface people already use puts
+   their own words. It is the cheapest possible way to say who spoke: no label
+   to read, no colour to decode, just a side.
+
+   It stays a quiet raised block rather than a saturated bubble — the accent is
+   reserved, and a filled bubble would make the shortest turn on screen the
+   loudest thing on it. */
+.msg[data-role="user"]{ display:flex; flex-direction:column; align-items:flex-end }
 .msg[data-role="user"] .prose{
-  border-left:2px solid var(--line-strong);
-  padding-left:var(--s-4);
+  max-width:min(78%,54ch);
+  padding:var(--s-3) var(--s-4);
+  border-radius:var(--r-xl);
+  background:var(--raised);
+  text-align:left;          /* right-aligned prose is harder to read */
 }
+/* The head follows the block it belongs to, so "YOU" and the row actions sit
+   over the right edge instead of across the empty half of the column. */
+.msg[data-role="user"] .msg__head{ flex-direction:row-reverse; align-self:stretch }
+.msg[data-role="user"] .msg__actions{ margin-left:0; margin-right:auto }
 
 .msg__trace{ margin-bottom:var(--s-4) }
 .msg__ref{ margin-top:var(--s-4) }
@@ -578,9 +600,14 @@
   font-size:var(--t-11); color:var(--text-4);
 }
 .artpane__foot .t-mono{ white-space:nowrap }
+/* Destructive, so it is the quietest control in the pane until it is hovered —
+   and it sits at the far end of the record's own facts rather than beside the
+   controls that hand the result to somebody else. */
+.artpane__del{ color:var(--text-4); margin-right:calc(var(--s-2) * -1) }
+.artpane__del:hover{ background:var(--err-soft); color:var(--err) }
 
 /* ================================================================ app rail
-   Solutions, as launchable surfaces. Narrow by default; the chevron at the
+   The workspace's apps. Always present — narrow by default; the chevron at the
    foot widens it to show names rather than opening a separate screen. */
 .apprail{
   grid-row:1;
@@ -589,8 +616,6 @@
   background:var(--surface);
   border-left:var(--border) solid var(--line);
 }
-.app[data-apps="closed"] .apprail{ border-left-color:transparent }
-
 .apprail__head{
   flex:none;
   display:flex; align-items:center; gap:var(--s-1);
@@ -634,25 +659,29 @@
 .apprail__more svg{ transition:rotate var(--base) var(--ease) }
 .app[data-apps="wide"] .apprail__more svg{ rotate:180deg }
 
-/* =============================================================== app sheet
-   Launched from the rail it sits against, so it stops short of the rail
-   rather than covering it — switching apps is one click, not close-then-open.
-   No scrim: the thread behind stays readable, which is the whole reason an
-   app is a layer and not a page. */
+/* =============================================================== app panel
+   A column, not a layer: opening an app takes width from the conversation
+   rather than covering it, so nothing has to be dismissed before the page can
+   be used again. No shadow and no scrim for the same reason — it is part of the
+   shell, and the only thing separating it from the chat is the hairline every
+   other column uses. Closed, --sheet-w is 0 and this clips itself away. */
 .appsheet{
-  position:fixed; z-index:70;
-  top:0; bottom:var(--status-h); right:var(--app-w);
-  width:min(460px,92vw);
+  grid-row:1;
   display:flex; flex-direction:column;
   min-height:0;
   background:var(--bg);
   border-left:var(--border) solid var(--line);
-  box-shadow:var(--shadow-lg);
-  opacity:0; translate:12px 0;
-  pointer-events:none;
-  transition:opacity var(--base) var(--ease), translate var(--base) var(--ease-out);
 }
-.appsheet[data-open="true"]{ opacity:1; translate:0 0; pointer-events:auto }
+.app:not([data-sheet="open"]) .appsheet{ border-left-color:transparent }
+/* Contents fade with the width so a 380px panel does not appear to slide out
+   of a 0px one — the column is animating, the content is only catching up. */
+.appsheet__head,.appsheet__body,.appsheet__foot{
+  opacity:0;
+  transition:opacity var(--fast) var(--ease);
+}
+.app[data-sheet="open"] .appsheet__head,
+.app[data-sheet="open"] .appsheet__body,
+.app[data-sheet="open"] .appsheet__foot{ opacity:1 }
 
 .appsheet__head{
   flex:none;

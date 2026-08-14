@@ -12,12 +12,12 @@
 <body>
 
 <!-- ============================================================ app shell
-     rail · sidebar · chat · artifact · apps, with a status strip spanning
-     all five. Rail buttons, sidebar rows, chat content, the artifact pane
-     and the app rail are all rendered by app.js — adding a section is one
-     entry in the SECTIONS registry.
+     rail · sidebar · chat · results · app panel · app rail, with a status strip
+     spanning all six. Rail buttons, sidebar rows, chat content, the results
+     column, the app panel and the app rail are all rendered by app.js — adding
+     a section is one entry in the SECTIONS registry.
 ============================================================================ -->
-<div class="app" id="app" data-list="open" data-art="open" data-apps="open">
+<div class="app" id="app" data-list="open" data-art="open" data-apps="open" data-sheet="closed">
 
   <nav class="rail" id="rail" aria-label="Sections">
     <div class="rail__mark" aria-hidden="true"><svg viewBox="0 0 22.91 18.70" fill="none"><path transform="translate(3.04 2.83)" d="M0 9.42169C0 4.21824 4.29139 0 9.58509 0L10.6919 0L11.7988 0C16.2579 0 19.8727 3.55315 19.8727 7.93617C19.8727 12.3192 16.2579 15.8723 11.7988 15.8723L0 15.8723L0 9.42169Z" fill="#ffe082"/><path transform="translate(9.81 6.17)" d="M1.52563 2.98039C2.36821 2.98039 3.05125 2.31321 3.05125 1.4902C3.05125 0.667183 2.36821 0 1.52563 0C0.683046 0 0 0.667183 0 1.4902C0 2.31321 0.683046 2.98039 1.52563 2.98039Z" fill="#2b282f"/><path transform="translate(15.60 6.17)" d="M1.52563 2.98039C2.36821 2.98039 3.05125 2.31321 3.05125 1.4902C3.05125 0.667183 2.36821 0 1.52563 0C0.683046 0 0 0.667183 0 1.4902C0 2.31321 0.683046 2.98039 1.52563 2.98039Z" fill="#2b282f"/><path fill-rule="evenodd" d="M10.8518 0.000919868C10.8995 0.00030702 10.9472 0 10.995 0L13.2624 0C14.9183 0.0256323 16.4786 0.454035 17.8386 1.19024C20.407 2.61801 22.3378 5.2016 22.7257 8.2297C22.7711 8.59739 22.7946 8.97186 22.7946 9.35191C22.7946 14.2796 18.8658 18.2696 13.9269 18.6718C13.6709 18.6917 13.4128 18.702 13.1532 18.702L0.37994 18.702L0 18.702L0 16.4697L0 10.9079C0.057969 7.09158 1.82929 4.04899 4.40095 2.1571C6.20573 0.841216 8.43835 0.0471854 10.8518 0.000919868ZM2.28844 10.6842C2.28844 6.01734 6.22246 2.23408 11.0753 2.23408L13.1046 2.23408C17.1923 2.23408 20.5061 5.42083 20.5061 9.35191C20.5061 13.283 17.1923 16.4697 13.1046 16.4697L4.57688 16.4697L2.28844 16.4697L2.28844 14.2344L2.28844 10.6842Z" fill="currentColor"/></svg></div>
@@ -46,10 +46,12 @@
       <div class="topbar__spacer"></div>
       <!-- Two toggles, not three: the sidebar is reached by ⌘\ and the palette.
            A column you are looking at does not need a button to say so. -->
-      <button class="iconbtn tip tip--below" id="artBtn" aria-pressed="true" data-tip="Artifact pane  ⌘." aria-label="Toggle artifact pane">
+      <button class="iconbtn tip tip--below" id="artBtn" aria-pressed="true" data-tip="Results  ⌘." aria-label="Toggle results column">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M15 4.5v15"/></svg>
       </button>
-      <button class="iconbtn tip tip--below" id="appsBtn" aria-pressed="true" data-tip="App rail  ⌘]" aria-label="Toggle app rail">
+      <!-- The app rail is permanent, so there is nothing to toggle. This opens
+           the panel beside it on the app you had last. -->
+      <button class="iconbtn tip tip--below" id="appsBtn" aria-pressed="false" data-tip="App panel  ⌘]" aria-label="Toggle app panel">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="2.6"/><circle cx="17" cy="7" r="2.6"/><circle cx="7" cy="17" r="2.6"/><circle cx="17" cy="17" r="2.6"/></svg>
       </button>
     </header>
@@ -91,18 +93,35 @@
     </div>
   </section>
 
-  <!-- ==================================================== artifact pane
-       Output that outlives the turn. The thread keeps a reference card;
-       the artifact itself lives here across questions.
+  <!-- =================================================== results column
+       Where the workspace's outcomes are kept — every thread's, newest first,
+       grouped by day. Its resting state is that list; a detail is one click
+       away, and the back button returns to the list. The column opens itself
+       when a result appears and stays shut while there are none. A turn that
+       produces a definite artifact also leaves a one-line reference card in
+       the thread it came from.
   -->
-  <section class="pane artpane" id="artpane" aria-label="Artifact">
+  <section class="pane artpane" id="artpane" aria-label="Results">
     <div class="artpane__grip" id="artGrip" role="separator" aria-orientation="vertical" tabindex="0"
-         aria-label="Resize artifact pane"></div>
+         aria-label="Resize results column"></div>
     <header class="artpane__head">
+      <!-- Shown only while a result is open: the pane's resting state is the
+           list, so leaving a detail has to be one click. -->
+      <button class="iconbtn iconbtn--sm" id="artBack" title="All results" aria-label="Back to results" hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+      </button>
       <span class="artpane__ico" id="artIcon"></span>
-      <span class="artpane__title" id="artTitle">Artifact</span>
+      <span class="artpane__title" id="artTitle">Results</span>
       <div class="seg" id="artTabs"></div>
-      <button class="iconbtn iconbtn--sm" id="artClose" title="Close artifact pane (⌘.)" aria-label="Close artifact pane">
+      <!-- A result is only useful if it can leave. Both act on the result being
+           read, so both are hidden while the pane is showing the list. -->
+      <button class="iconbtn iconbtn--sm" id="artDl" title="Download" aria-label="Download result" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M5 20h14"/></svg>
+      </button>
+      <button class="iconbtn iconbtn--sm" id="artShare" title="Share…" aria-label="Share result" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></svg>
+      </button>
+      <button class="iconbtn iconbtn--sm" id="artClose" title="Close results column (⌘.)" aria-label="Close results column">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </header>
@@ -110,29 +129,13 @@
     <footer class="artpane__foot" id="artFoot"></footer>
   </section>
 
-  <!-- ======================================================== app rail
-       Solutions as launchable surfaces. The chevron widens the rail to
-       show names rather than opening a screen of its own.
-  -->
-  <nav class="apprail" id="apprail" aria-label="Apps">
-    <!-- Label only. The rail is closed from the topbar toggle, which is always
-         on screen — a second control for it inside the thing it closes was
-         redundant. -->
-    <div class="apprail__head">
-      <span class="apprail__label t-eyebrow">Apps</span>
-    </div>
-    <div class="apprail__body" id="appsBody"></div>
-    <button class="apprail__more" id="appsMore" aria-label="Show app names">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-    </button>
-  </nav>
-
-  <!-- ========================================================= app sheet
-       An app is a surface, not a destination. It opens as a fixed layer
-       beside the rail that launched it: the thread you were reading stays
-       exactly where it was, and the rail stays live so one app can be
-       swapped for another without going anywhere. Lives inside .app so it
-       inherits --app-w and sits flush when the rail is closed.
+  <!-- ========================================================= app panel
+       An app is a surface, not a destination — but it is not an overlay
+       either. This is a column of the shell: opening one takes width from
+       the conversation instead of covering it, so both stay readable and
+       nothing has to be dismissed before the page can be used again. Zero
+       width when closed. The rail beside it stays live, so one app can be
+       swapped for another without going anywhere.
   -->
   <aside class="appsheet" id="appSheet" data-open="false" aria-label="App" aria-hidden="true">
     <header class="appsheet__head">
@@ -149,6 +152,21 @@
     <div class="appsheet__body" id="appSheetBody"></div>
     <footer class="appsheet__foot" id="appSheetFoot"></footer>
   </aside>
+
+  <!-- ========================================================== app rail
+       Always on screen: it is the only way in to the apps, and a launcher you
+       have to summon is one nobody uses. The chevron widens it to show names
+       rather than opening a screen of its own.
+  -->
+  <nav class="apprail" id="apprail" aria-label="Apps">
+    <div class="apprail__head">
+      <span class="apprail__label t-eyebrow">Apps</span>
+    </div>
+    <div class="apprail__body" id="appsBody"></div>
+    <button class="apprail__more" id="appsMore" aria-label="Show app names">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+  </nav>
 
   <!-- Usage spans every column, because it belongs to none of them. -->
   <footer class="statusbar">
@@ -183,6 +201,65 @@
       <span><span class="kbd">↵</span> open</span>
       <span><span class="kbd">esc</span> close</span>
     </div>
+  </div>
+</div>
+
+<!-- ==================================================== assistant, in detail
+     Opened from an assistant card in Chat. An overlay rather than a page: you
+     came here from a list to decide whether this is the one you want, and
+     picking it should put you back where you were with it bound — see
+     useExample in app.js. Everything in it is rendered by app.js.
+-->
+<div class="scrim scrim--center" id="asstScrim" data-open="false">
+  <div class="detail" role="dialog" aria-modal="true" aria-labelledby="asstName">
+
+    <aside class="detail__id">
+      <div class="detail__idhead">
+        <span class="detail__glyph" id="asstGlyph" aria-hidden="true"></span>
+        <div class="detail__names">
+          <h2 class="detail__name" id="asstName">Assistant</h2>
+          <!-- Both ids are copyable, because an id you cannot copy is decoration -->
+          <button class="detail__uuid" id="asstEndpoint" type="button"></button>
+        </div>
+      </div>
+      <button class="detail__rec" id="asstRecord" type="button"></button>
+      <p class="detail__desc" id="asstDesc"></p>
+      <div class="detail__ex" id="asstEx"></div>
+      <div class="detail__meta" id="asstMeta"></div>
+      <div class="detail__upd" id="asstUpd"></div>
+    </aside>
+
+    <div class="detail__main">
+      <header class="detail__head">
+        <div class="tabs detail__tabs" id="asstTabs" role="tablist"></div>
+        <button class="iconbtn iconbtn--sm" id="asstClose" title="Close (esc)" aria-label="Close">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </header>
+      <div class="detail__body" id="asstBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================= share a result
+     A link with no access control is not a share, it is a leak — so the dialog
+     asks who may open it first and only then mints one. Nothing is uploaded:
+     the URL is generated in the page and goes nowhere.
+-->
+<div class="scrim" id="shareScrim" data-open="false">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+    <header class="dialog__head">
+      <span class="dialog__ico" id="shareIco" aria-hidden="true"></span>
+      <span class="dialog__id">
+        <span class="dialog__title" id="shareTitle">Share result</span>
+        <span class="dialog__sub" id="shareSub"></span>
+      </span>
+      <button class="iconbtn iconbtn--sm" id="shareClose" title="Close (esc)" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="dialog__body" id="shareBody"></div>
+    <footer class="dialog__foot" id="shareFoot"></footer>
   </div>
 </div>
 

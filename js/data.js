@@ -9,6 +9,9 @@ window.DATA = (function(){
    One object serves two places: the reference card inside a thread and the
    artifact pane on the right. They share an id, so opening from either lands
    on the same thing. */
+/* `when` is an AGE, not a date: a hand-written date rots on the shelf, so the
+   app turns these into real timestamps at boot (see initResults). Minutes,
+   hours and days, alone or combined — "2d 5h". */
 const ARTIFACTS = [
   {
     id:'a1', kind:'table', title:'Q3 variance by segment',
@@ -58,7 +61,7 @@ const ARTIFACTS = [
   },
   {
     id:'a3', kind:'chart', title:'Churn model — feature importance',
-    from:'Churn signals in enterprise accounts', when:'1d', size:'8 features',
+    from:'Churn signals in enterprise accounts', when:'1d 3h', size:'8 features',
     bars:[
       ['admin_changed_90d', 100],
       ['seats_active_delta', 61],
@@ -91,7 +94,7 @@ const ARTIFACTS = [
   },
   {
     id:'a4', kind:'doc', title:'Empty-state copy set',
-    from:'Onboarding copy pass', when:'2d', size:'9 states',
+    from:'Onboarding copy pass', when:'2d 5h', size:'9 states',
     md:[
       '### The pattern',
       'State what is missing, then name the one action that fills it. No encouragement, no personality, no exclamation marks.',
@@ -109,7 +112,7 @@ const ARTIFACTS = [
   },
   {
     id:'a5', kind:'table', title:'FY25 forecast bridge',
-    from:'Q3 revenue analysis', when:'2d', size:'6 rows',
+    from:'Q3 revenue analysis', when:'2d 1h', size:'6 rows',
     rows:[
       ['Q3 actual','today'],
       ['less services timing','1d'],
@@ -131,7 +134,7 @@ const ARTIFACTS = [
   },
   {
     id:'a6', kind:'doc', title:'Adapter credit scheme',
-    from:'Refactor the ingestion pipeline', when:'3d', size:'2 pages',
+    from:'Refactor the ingestion pipeline', when:'3d 7h', size:'2 pages',
     md:[
       'ADR-014 specifies a credit-based backpressure scheme. Nothing in the code reads a credit, so this is a design note rather than documentation.',
       '',
@@ -371,6 +374,98 @@ ASSISTANTS[2].conn = ['cn3','cn6'];
 ASSISTANTS[3].conn = ['cn2','cn4'];
 ASSISTANTS[4].conn = ['cn1'];
 ASSISTANTS[10].conn = ['cn1','cn3'];
+
+/* ------------------------------------------------- what an assistant CAN do
+   A skill name says what it is called; this says what it is for, in the one
+   line a reader skims. The long behavioural note stays on the SKILLS record —
+   this is the label, not the contract. Names that predate the SKILLS list are
+   here too, so every capability an assistant claims can be described. */
+const SKILL_DESC = {
+  'warehouse.query':'Read the warehouse, read-only',
+  'code.run':       'Run Python over the result',
+  'chart.build':    'Draw the figure behind a number',
+  'search.docs':    'Retrieve spans from the knowledge base',
+  'doc.write':      'Draft the document, in the house register',
+  'fs.read':        'Read files in the repository',
+  'code.analyze':   'Read code without running it',
+  'search.repo':    'Search the repository by symbol or text',
+  'classify':       'Label and route what comes in',
+  'search.logs':    'Search logs across services',
+  'trace.read':     'Read a distributed trace end to end'
+};
+
+/* ------------------------------------------------- and what to ask it first
+   Example prompts, per assistant per capability. These are the interaction, not
+   decoration: clicking one binds the assistant and puts the question in the
+   composer, so each has to be a question this assistant would actually answer
+   well. Written per assistant, because "run a query" is not an example. */
+const ASSISTANT_EX = {
+  as1:{ 'warehouse.query':['Q3 ARR by segment, plan vs actual', 'Which segments missed plan, and by how much?'],
+        'code.run':['Strip non-recurring lines and re-attribute the growth'],
+        'chart.build':['Chart the Q3 variance by segment'] },
+  as2:{ 'fs.read':['Read ingest/pipeline.py and tell me what it assumes'],
+        'code.analyze':['Review the last change to the ingestion pipeline'],
+        'search.repo':['Where is the queue depth configured?'] },
+  as3:{ 'classify':['Label the ten oldest open tickets by area and urgency'],
+        'search.docs':['Which of these are covered by an existing macro?'] },
+  as4:{ 'search.docs':['What did last week\'s analyses conclude?'],
+        'doc.write':['Draft this week\'s leadership digest', 'Rewrite the digest without adjectives'] },
+  as5:{ 'warehouse.query':['Recurring base for Q3, excluding services'],
+        'code.run':['Check the FY25 forecast against the recurring base'] },
+  as6:{ 'warehouse.query':['Which cohorts does the November uplift touch?'],
+        'code.run':['Model the exposure if 10% opt out'],
+        'chart.build':['Chart exposed ARR by renewal month'] },
+  as7:{ 'warehouse.query':['Who renews in the next 60 days?'],
+        'search.docs':['What did we agree with Contoso at the last renewal?'] },
+  as8:{ 'search.logs':['Errors on billing_export in the last hour'],
+        'trace.read':['Follow one failing export request end to end'],
+        'doc.write':['Write the timeline so far, no causes'] },
+  as9:{ 'fs.read':['Does the ingest runbook match what the service does?'],
+        'search.repo':['Which services have no runbook at all?'] },
+  as10:{ 'code.analyze':['What has to change to move ingest off the shared queue?'],
+         'doc.write':['Sequence the migration, marking what is reversible'] },
+  as11:{ 'warehouse.query':['Accounts above 0.6 churn probability'],
+         'classify':['Split those signals into actionable and not'] },
+  as12:{ 'search.docs':['Which macros use the old pricing vocabulary?'],
+         'doc.write':['Rewrite the top five to match the current terms'] },
+  as13:{ 'classify':['Was ticket #4809 worth escalating?'],
+         'search.docs':['What does the escalation policy actually require?'] },
+  as14:{ 'doc.write':['Rewrite the empty states to name one action each',
+                      'Tighten the onboarding dialog copy'] },
+  as15:{ 'search.docs':['How do I connect a warehouse?', 'What does a solution package contain?'] },
+  as16:{ 'doc.write':['Turn this transcript into decisions and owners'],
+         'classify':['Which of these are open questions rather than decisions?'] }
+};
+
+/* Ids, a temperature and an age, derived rather than hand-written. A uuid typed
+   into a fixture by hand is one nobody can quote in a bug report, because it
+   changes the next time somebody edits the file; these are generated from the
+   record id, so they are the same on every reload. */
+function fixtureUuid(seed){
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++){ h ^= seed.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  const hex = n => {
+    let o = '';
+    for (let i = 0; i < n; i++){
+      h = (h * 1664525 + 1013904223) >>> 0;
+      o += (((h >>> 16) & 0xff) + 0x100).toString(16).slice(-2);
+    }
+    return o;
+  };
+  return hex(4) + '-' + hex(2) + '-' + hex(2) + '-' + hex(2) + '-' + hex(6);
+}
+const ASST_AGES = ['12m','2h','1d','2d 4h','4d','1w','3h','5d'];
+ASSISTANTS.forEach((a, i) => {
+  a.ex = ASSISTANT_EX[a.id] || {};
+  /* Two identifiers, because they answer different questions: the endpoint is
+     what an API call addresses, the record id is what a support ticket quotes. */
+  a.endpointId = fixtureUuid(a.id + '/endpoint');
+  a.recordId = fixtureUuid(a.id + '/record');
+  /* Derived from the model rather than invented per assistant: a thinking model
+     runs cold, a fast one is allowed a little more room. */
+  a.temp = a.opts.think ? 0.1 : (a.model.indexOf('Fast') > -1 || a.model.indexOf('Mini') > -1 ? 0.3 : 0.2);
+  a.upd = ASST_AGES[i % ASST_AGES.length];
+});
 
 /* --------------------------------------------------------------- schedule */
 const SCHEDULE = [
@@ -741,7 +836,7 @@ const DESIGN_ACCENTS = [
    Where a package can ship. `renders` is the load-bearing field: a surface that
    renders needs a design element, and one that answers in JSON does not. */
 const SURFACES = [
-  { id:'app',   name:'App rail',        renders:true,  desc:'A sheet in this workspace’s right rail.' },
+  { id:'app',   name:'App rail',        renders:true,  desc:'A panel in this workspace’s right-hand rail.' },
   { id:'embed', name:'Embedded widget', renders:true,  desc:'Dropped into a page another team owns.' },
   { id:'site',  name:'Public website',  renders:true,  desc:'A hosted page on your own domain.' },
   { id:'hook',  name:'Webhook',         renders:false, desc:'Called by another system, answers in JSON.' },
@@ -787,117 +882,125 @@ const SOLUTIONS = [
 /* An app carries a colour and a glyph, keyed to what it is for rather than to
    its position in the rail: money is amber wherever it appears, authoring is
    red. `c` indexes --app-1..5 in tokens.css. */
+/* ----------------------------------------------------------------- apps
+   The workspace's own apps: the tools you keep open BESIDE a conversation, not
+   the analytical surfaces a solution publishes. That is why they are ordinary
+   and small — a calendar, two extractors, files, news, a note, a todo list. An
+   app earns its column by being useful while you are reading something else.
+
+   `c` is the identity colour (--app-1..5) and `icon` the glyph. Adjacent apps
+   never share a colour: the rail is scanned, not read. */
 const APPS = [
-  { id:'ap1',  short:'RC', name:'Revenue Cockpit', state:'live', c:3, icon:'dollar',   desc:'Variance, bridge and a question box.' },
-  { id:'ap2',  short:'CR', name:'Churn Radar',     state:'live', c:5, icon:'feather',  desc:'Account watchlist by churn probability.' },
-  { id:'ap3',  short:'PH', name:'Pipeline Health', state:'live', c:4, icon:'checksq',  desc:'Ingestion throughput and adapter budgets.' },
-  { id:'ap4',  short:'TT', name:'Ticket Triage',   state:'live', c:2, icon:'filetext', desc:'Inbound labelling and escalation queue.' },
-  { id:'ap5',  short:'FS', name:'Forecast Studio', state:'live', c:3, icon:'dollar',   desc:'Scenario forecasting off the recurring base.' },
-  { id:'ap6',  short:'DQ', name:'Data Quality',    state:'warn', c:4, icon:'checksq',  desc:'Freshness and completeness per source.' },
-  { id:'ap7',  short:'BD', name:'Board Digest',    state:'beta', c:2, icon:'filetext', desc:'Weekly leadership note, drafted.' },
-  { id:'ap8',  short:'PL', name:'Pricing Lab',     state:'draft',c:3, icon:'dollar',   desc:'November cohort exposure model.' },
-  { id:'ap9',  short:'RD', name:'Renewals Desk',   state:'live', c:1, icon:'calendar', desc:'The renewal book, by month and owner.' },
-  { id:'ap10', short:'CE', name:'Corpus Explorer', state:'live', c:5, icon:'feather',  desc:'Search across every knowledge base.' }
+  { id:'ap1', short:'CA', name:'Calendar',          state:'live', c:1, icon:'calendar', desc:'Today, this week, and what is due.' },
+  { id:'ap2', short:'CV', name:'CV extractor',      state:'live', c:2, icon:'idcard',   desc:'Reads a CV into fields you can file.' },
+  { id:'ap3', short:'IN', name:'Invoice extractor', state:'live', c:3, icon:'receipt',  desc:'Reads an invoice and checks it adds up.' },
+  { id:'ap4', short:'MF', name:'My files',          state:'live', c:2, icon:'folder',   desc:'Everything uploaded here, newest first.' },
+  { id:'ap5', short:'NW', name:'News',              state:'beta', c:4, icon:'news',     desc:'What moved in the accounts you follow.' },
+  { id:'ap6', short:'NO', name:'Note',              state:'live', c:5, icon:'note',     desc:'A scratchpad that survives navigation.' },
+  { id:'ap7', short:'TD', name:'Todo',              state:'live', c:4, icon:'checksq',  desc:'What you said you would do.' }
 ];
 
-/* An app opens as a sheet, so each one needs a surface rather than a page.
-   Six shapes cover all ten: a ledger of amounts, a triage queue, a health
-   readout, a month, a drafted note, a search. `s` picks the renderer. */
+/* An app opens into a panel, so each one needs a surface rather than a page.
+   Seven apps, six shapes — `s` picks the renderer:
+
+     agenda   a month, and what is on today
+     extract  a document read into fields, with what to check and what to file
+     files    what has been uploaded, attachable to the next message
+     news     headlines, unread first, askable about in the thread
+     note     an editable scratchpad
+     todo     items you can tick
+
+   Anything the reader can change (a ticked box, typed text, an item marked
+   read) is seeded from here once and then owned by APP_STATE in app.js — a
+   fixture the interface writes back into is a fixture that lies after the
+   first click. */
 const APP_PANELS = {
-  ap1:{ s:'ledger', sub:'Q3 · by segment',
-    stats:[['Q3 actual','$41.2M'],['vs plan','+12.4%'],['Q4 forecast','$42.4M']],
+
+  /* Days are OFFSETS FROM TODAY, not dates: a calendar fixture pinned to
+     August 2026 is wrong by September. The grid is generated from the clock. */
+  ap1:{ s:'agenda', sub:'4 events today', foot:'Mirrors your work calendar. Read-only here.',
+    marks:{ 0:'4 events', 1:'Renewal review', 4:'Board pack due', 8:'Q3 close' },
     rows:[
-      ['Enterprise','142 accounts · renewals','$22.4M','ok'],
-      ['Mid-market','388 accounts · expansion','$12.8M','ok'],
-      ['SMB','2,140 accounts · churn 40bps','$4.6M','err'],
-      ['Services','one-off implementations','$1.4M','warn']
+      ['09:30','Pipeline review','Meet · 30m'],
+      ['11:00','Contoso renewal call','Ana, Ravi · 45m'],
+      ['14:00','Q3 close walkthrough','Finance · 1h'],
+      ['16:30','1:1 with Marc','Meet · 30m']
     ] },
 
-  ap2:{ s:'queue', sub:'5 accounts above threshold',
-    stats:[['At risk ARR','$6.2M'],['Above 0.6','5'],['New this week','2']],
-    rows:[
-      ['Northwind Traders','admin changed 9d ago · usage flat','0.81','err'],
-      ['Contoso Retail','usage −34% over 30d','0.74','err'],
-      ['Fabrikam','exec sponsor left in July','0.63','warn'],
-      ['Tailspin Toys','2 tickets reopened, 1 escalated','0.61','warn'],
-      ['Adventure Works','seats +12, no other signal','0.22','ok']
+  ap2:{ s:'extract', sub:'cv-priya-raman.pdf · 2 pages', foot:'Fields are read from the file, never invented.',
+    file:'cv-priya-raman.pdf', pages:'2 pages · read in 1.4s',
+    res:'Priya Raman — CV fields',
+    fields:[
+      ['Name','Priya Raman',''],
+      ['Current title','Staff Data Engineer',''],
+      ['Location','Berlin · EU work permit',''],
+      ['Experience','8 years',''],
+      ['Notice period','~2 months','check']
+    ],
+    chipsLabel:'Skills found',
+    chips:['Python','dbt','Airflow','Snowflake','Terraform','Kafka','Postgres'],
+    /* Named because a field the model guessed and a field it read are not the
+       same fact, and only one of them needs a human. */
+    note:'Notice period was written in prose — "about two months" — not in a field. Confirm before it goes in an offer.' },
+
+  ap3:{ s:'extract', sub:'INV-2026-0841 · Northwind Traders', foot:'Totals are re-added here rather than trusted.',
+    file:'northwind-inv-0841.pdf', pages:'1 page · read in 0.9s',
+    res:'INV-2026-0841 — invoice fields',
+    fields:[
+      ['Vendor','Northwind Traders',''],
+      ['Invoice no.','INV-2026-0841',''],
+      ['Issued','2 Aug 2026',''],
+      ['Due','1 Sep 2026',''],
+      ['Subtotal','€18,400.00',''],
+      ['VAT 19%','€3,496.00',''],
+      ['Total','€21,896.00','']
+    ],
+    check:'Subtotal + VAT adds up to the total, and the subtotal matches PO-3391.',
+    queueLabel:'Also in the tray',
+    queue:[
+      ['acme-inv-2211.pdf','read · no VAT line','warn'],
+      ['contoso-inv-9004.pdf','queued','']
     ] },
 
-  ap3:{ s:'health', sub:'ingestion · last 24h',
-    meters:[['Ingest throughput',82,''],['Adapter credits',54,''],['Queue depth',91,'warn'],['Sink latency',37,'']],
+  ap4:{ s:'files', sub:'7 files · 25.6 MB', foot:'Uploaded in this workspace. Nothing leaves the page.',
     rows:[
-      ['warehouse','committed 2m ago','ok'],
-      ['drive','committed 4m ago','ok'],
-      ['support_api','backlog 1,840 batches','warn'],
-      ['billing_export','failed 3 retries','err']
+      ['q4_forecast.csv','csv','2.1 MB','12m'],
+      ['renewals_export.csv','csv','8.4 MB','2h'],
+      ['cv-priya-raman.pdf','pdf','740 KB','3h'],
+      ['northwind-inv-0841.pdf','pdf','310 KB','1d'],
+      ['board-pack-aug.pptx','deck','12.8 MB','2d'],
+      ['schema.sql','sql','18 KB','4d'],
+      ['dashboard.png','image','1.2 MB','1w']
     ] },
 
-  ap4:{ s:'queue', sub:'4 open · 2 breaching',
-    stats:[['Open','4'],['Breaching','2'],['Median first reply','18m']],
+  /* The fourth value is 1 for unread. Marking one read is app state. */
+  ap5:{ s:'news', foot:'Reuters · Bloomberg · Handelsblatt · Politico · WSJ',
     rows:[
-      ['Export fails above 50k rows','#4812 · billing · 2h','P1','err'],
-      ['SSO loop after password reset','#4809 · auth · 3h','P1','err'],
-      ['Webhook retries duplicate events','#4801 · api · 1d','P2','warn'],
-      ['Docs reference a removed endpoint','#4796 · docs · 2d','P3','']
+      ['Northwind Traders names a new CFO','Reuters','34m',1],
+      ['ECB holds rates, signals one cut before year end','Bloomberg','1h',1],
+      ['Contoso Retail closes 40 stores in the DACH region','Handelsblatt','3h',0],
+      ['EU AI Act: first conformity deadlines land in September','Politico','6h',0],
+      ['Fabrikam raises a $120M Series D','TechCrunch','1d',0],
+      ['Snowflake lifts FY guidance on data-sharing revenue','WSJ','1d',0]
     ] },
 
-  ap5:{ s:'ledger', sub:'off the recurring base',
-    stats:[['Recurring base','$39.8M'],['Trailing rate','+5.3%'],['Band','$42.1–43.4M']],
-    rows:[
-      ['Base case','trailing three-quarter rate','$42.4M','ok'],
-      ['Pricing slips to Q1','November cohort delayed','$41.8M','warn'],
-      ['SMB stabilises','churn back to 20bps','$43.1M','ok'],
-      ['Renewal slip 10%','two enterprise deals move','$40.2M','err']
+  /* A note is one string and its FIRST LINE is its title — the same rule every
+     notes app converged on, and one less control than a title field. */
+  ap6:{ s:'note', foot:'Kept in this session only.',
+    notes:[
+      'Q3 close — open questions\n\nServices $0.6M: Q2 implementation that slipped. Do not count as growth.\n\nSMB churn 40bps — check against the ledger before the board pack.\n\nAsk Ana whether the two enterprise renewals are signed or verbal.',
+      'Contoso renewal — call prep\n\nUsage down 34% over 30 days, admin changed 9 days ago.\n\nOpen with the admin change, not the number: they may not know.',
+      ''
     ] },
 
-  ap6:{ s:'health', sub:'4 sources · 1 failing',
-    meters:[['Freshness',96,''],['Completeness',88,''],['Schema drift',12,'warn']],
-    rows:[
-      ['q3_ledger','fresh · 2m · 0 nulls','ok'],
-      ['renewals_export','stale · 6h behind','warn'],
-      ['support_tickets','fresh · 4m · 12 nulls','ok'],
-      ['pricing_cohorts','3 columns missing since 07-30','err']
-    ] },
-
-  ap7:{ s:'note', sub:'week 33 · drafted, not sent',
-    md:[
-      'Q3 closed **$41.2M**, 12.4% over plan. Two segments carry the beat and one of them is timing.',
-      '',
-      '### What to tell the board',
-      '- The durable half is enterprise renewals — $3.1M, mostly multi-year, signed before the July pricing change.',
-      '- Mid-market expansion is the third consecutive quarter outpacing new logo. That is the trend worth naming.',
-      '- SMB is $0.4M under plan with churn up 40bps. It is small, and it is the only line moving the wrong way.',
-      '',
-      '### What not to claim',
-      'The $0.6M in services is a Q2 implementation that slipped. Counting it as growth would flatter Q3 and cost us Q4.'
-    ].join('\n') },
-
-  ap8:{ s:'ledger', sub:'November cohort',
-    stats:[['Exposed ARR','$8.9M'],['Cohorts','12'],['Blended uplift','2.1%']],
-    rows:[
-      ['November renewals','412 accounts · uplift applies','$3.9M','warn'],
-      ['December renewals','280 accounts · uplift applies','$2.6M','warn'],
-      ['Grandfathered','98 accounts · exempt to 2027','$1.8M','ok'],
-      ['Opted out','14 accounts · negotiated','$0.6M','err']
-    ] },
-
-  ap9:{ s:'calendar', sub:'August 2026 · $4.6M in book',
-    month:'August 2026', offset:5, days:31, today:13,
-    marks:{ 5:'$0.4M', 12:'$1.2M', 18:'$0.6M', 24:'$2.1M', 27:'$0.3M' },
-    rows:[
-      ['Aug 12','Contoso Retail','$1.2M · Ana'],
-      ['Aug 18','Fabrikam','$0.6M · Ravi'],
-      ['Aug 24','Northwind Traders','$2.1M · Ana'],
-      ['Aug 27','Tailspin Toys','$0.3M · Ravi']
-    ] },
-
-  ap10:{ s:'search', sub:'6 knowledge bases · 1,284 docs',
-    placeholder:'Search every knowledge base…',
-    rows:[
-      ['Adapter credit scheme','ADR-014 · Engineering ADRs','3d'],
-      ['FY25 pricing changes','pricing-changes.md · Revenue','1w'],
-      ['Renewal playbook','renewals.md · Sales enablement','2w'],
-      ['Ingestion runbook','runbook-ingest.md · Engineering','1mo']
+  ap7:{ s:'todo', foot:'Kept in this session only.',
+    items:[
+      { t:'Send the Q3 variance table to Ana', due:'today', done:false },
+      { t:'Confirm Priya\'s notice period', due:'today', done:false },
+      { t:'Check SMB churn against the ledger', due:'tomorrow', done:false },
+      { t:'Approve INV-2026-0841', due:'1 Sep', done:false },
+      { t:'File the board pack', due:'', done:true },
+      { t:'Rotate the warehouse credential', due:'', done:true }
     ] }
 };
 
@@ -979,6 +1082,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'ingest/hooks.py', s:'repo' }, { n:'ADR-014.md', s:'docs' } ],
     w:{ kind:'code', title:'Verify a signed webhook', meta:'2 runtimes',
+        res:'Signed-webhook verification',
         variants:{
           Python:[
             'import hmac, hashlib, time',
@@ -1019,6 +1123,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'q3-close-notes.md', s:'drive' } ],
     w:{ kind:'quiz', title:'Deck shape', meta:'1 question',
+        res:'Q3 board deck outline',
         questions:[
           { q:'Which shape fits this board?',
             options:['Problem → evidence → ask','Numbers first','Narrative'] }
@@ -1070,6 +1175,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'q3_ledger.parquet', s:'warehouse' } ],
     w:{ kind:'chart', title:'Q3 by segment', meta:'2 series',
+        res:'Q3 variance and expansion',
         series:[
           { n:'Variance vs plan', unit:'$M',
             bars:[['Enterprise',3.1],['Mid-market',1.0],['Services',0.6],['SMB',-0.4]] },
@@ -1092,6 +1198,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'FY25_targets.xlsx', s:'drive' }, { n:'pricing-changes.md', s:'notion' } ],
     w:{ kind:'table', title:'Close glossary', meta:'6 terms',
+        res:'Close glossary',
         cols:['Term','How it is used here','Differs'],
         rows:[
           ['recurring base','Q3 actual less services and less the July uplift','yes'],
@@ -1119,6 +1226,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'accounts_health.parquet', s:'warehouse' }, { n:'renewals_export.csv', s:'upload' } ],
     w:{ kind:'form', title:'Add the new admin', meta:'writes to HubSpot',
+        res:'Contacts added to HubSpot',
         note:'Goes to the renewals desk with the account attached. Nothing is sent to the contact.',
         fields:[
           { k:'Name',  ph:'Priya Raman' },
@@ -1143,6 +1251,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'platform-role-brief.md', s:'drive' } ],
     w:{ kind:'quiz', title:'What matters for this hire', meta:'3 questions',
+        res:'Platform shortlist, ranked',
         questions:[
           { q:'Weight experience or evidence of shipping?',
             options:['Evidence of shipping','Years of experience','Both equally'] },
@@ -1179,6 +1288,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'q3_ledger.parquet', s:'warehouse' } ],
     w:{ kind:'table', title:'q3_ledger — column profile', meta:'6 columns',
+        res:'q3_ledger column profile',
         cols:['Column','Type','Null','Distinct','Trust'],
         rows:[
           ['invoice_id','string','0%','2,431,004','ok'],
@@ -1204,6 +1314,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'q3_ledger.parquet', s:'warehouse' } ],
     w:{ kind:'table', title:'Residual outliers', meta:'5 rows',
+        res:'Q3 residual outliers',
         cols:['When','What','Size','Verdict'],
         rows:[
           ['Jul 14','$412k line booked twice, 4 min apart','412,000','real'],
@@ -1230,6 +1341,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'renewals_export.csv', s:'upload' }, { n:'q3_ledger.parquet', s:'warehouse' } ],
     w:{ kind:'code', title:'The join, with the misses kept', meta:'2 dialects',
+        res:'Ledger to renewal book join',
         variants:{
           SQL:[
             'with l as (',
@@ -1273,6 +1385,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'arr_monthly', s:'warehouse' } ],
     w:{ kind:'chart', title:'Eight months', meta:'2 series',
+        res:'ARR and churn, eight months',
         series:[
           { n:'ARR by month', unit:'$M',
             bars:[['Jan',42],['Feb',46],['Mar',51],['Apr',47],['May',55],['Jun',58],['Jul',61],['Aug',66]] },
@@ -1295,6 +1408,7 @@ const CASES = {
     ].join('\n'),
     cites:[ { n:'FY25_targets.xlsx', s:'drive' } ],
     w:{ kind:'quiz', title:'Pick a definition', meta:'1 question',
+        res:'ARR definition in use',
         questions:[
           { q:'Which ARR are you asking about?',
             options:['Booked ARR','Recurring base','Committed ARR'] }
@@ -1364,7 +1478,7 @@ const REPLIES = [
 ];
 
 return {
-  ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SCHEDULE,
+  ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SKILL_DESC, SCHEDULE,
   KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, SOLUTIONS, APPS, APP_PANELS, CLOUD,
   CONNECTORS, CONNECTOR_AUTHS, DESIGNS, DESIGN_ACCENTS, SURFACES,
   ACCOUNT, MODELS, CASES, REPLIES

@@ -79,6 +79,15 @@
 .badge--info{ background:var(--accent-soft); color:var(--accent) }
 .badge--mono{ font-family:var(--mono) }
 
+/* A person at the size where their name would not fit. */
+.initial{
+  display:grid; place-items:center;
+  width:18px; height:18px; flex:none;
+  border-radius:var(--r-full);
+  background:var(--raised-2); color:var(--text-3);
+  font-size:10px; font-weight:var(--w-semi);
+}
+
 /* Status dot. --state drives the color; .is-live adds the pulse. */
 .dot{
   width:var(--dot); height:var(--dot);
@@ -90,6 +99,10 @@
 .dot--warn{ background:var(--warn) }
 .dot--err{ background:var(--err) }
 .dot--run{ background:var(--accent) }
+/* Unread is a filled dot and read a hollow one. This is a marker, not a call
+   to act, so it stays out of the accent. */
+.dot--unread{ background:var(--text-2) }
+.dot--read{ background:none; box-shadow:inset 0 0 0 1px var(--line-strong) }
 .dot.is-live{ animation:pulse 1.1s var(--ease) infinite }
 @keyframes pulse{ 0%,100%{opacity:1;scale:1} 50%{opacity:.35;scale:.7} }
 
@@ -154,6 +167,8 @@ button.chip--plain:hover{ background:var(--raised) }
   resize:vertical;
   transition:border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
 }
+/* A note is prose, not instructions the model reads, so it drops the mono. */
+.textarea--prose{ font-family:var(--font); font-size:var(--t-13); line-height:1.6 }
 .select{
   padding-right:26px;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
@@ -192,6 +207,9 @@ button.chip--plain:hover{ background:var(--raised) }
 
 /* ======================================================== segmented tabs */
 .seg{ display:flex; gap:2px; padding:2px; border-radius:var(--r-md); background:var(--raised-2) }
+/* A single-pane artifact leaves the tab strip empty, and an empty strip still
+   paints a 4px pill in the header. */
+.seg:empty{ display:none }
 .seg button{
   padding:3px var(--s-2);
   border-radius:var(--r-sm);
@@ -318,6 +336,15 @@ button.chip--plain:hover{ background:var(--raised) }
 .check:indeterminate{
   --tick:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round'><path d='M6 12h12'/></svg>");
 }
+/* Same control, round, for a choice that excludes the others — a checkbox
+   where only one may be ticked lies about what will happen. */
+.check--radio{ border-radius:var(--r-full) }
+.check--radio:checked::after{
+  width:7px; height:7px;
+  border-radius:var(--r-full);
+  -webkit-mask:none; mask:none;
+  background:var(--accent-fg);
+}
 
 /* ================================================================= meter */
 .meter{ display:block; height:4px; border-radius:var(--r-full); background:var(--raised-2); overflow:hidden }
@@ -358,7 +385,37 @@ button.chip--plain:hover{ background:var(--raised) }
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .row__meta{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4); flex:none }
+/* A headline is content, not a label, so it wraps rather than truncating. Used
+   by the News panel, where the row IS the thing being read. */
+.row--wrap{ align-items:flex-start; padding-top:var(--s-2); padding-bottom:var(--s-2) }
+.row--wrap .row__title{ white-space:normal; overflow:visible; text-overflow:clip }
+.row--wrap .row__icon,.row--wrap .row__meta,.row--wrap .dot{ margin-top:3px }
 .row__icon{ color:var(--text-4); flex:none }
+/* A mark that says something is true of this row — currently only "shared",
+   in the results list. It sits before the meta, not inside the title, so a
+   long name still ellipsises against the same edge as every other row. */
+.row__flag{ display:flex; flex:none; color:var(--text-4) }
+
+/* A row with an action of its own beside it. The action cannot be INSIDE .row —
+   that is a button — so the line holds both and carries the hover for the pair,
+   or reaching for the action would drop the row's highlight. */
+.rowline{ display:flex; align-items:center; gap:2px }
+.rowline > .row{ min-width:0 }
+.rowline:hover > .row{ background:var(--raised) }
+.row__act{
+  flex:none;
+  display:grid; place-items:center;
+  width:var(--ctl-sm); height:var(--ctl-sm);
+  border-radius:var(--r-sm);
+  color:var(--text-4);
+  opacity:0;
+  transition:opacity var(--fast) var(--ease), background var(--fast) var(--ease),
+             color var(--fast) var(--ease);
+}
+.rowline:hover .row__act,.row__act:focus-visible{ opacity:1 }
+.row__act:hover{ background:var(--err-soft); color:var(--err) }
+/* Where there is no hover there is no reveal, so it is simply always there. */
+@media (hover:none){ .row__act{ opacity:1 } }
 
 /* ================================================================= cards */
 .card{
@@ -376,6 +433,11 @@ button.chip--plain:hover{ background:var(--raised) }
 .card__title{ font-size:var(--t-12); font-weight:var(--w-medium); color:var(--text-2) }
 .card__body{ padding:var(--s-4) }
 .card--raised{ background:var(--raised) }
+/* A card that opens something. The border firms up rather than the surface
+   lifting: a whole card changing colour under the cursor is a lot of movement
+   for "you can click this". */
+.card--click{ cursor:pointer; transition:border-color var(--fast) var(--ease) }
+.card--click:hover{ border-color:var(--line-strong) }
 
 /* ================================================================ tables */
 .table{ width:100%; border-collapse:collapse; font-size:var(--t-12) }
@@ -443,6 +505,33 @@ button.chip--plain:hover{ background:var(--raised) }
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .artlist__v{ margin-left:auto; flex:none; color:var(--text-4) }
+
+/* ---------------------------------------------------------- results index
+   The store holds every thread's outcomes, so the list is a timeline: a day
+   heading, then the time on each row. Without the heading, "14:22" would not
+   say which day it belongs to. */
+.artday{
+  padding:var(--s-4) var(--s-1) var(--s-1);
+  font-size:var(--t-11); font-weight:var(--w-semi);
+  letter-spacing:var(--ls-caps); text-transform:uppercase;
+  color:var(--text-4);
+}
+.artday:first-child{ padding-top:0 }
+
+/* Access state, stated where the result is read rather than only inside the
+   dialog that set it. A public link is a warning; anything narrower is not. */
+.sharebar{
+  display:flex; align-items:center; gap:var(--s-2);
+  margin-bottom:var(--s-4);
+  padding:var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  border-radius:var(--r-md);
+  background:var(--raised);
+  font-size:var(--t-11); color:var(--text-3);
+}
+.sharebar__ico{ display:flex; flex:none; color:var(--text-4) }
+.sharebar__txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.sharebar[data-public="true"]{ background:var(--warn-soft); color:var(--warn) }
+.sharebar[data-public="true"] .sharebar__ico{ color:var(--warn) }
 
 /* ================================================================== code */
 .code{
@@ -712,6 +801,202 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .palette__foot span{ display:flex; align-items:center; gap:5px }
 
+/* A tall overlay wants the middle of the screen, not 14vh from the top. */
+.scrim--center{ place-items:center; padding-top:0; padding:var(--s-6) }
+
+/* =================================================== detail overlay
+   One record, opened over the list it was chosen from: identity on the left,
+   what it is configured to do on the right. It is an overlay rather than a page
+   because the reason you opened it is to go back — with the thing bound. */
+.detail{
+  display:grid;
+  /* Wide enough for a uuid: an identifier shown with an ellipsis in it is an
+     identifier nobody can read back over a call. */
+  grid-template-columns:minmax(0,340px) minmax(0,1fr);
+  width:min(1120px,96vw); height:min(760px,88vh);
+  background:var(--bg);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  translate:0 -8px; scale:.985;
+  transition:translate var(--base) var(--ease), scale var(--base) var(--ease);
+}
+.scrim[data-open="true"] .detail{ translate:0 0; scale:1 }
+
+.detail__id{
+  min-width:0;
+  display:flex; flex-direction:column;
+  gap:var(--s-4);
+  padding:var(--s-6);
+  overflow-y:auto;
+  background:var(--surface);
+  border-right:var(--border) solid var(--line);
+}
+.detail__idhead{ display:flex; align-items:flex-start; gap:var(--s-3) }
+.detail__glyph{ display:flex; flex:none; color:var(--text-3); margin-top:2px }
+.detail__names{ min-width:0 }
+.detail__name{
+  font-size:var(--t-22); font-weight:var(--w-semi); letter-spacing:var(--ls-tight);
+  color:var(--text);
+  margin:0 0 2px;
+}
+/* The endpoint id sits with the name because it is the name an API call uses. */
+.detail__uuid,.detail__rec{
+  display:block; max-width:100%; text-align:left;
+  font-family:var(--mono); font-size:var(--t-11);
+  color:var(--text-3);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  transition:color var(--fast) var(--ease);
+}
+.detail__rec{ color:var(--text-4); margin-top:calc(var(--s-4) * -1 + 2px) }
+.detail__uuid:hover,.detail__rec:hover{ color:var(--accent) }
+.detail__desc{ margin:0; font-size:var(--t-12); color:var(--text-2); line-height:var(--lh-prose) }
+.detail__ex{ display:flex; flex-wrap:wrap; gap:var(--s-2) }
+/* Who owns it, right under the examples rather than pinned to the foot: the
+   identity column reads as one block, and a gap in the middle of it reads as
+   something missing. */
+.detail__meta{
+  display:flex; align-items:center; gap:var(--s-2); flex-wrap:wrap;
+  font-size:var(--t-12); color:var(--text-3);
+}
+.detail__upd{ font-size:var(--t-11); color:var(--text-4) }
+
+.detail__main{ min-width:0; display:flex; flex-direction:column }
+.detail__head{
+  flex:none;
+  display:flex; align-items:center; gap:var(--s-3);
+  padding:var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  /* The body scrolls under this, so the two need a line between them. */
+  border-bottom:var(--border) solid var(--line);
+}
+.detail__tabs{ flex:1; min-width:0; border-bottom:0; padding-bottom:0 }
+.detail__body{
+  flex:1 1 0; min-height:0;
+  overflow-y:auto;
+  padding:var(--s-5);
+}
+.detail__body > .section + .section{ margin-top:var(--s-6) }
+/* A capability: what it is called, what it is for, and what to ask it. */
+.capa{
+  padding:var(--s-3) var(--s-4);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+}
+.capa + .capa{ margin-top:var(--s-2) }
+.capa__head{ display:flex; align-items:baseline; gap:var(--s-3); flex-wrap:wrap }
+.capa__nm{ font-family:var(--mono); font-size:var(--t-12); color:var(--text) }
+.capa__desc{ font-size:var(--t-12); color:var(--text-4) }
+.capa__ex{ display:flex; flex-wrap:wrap; gap:var(--s-2); margin-top:var(--s-3) }
+/* An example is an invitation, so it reads as something to pick up rather than
+   a filled field — and it takes the accent on hover, because clicking it acts. */
+.exchip{
+  display:inline-flex; align-items:center;
+  max-width:100%;
+  padding:4px var(--s-3);
+  border-radius:var(--r-full);
+  border:var(--border) solid var(--line);
+  background:var(--bg);
+  color:var(--text-2);
+  font-size:var(--t-11);
+  text-align:left;
+  transition:border-color var(--fast) var(--ease), color var(--fast) var(--ease),
+             background var(--fast) var(--ease);
+}
+.exchip:hover{ border-color:var(--accent-line); background:var(--accent-soft); color:var(--accent) }
+.detail__ex .exchip{ background:var(--raised) }
+.detail__ex .exchip:hover{ background:var(--accent-soft) }
+/* A row in the overlay: a glyph, a name, and one muted fact. */
+.detrow{
+  display:flex; align-items:center; gap:var(--s-3);
+  padding:var(--s-2) var(--s-3);
+  border-radius:var(--r-md);
+  background:var(--surface);
+  font-size:var(--t-12); color:var(--text-2);
+}
+.detrow + .detrow{ margin-top:var(--s-1) }
+.detrow__ico{ display:flex; flex:none; color:var(--text-4) }
+.detrow__nm{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text) }
+.detrow__meta{ flex:none; font-size:var(--t-11); color:var(--text-4) }
+
+@media (max-width:860px){
+  .detail{ grid-template-columns:minmax(0,1fr); height:min(88vh,900px) }
+  .detail__id{ border-right:0; border-bottom:var(--border) solid var(--line); padding:var(--s-4) }
+}
+
+/* A dialog shares the palette's scrim and its entrance, because both are the
+   same event: one thing taking over from everything behind it. */
+.dialog{
+  width:min(460px,92vw);
+  background:var(--bg);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  translate:0 -8px; scale:.985;
+  transition:translate var(--base) var(--ease), scale var(--base) var(--ease);
+}
+.scrim[data-open="true"] .dialog{ translate:0 0; scale:1 }
+.dialog__head{
+  display:flex; align-items:center; gap:var(--s-3);
+  padding:var(--s-3) var(--s-2) var(--s-3) var(--s-4);
+  border-bottom:var(--border) solid var(--line);
+}
+.dialog__ico{ display:flex; flex:none; color:var(--text-4) }
+.dialog__id{ flex:1; min-width:0 }
+.dialog__title{ display:block; font-size:var(--t-13); font-weight:var(--w-medium); color:var(--text) }
+.dialog__sub{
+  display:block;
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.dialog__body{ padding:var(--s-4); max-height:min(560px,62vh); overflow:auto }
+.dialog__body .field:last-child{ margin-bottom:0 }
+.dialog__foot{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-3) var(--s-4);
+  border-top:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.dialog__spacer{ flex:1 }
+/* The link, once there is one: monospace, selectable, and a copy beside it. */
+.linkrow{ display:flex; align-items:center; gap:var(--s-2) }
+.linkrow .input{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-3) }
+.linkrow .btn{ flex:none }
+
+/* ================================================================== menu
+   A short list of choices anchored to the control that opened it. Fixed
+   position, because the panes it opens from clip their own overflow — and a
+   menu that has to fit inside a 380px column is a menu with two words a row. */
+.menu{
+  position:fixed; z-index:90;
+  min-width:240px; max-width:min(320px,92vw);
+  padding:var(--s-1);
+  background:var(--bg);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  box-shadow:var(--shadow-lg);
+  opacity:0; translate:0 -4px;
+  transition:opacity var(--fast) var(--ease), translate var(--fast) var(--ease);
+}
+.menu[data-open="true"]{ opacity:1; translate:0 0 }
+.menu__item{
+  display:flex; align-items:center; gap:var(--s-3);
+  width:100%; text-align:left;
+  padding:var(--s-2);
+  border-radius:var(--r-md);
+  transition:background var(--fast) var(--ease);
+}
+.menu__item:hover{ background:var(--raised) }
+.menu__main{ flex:1; min-width:0 }
+.menu__nm{ display:block; font-size:var(--t-12); color:var(--text) }
+.menu__sub{
+  display:block;
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.menu__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
 /* ============================================================ live widget
    Something in an answer you can act on: a form, a questionnaire, a chart to
    switch, a table to sort, a snippet to read. It reads as a panel rather than a
@@ -723,8 +1008,6 @@ button.chip--plain:hover{ background:var(--raised) }
   background:var(--bg);
   overflow:hidden;
 }
-/* In the artifact pane the pane is already the frame. */
-.live--pane{ border:0; border-radius:0; background:transparent }
 .live__host{ display:block; margin:var(--s-4) 0 0 }
 .live__head{
   display:flex; align-items:center; gap:var(--s-2);
@@ -733,7 +1016,6 @@ button.chip--plain:hover{ background:var(--raised) }
   border-bottom:var(--border) solid var(--line);
   background:var(--surface);
 }
-.live--pane .live__head{ background:transparent; padding-left:0 }
 .live__ico{ display:flex; flex:none; color:var(--accent) }
 .live__title{
   flex:1; min-width:0;
@@ -742,14 +1024,12 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .live__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
 .live__body{ padding:var(--s-3) }
-.live--pane .live__body{ padding:var(--s-3) 0 }
 .live__foot{
   padding:6px var(--s-3);
   border-top:var(--border) solid var(--line);
   background:var(--surface);
   font-family:var(--mono); font-size:var(--t-11); color:var(--text-4);
 }
-.live--pane .live__foot{ background:transparent; padding-left:0; padding-right:0 }
 
 /* ---------------------------------------------------------------- a form */
 .live__grid{
@@ -813,6 +1093,9 @@ button.chip--plain:hover{ background:var(--raised) }
 .picklist__row:last-child{ border-bottom:0 }
 .picklist__row:hover{ background:var(--raised) }
 .picklist__main{ flex:1; min-width:0 }
+/* Only the exclusive variant carries one: three audiences are easier to tell
+   apart by glyph than by reading three sentences. */
+.picklist__ico{ display:flex; flex:none; color:var(--text-4); margin-left:2px }
 .picklist__nm{
   display:block;
   font-size:var(--t-12); color:var(--text);
@@ -824,6 +1107,9 @@ button.chip--plain:hover{ background:var(--raised) }
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .picklist__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+/* Done, and still where it was: a list that reorders itself under the cursor
+   makes the next tick a guess. */
+.picklist__row[data-done="true"] .picklist__nm{ color:var(--text-4); text-decoration:line-through }
 
 /* ============================================================= checklist
    What a package still needs before it can ship. Status colour carries the
@@ -1022,5 +1308,18 @@ button.chip--plain:hover{ background:var(--raised) }
   animation:toast-in var(--base) var(--ease-out) both;
 }
 .toast.is-out{ animation:toast-out var(--base) var(--ease) both }
+/* The way back from something destructive, inside the thing that reports it.
+   On the inverted surface, so it borrows --inv-text rather than the accent —
+   which would be the only saturated thing on a dark strip. */
+.toast__act{
+  margin-left:var(--s-2);
+  padding:0 var(--s-2); height:var(--ctl-xs);
+  border-radius:var(--r-sm);
+  color:var(--inv-text);
+  font-size:var(--t-11); font-weight:var(--w-medium);
+  text-decoration:underline; text-underline-offset:2px;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.toast__act:hover{ background:var(--inv-text); color:var(--inv-bg); text-decoration:none }
 @keyframes toast-in{ from{ opacity:0; translate:0 8px } }
 @keyframes toast-out{ to{ opacity:0; translate:0 8px } }

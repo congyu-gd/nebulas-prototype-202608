@@ -1,5 +1,5 @@
 /* ============================================================================
-   app — shell routing, section renderers, the artifact pane, simulated turns.
+   app — shell routing, section renderers, the results column, simulated turns.
    Plain script (not a module) so the file:// protocol works without a server.
    ========================================================================= */
 (function(){
@@ -80,6 +80,11 @@ const P = {
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
   folder:'<path d="M3 7.5A2 2 0 0 1 5 5.5h3.4l2 2.4H19a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
   link:'<path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.6 1.6"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0L5 13.3a4 4 0 0 0 5.7 5.7l1.6-1.6"/>',
+  /* leaving the page — download, share, and the two audiences a link can have */
+  down:'<path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M5 20h14"/>',
+  share:'<path d="M12 16V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3.4 9.5h17.2M3.4 14.5h17.2"/><path d="M12 3a13 13 0 0 1 0 18 13 13 0 0 1 0-18Z"/>',
+  users:'<circle cx="9.5" cy="9" r="3"/><path d="M3.7 19a6.1 6.1 0 0 1 11.6 0"/><path d="M16 6.6a3 3 0 0 1 0 5.8"/><path d="M17.6 19a6.5 6.5 0 0 0-1.4-3.2"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14a2 2 0 1 1 0-4 1.6 1.6 0 0 0 1.6-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3a2 2 0 1 1 4 0 1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21 10a2 2 0 1 1 0 4 1.6 1.6 0 0 0-1.6 1Z"/>',
   help:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .9-1 1.6v.4"/><path d="M12 17h.01"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
@@ -128,7 +133,11 @@ const P = {
   filetext:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
   dollar:'<path d="M12 3v18"/><path d="M16.5 7.5A3.5 3.5 0 0 0 13 5.5h-1.6a2.9 2.9 0 0 0 0 5.8h1.2a3 3 0 0 1 0 6H11a3.5 3.5 0 0 1-3.2-2"/>',
   checksq:'<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="m8 12.2 2.8 2.8L16.5 9.3"/>',
-  feather:'<path d="M19.4 4.6a5.5 5.5 0 0 0-7.8 0L5 11.2V19h7.8l6.6-6.6a5.5 5.5 0 0 0 0-7.8Z"/><path d="M15.5 8.5 5 19M13 11H8.5M16 8h-3"/>'
+  feather:'<path d="M19.4 4.6a5.5 5.5 0 0 0-7.8 0L5 11.2V19h7.8l6.6-6.6a5.5 5.5 0 0 0 0-7.8Z"/><path d="M15.5 8.5 5 19M13 11H8.5M16 8h-3"/>',
+  idcard:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.1"/><path d="M5.8 16.2a3.6 3.6 0 0 1 6.4 0M15 10h3.5M15 13.5h3.5"/>',
+  receipt:'<path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21Z"/><path d="M9 8h6M9 11.5h6M9 15h3"/>',
+  news:'<path d="M4 6h11a1 1 0 0 1 1 1v11H6a2 2 0 0 1-2-2Z"/><path d="M16 9h3a1 1 0 0 1 1 1v6a2 2 0 0 1-2 2h-2"/><path d="M7 9h5M7 12h5M7 15h3"/>',
+  note:'<path d="M5 5.5A1.5 1.5 0 0 1 6.5 4h7L19 9.5v9A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5Z"/><path d="M13 4v6h6"/><path d="M8.5 13.5h6M8.5 16.5h4"/>'
 };
 function ic(name, size){
   const s = size || 16;
@@ -152,7 +161,9 @@ const state = {
   busy:false,
   model:D.MODELS[0],
   tokens:0, turns:0, tools:0,
-  art:{ id:'a1', pane:0 },
+  /* The results column is one store for the whole workspace, so it has nothing
+     to scope: `id` is the result being read, null the list itself. */
+  art:{ id:null, pane:0 },
   app:null,                    /* the app id open in the sheet, or null */
   /* Knowledge detail: which tab, which rows are picked, how they are sorted.
      The tab survives switching bases — you were looking at Files for a
@@ -165,19 +176,72 @@ const state = {
      that hides content on arrival reads as missing content. */
   build:{ open:'as', scope:'All', last:{} },
   assistant:null,              /* the assistant bound to the next message */
-  /* null means "follow the viewport"; true/false is an explicit choice. */
-  pref:{ list:null, art:null, apps:null },
-  appsWide:false
+  /* null means "follow the viewport"; true/false is an explicit choice. The app
+     rail is not in here: it never closes. */
+  pref:{ list:null, art:null },
+  appsWide:false,
+  lastApp:null,                /* reopened by the topbar toggle and ⌘] */
+  /* True while the results column has been lent to an open app panel, so
+     closing the app can hand it back. */
+  artYielded:false
 };
 let replyIx = 0, newThreadN = 0;
 /* Ids for things made in this session. Fixture ids are hand-written, so a
    counter keeps the two from colliding. */
 let madeN = 0;
 
-function toast(msg){
-  const t = el('div','toast','<span style="display:flex">' + ic('check',13) + '</span><span>' + esc(msg) + '</span>');
+/* Something happened. With an action attached it is also the way back from it,
+   which is what a destructive step needs instead of a dialog asking whether you
+   meant it — and it stays up three times as long, because an undo nobody has
+   time to read is decoration. */
+function toast(msg, action){
+  const t = el('div','toast','<span style="display:flex">' +
+    ic((action && action.icon) || 'check',13) + '</span><span>' + esc(msg) + '</span>');
+  const kill = () => { t.classList.add('is-out'); setTimeout(() => t.remove(), 200); };
+  if (action){
+    const b = el('button','toast__act', esc(action.label));
+    b.type = 'button';
+    b.onclick = () => { kill(); action.run(); };
+    t.append(b);
+  }
   $('#toasts').append(t);
-  setTimeout(() => { t.classList.add('is-out'); setTimeout(() => t.remove(), 200); }, 2000);
+  setTimeout(kill, action ? 6000 : 2000);
+}
+
+/* ===================================================================== time
+   Results are kept in one list across every thread, so they need a real
+   timestamp to sort and to name a time of day. Fixtures declare an AGE ("2m",
+   "1d") rather than a date, because a hand-written date rots on the shelf; the
+   age is turned into a timestamp once, here, and everything shown is derived
+   from that. */
+const T0 = Date.now();
+const AGE_MS = { m:60e3, h:3600e3, d:864e5 };
+/* "2m", "1h", "2d 5h" — anything unreadable, including "now", means T0. */
+function parseAge(s){
+  const re = /(\d+)\s*([mhd])/g;
+  let ms = 0, m;
+  while ((m = re.exec(String(s || '')))) ms += Number(m[1]) * AGE_MS[m[2]];
+  return ms;
+}
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const pad2 = n => (n < 10 ? '0' : '') + n;
+function startOfDay(ms){ const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function clockTime(ms){ const d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+/* The day a result belongs to, named the way somebody would say it aloud. */
+function dayLabel(ms){
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(ms)) / 864e5);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  const d = new Date(ms);
+  return days < 7 ? DAYS[d.getDay()] : d.getDate() + ' ' + MONTHS[d.getMonth()];
+}
+/* In the list the day is already a heading above, so a row names the time.
+   Something that has only just happened says so instead of reading 14:22. */
+function stampShort(ms){ return Date.now() - ms < 90e3 ? 'now' : clockTime(ms); }
+function stampFull(ms){
+  const d = new Date(ms);
+  return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + ' at ' + clockTime(ms);
 }
 
 /* ================================================================= sidebar */
@@ -572,8 +636,10 @@ function codeCard(code){
   return c;
 }
 function banner(kind, html){
+  /* A warning marked with a question mark reads as an aside. */
+  const glyph = kind === 'info' ? 'help' : 'alert';
   const b = el('div','banner banner--' + kind,
-    '<span style="display:flex;margin-top:1px">' + ic('help',14) + '</span><span>' + html + '</span>');
+    '<span style="display:flex;margin-top:1px">' + ic(glyph,14) + '</span><span>' + html + '</span>');
   b.style.marginBottom = 'var(--s-6)';
   return b;
 }
@@ -750,10 +816,12 @@ function citesNode(cites){
 /* The artifact itself lives in the right pane. What stays in the thread is
    a one-line reference, so a long answer does not push the next turn off
    the screen. */
-/* A promoted widget keeps its own glyph and says what kind of widget it is,
-   rather than reading as the generic "live". */
-const artGlyph = a => a.kind === 'live' ? (WIDGET_ICON[a.wkind] || 'file') : (KIND_ICON[a.kind] || 'file');
-const artKind  = a => a.kind === 'live' ? a.wkind : a.kind;
+/* A result names its own shape rather than reading as the generic "result".
+   artType is the name in a list ("Table"); artKind the same word in the mono
+   footer, where lowercase is the house style. */
+const artGlyph = a => a.kind === 'result' ? (RESULT_ICON[a.shape] || 'file') : (KIND_ICON[a.kind] || 'file');
+const artType  = a => a.kind === 'result' ? (RESULT_TYPE[a.shape] || 'Result') : (KIND_TYPE[a.kind] || 'File');
+const artKind  = a => artType(a).toLowerCase();
 
 function artRefNode(a){
   const b = el('button','artref msg__ref');
@@ -800,12 +868,9 @@ function msgNode(m){
     wrap.append(t);
   }
   wrap.append(el('div','prose', m.role === 'user' ? '<p>' + inline(m.text) + '</p>' : md(m.md)));
-  /* A live widget sits in the thread until someone moves it, at which point the
-     reference card below takes its place — the same card every other artifact
-     leaves behind, because that is what has happened to it. */
-  if (m.liveId && LIVE[m.liveId] && LIVE[m.liveId].placed === 'thread'){
-    wrap.append(liveHost(LIVE[m.liveId], 'thread'));
-  }
+  /* A live widget stays in the thread. Its outcome is what reaches the artifact
+     column, and it goes there as a result rather than by moving. */
+  if (m.liveId && LIVE[m.liveId]) wrap.append(liveHost(LIVE[m.liveId]));
   if (m.artifactId){
     const a = D.ARTIFACT_BY_ID(m.artifactId);
     if (a) wrap.append(artRefNode(a));
@@ -820,11 +885,10 @@ function msgNode(m){
    read. One per turn — two things to act on in one answer and neither gets
    acted on.
 
-   State lives in the instance, never in the DOM, so a widget can be re-rendered
-   anywhere without losing what has been typed or chosen. That is what makes
-   "move it to the artifact pane" a one-line state change rather than a DOM
-   transplant: the thread swaps the widget for the reference card it already
-   uses for artifacts, and the pane renders the same instance. */
+   State lives in the instance, never in the DOM, so a widget survives being
+   re-rendered — after acting on it, or after leaving the section and coming
+   back. What leaves the thread is not the widget but its outcome, filed in the
+   results column under a name (see syncResult). */
 const LIVE = {};
 let liveN = 0;
 const WIDGET_ICON = { form:'filetext', quiz:'checksq', chart:'chart', table:'table', code:'code' };
@@ -833,69 +897,27 @@ function makeLive(spec, from){
   const w = Object.assign({}, spec, {
     id:'w' + (++liveN),
     from:from,
-    placed:'thread',
     answers:{},      /* quiz: question index -> chosen option */
     added:[],        /* form: rows submitted so far */
     series:spec.series, ser:0,
     variant:spec.variants ? Object.keys(spec.variants)[0] : null,
     sort:null,
-    msg:null         /* the message that produced it, set by runTurn */
+    told:false       /* whether its first result has been announced */
   });
   LIVE[w.id] = w;
   return w;
 }
-/* What the pane's footer says it is holding. */
-function liveSize(w){
-  if (w.kind === 'form')  return plural(w.fields.length, 'field');
-  if (w.kind === 'quiz')  return plural(w.questions.length, 'question');
-  if (w.kind === 'chart') return plural(w.series.length, 'series', 'series');
-  if (w.kind === 'table') return plural(w.rows.length, 'row');
-  return plural(Object.keys(w.variants).length, 'variant');
-}
 
-/* Promote: the widget moves to the artifact pane and the thread keeps the same
-   one-line reference card any other artifact leaves behind. The artifact record
-   is created here rather than in the fixture, because until someone moves it
-   there is nothing to reference. */
-function liveToArtifact(w){
-  const a = {
-    id:'la-' + w.id, kind:'live', wkind:w.kind, live:w.id,
-    title:w.title, from:w.from, when:'now', size:liveSize(w)
-  };
-  D.ARTIFACTS.push(a);
-  w.placed = 'artifact';
-  if (w.msg) w.msg.artifactId = a.id;
-  render();
-  openArtifact(a.id);
-  toast(w.title + ' moved to the artifact pane');
-}
-function liveToThread(w){
-  const id = 'la-' + w.id;
-  const i = D.ARTIFACTS.map(x => x.id).indexOf(id);
-  if (i > -1) D.ARTIFACTS.splice(i, 1);
-  w.placed = 'thread';
-  if (w.msg) delete w.msg.artifactId;
-  if (state.art.id === id) state.art.id = null;
-  render();
-  renderArtifact();
-  toast(w.title + ' moved back into the thread');
-}
-
-function liveNode(w, where){
-  const wrap = el('section','live' + (where === 'pane' ? ' live--pane' : ''));
+/* The widget stays in the thread. It is where the question was asked and where
+   the acting happens; what leaves it is the OUTCOME, which lands in the
+   artifact column as a named result. Nothing is relocated. */
+function liveNode(w){
+  const wrap = el('section','live');
   wrap.dataset.kind = w.kind;
-
-  const head = el('div','live__head',
+  wrap.append(el('div','live__head',
     '<span class="live__ico">' + ic(WIDGET_ICON[w.kind] || 'file', 14) + '</span>' +
     '<span class="live__title">' + esc(w.title) + '</span>' +
-    '<span class="live__meta">' + esc(w.meta || w.kind) + '</span>');
-  const move = el('button','iconbtn iconbtn--sm',
-    ic(where === 'pane' ? 'chevL' : 'open', 13));
-  move.type = 'button';
-  move.title = where === 'pane' ? 'Move back into the thread' : 'Move to the artifact pane';
-  move.onclick = () => where === 'pane' ? liveToThread(w) : liveToArtifact(w);
-  head.append(move);
-  wrap.append(head);
+    '<span class="live__meta">' + esc(w.meta || w.kind) + '</span>'));
 
   const body = el('div','live__body');
   LIVE_KIND[w.kind](body, w);
@@ -999,7 +1021,7 @@ const LIVE_KIND = {
     const block = el('div','live__out');
     block.append(el('div','live__outt',
       inline(String(out.text).replace(/\{(\d)\}/g, (m, d) => w.answers[Number(d) - 1] || ''))));
-    /* A definition list, not the artifact pane's label-against-right-aligned
+    /* A definition list, not the results column's label-against-right-aligned
        value: an outline's keys are "1" and "2" and its text has to start at a
        column, not end at one. */
     if (out.rows) block.append(defList(out.rows.map(r => [r[0], esc(r[1])])));
@@ -1109,20 +1131,130 @@ const LIVE_KIND = {
   }
 };
 
-/* A widget re-renders in place — wherever it happens to be. Nothing else on the
-   page has to know which of the two columns that is. */
+/* Acting on a widget re-renders it in place and re-derives its result, which is
+   the only thing that leaves the thread. */
 function rerender(w){
   const host = $('[data-live="' + w.id + '"]');
-  if (!host) return;
-  host.innerHTML = '';
-  host.append(liveNode(w, host.dataset.where));
+  if (host){
+    host.innerHTML = '';
+    host.append(liveNode(w));
+  }
+  syncResult(w);
 }
-function liveHost(w, where){
+function liveHost(w){
   const host = el('div','live__host');
   host.dataset.live = w.id;
-  host.dataset.where = where;
-  host.append(liveNode(w, where));
+  host.append(liveNode(w));
   return host;
+}
+
+/* ================================================================= results
+   ONE store for the whole workspace. A widget is where you work; the moment its
+   output is settled — a questionnaire answered, a contact added, a series
+   chosen — that output is recorded under a name, next to every other result
+   whatever thread produced it. The thread it came from is a property of the
+   result, not a filing cabinet: you go looking for the thing you made, and it
+   is easier to remember what it was than which conversation it happened in.
+
+   Settled is a real condition, not a timer: an unanswered questionnaire and an
+   empty form have no outcome, so they have no result, and clearing them takes
+   the result away again. */
+const RESULT_ICON = { list:'doc', grid:'table', bars:'chart', doc:'doc', code:'code' };
+/* What kind of thing a result is, for the list row, the pane footer and the
+   file it downloads as. Results have one pane, so this never shows up as a tab
+   label — "Form · 1 row" is what it is for, and "rows · 1 row" was the bug. */
+const RESULT_TYPE = { list:'Form', grid:'Table', bars:'Chart', doc:'Document', code:'Source' };
+const KIND_TYPE   = { table:'Table', chart:'Chart', doc:'Document', diff:'Diff' };
+
+function liveResult(w){
+  if (w.kind === 'form'){
+    if (!w.added.length) return null;
+    return { shape:'list', size:plural(w.added.length, 'row'),
+             rows:w.added.map(r => [r[0], r.slice(1).filter(x => x !== '—').join(' · ')]) };
+  }
+  if (w.kind === 'quiz'){
+    if (!w.questions.every((q, i) => w.answers[i])) return null;
+    const out = w.outcomeBy ? w.outcomeBy[w.answers[0]] : w.outcome;
+    if (!out) return null;
+    const text = String(out.text).replace(/\{(\d)\}/g, (m, d) => w.answers[Number(d) - 1] || '');
+    return { shape:'doc', size:plural((out.rows || []).length, 'line'),
+             md:[text, ''].concat((out.rows || []).map(r => '- **' + r[0] + '** — ' + r[1])).join('\n') };
+  }
+  if (w.kind === 'chart'){
+    const s = w.series[w.ser];
+    return { shape:'bars', size:plural(s.bars.length, 'bar'), unit:s.unit, series:s.n, bars:s.bars };
+  }
+  if (w.kind === 'table'){
+    return { shape:'grid', size:plural(w.rows.length, 'row'), cols:w.cols, rows:w.rows };
+  }
+  return { shape:'code', size:w.variant, code:w.variants[w.variant] };
+}
+
+/* The fixtures are authored with an age; the store runs on timestamps. Done
+   once, before anything reads the list. */
+function initResults(){
+  D.ARTIFACTS.forEach(a => { if (a.at == null) a.at = T0 - parseAge(a.when); });
+}
+/* Newest first. The store is one list, so this ordering is the whole index. */
+function allResults(){ return D.ARTIFACTS.slice().sort((x, y) => y.at - x.at); }
+
+/* Filing something that is not a chat widget — an app panel's extraction, say.
+   Same rule as a widget's outcome: kept under a name, and the column opens
+   because there is now something in it. Re-filing updates in place, so pressing
+   Save twice does not leave two of the same thing. */
+function fileResult(rec){
+  const prev = D.ARTIFACT_BY_ID(rec.id);
+  upsertResult(Object.assign({
+    kind:'result',
+    at:prev ? prev.at : Date.now(),
+    share:prev ? prev.share : null
+  }, rec));
+  /* The toast says it either way; the column only opens itself if there is room
+     for it beside whatever else the reader has open. */
+  if (!prev && roomForArt()){ state.pref.art = true; applyPanels(); }
+  renderArtifact();
+  toast((prev ? 'Result updated — ' : 'Result saved — ') + rec.title);
+}
+
+function upsertResult(rec){
+  const i = D.ARTIFACTS.map(a => a.id).indexOf(rec.id);
+  if (i > -1) D.ARTIFACTS[i] = rec; else D.ARTIFACTS.push(rec);
+}
+function dropResult(id){
+  const i = D.ARTIFACTS.map(a => a.id).indexOf(id);
+  if (i < 0) return;
+  D.ARTIFACTS.splice(i, 1);
+  /* Reading a result that has just stopped existing: fall back to the list. */
+  if (state.art.id === id) state.art.id = null;
+  /* A column with nothing in it has no claim on the width. Handing the choice
+     back to null rather than setting false means the next result opens it. */
+  if (!D.ARTIFACTS.length){ state.pref.art = null; applyPanels(); }
+}
+function syncResult(w){
+  const id = 'r-' + w.id;
+  const spec = liveResult(w);
+  if (!spec){ dropResult(id); renderArtifact(); return; }
+  const prev = D.ARTIFACT_BY_ID(id);
+  upsertResult(Object.assign({
+    id:id, kind:'result', title:w.res || w.title, from:w.from,
+    /* When it first settled, not when it was last touched: sorting a table it
+       already produced is not a new result, and a list that reshuffles itself
+       under the reader is a list nobody trusts. */
+    at:prev ? prev.at : Date.now(),
+    share:prev ? prev.share : null
+  }, spec));
+  renderArtifact();
+  /* A result appearing where there was none is the moment the column has
+     something to show — including after an undo took the last one away. The
+     toast is said once per widget: on every row added it would train people to
+     ignore it. */
+  if (!prev){
+    if (roomForArt()){ state.pref.art = true; applyPanels(); }
+    if (!w.told){
+      w.told = true;
+      toast('Result saved — ' + (w.res || w.title));
+    }
+  }
 }
 
 /* ================================================================== views */
@@ -1177,7 +1309,7 @@ function heroNode(){
   });
   h.append(row);
   h.append(el('p','hero__note',
-    'Each one runs a worked example — with something in the answer you can fill in, answer, sort or move to the artifact pane.'));
+    'Each one runs a worked example. Anything definite it produces is kept in the results column on the right.'));
 
   /* The input follows the starters, because a starter is a half-written
      message and the place it lands should be the next thing under it. */
@@ -1304,6 +1436,8 @@ function newDashNode(){
   return card;
 }
 
+/* The results column is not scoped to the thread, so opening one leaves it
+   alone: what you were reading stays open, and the store is the same store. */
 function threadView(body, t){
   if (!t.msgs.length){
     /* The hero centres itself in the pane, so it skips the reading measure. */
@@ -1315,11 +1449,277 @@ function threadView(body, t){
   t.msgs.forEach(m => wrap.append(msgNode(m)));
   body.append(wrap);
   recount(t);
+}
 
-  /* Opening a thread restores the last artifact it produced — the pane is
-     supposed to hold the thing you were just reading. */
-  const last = t.msgs.filter(m => m.artifactId).pop();
-  if (last) openArtifact(last.artifactId, true);
+/* ================================================= an assistant, in detail
+   A card in the list says enough to choose between two assistants; it does not
+   say enough to trust one with a question. So clicking a card opens the whole
+   record over the list — what model it runs, what it can do, what to ask it
+   first, what it may reach, and the instructions it was given.
+
+   An overlay, not a page, because of why you opened it: to decide whether this
+   is the one you want and then get on with asking it something. Clicking an
+   example does exactly that in one step — see useExample. */
+const ASST_TABS = [
+  { id:'config', nm:'Configuration', ico:'copy' },
+  { id:'logs',   nm:'Logs',          ico:'files' },
+  { id:'act',    nm:'Activity',      ico:'pulse' },
+  { id:'access', nm:'Access',        ico:'lock' }
+];
+let asstOn = null;                 /* the assistant being read */
+let asstTab = 'config';
+
+/* Every example this assistant offers, flattened in capability order — the
+   shortcut in the identity column, before anything has been read. */
+function asstPrompts(a){
+  const out = [];
+  a.skills.forEach(sk => (a.ex[sk] || []).forEach(x => out.push(x)));
+  return out;
+}
+/* The one line a section heading needs to explain itself. */
+const infoTip = text =>
+  '<span class="tip" data-tip="' + esc(text) + '" style="display:flex;color:var(--text-4)">' +
+  ic('help',13) + '</span>';
+
+function openAssistant(a){
+  asstOn = a;
+  asstTab = 'config';
+  $('#asstGlyph').innerHTML = ic('agent',20);
+  $('#asstName').textContent = a.name;
+  $('#asstDesc').textContent = a.desc;
+
+  const ep = $('#asstEndpoint'), rec = $('#asstRecord');
+  ep.textContent = a.endpointId;
+  ep.title = 'Endpoint id — what an API call addresses. Click to copy.';
+  ep.onclick = () => copyText(a.endpointId);
+  rec.textContent = 'ID: ' + a.recordId;
+  rec.title = 'Record id — what a support ticket quotes. Click to copy.';
+  rec.onclick = () => copyText(a.recordId);
+
+  /* The examples, up here as well as inside their capabilities: from the list
+     you are choosing an assistant BY the question you have. */
+  const ex = $('#asstEx');
+  ex.innerHTML = '';
+  asstPrompts(a).forEach(p => ex.append(exampleChip(a, p)));
+
+  const who = a.owner === 'me' ? D.ACCOUNT.name : a.owner;
+  $('#asstMeta').innerHTML =
+    '<span style="display:flex;color:var(--text-4)">' + ic('cloud',14) + '</span>' +
+    '<span>' + esc(D.ACCOUNT.org) + '</span>' +
+    '<span style="color:var(--line-strong)">|</span>' +
+    '<span class="initial">' + esc(who.slice(0, 1).toUpperCase()) + '</span>' +
+    '<span>' + esc(who) + '</span>' +
+    '<span class="badge badge--mono">' + esc(a.team) + '</span>';
+  $('#asstUpd').textContent = 'Last updated ' + stampFull(T0 - parseAge(a.upd));
+
+  renderAsstTabs();
+  renderAsstBody();
+  $('#asstScrim').dataset.open = 'true';
+}
+function closeAssistant(){
+  $('#asstScrim').dataset.open = 'false';
+  asstOn = null;
+}
+function renderAsstTabs(){
+  const bar = $('#asstTabs');
+  bar.innerHTML = '';
+  ASST_TABS.forEach(t => {
+    const b = el('button','tab', ic(t.ico,14) + '<span>' + esc(t.nm) + '</span>');
+    b.type = 'button';
+    b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', String(asstTab === t.id));
+    b.onclick = () => { asstTab = t.id; renderAsstTabs(); renderAsstBody(); };
+    bar.append(b);
+  });
+}
+
+/* An example, as a button. It is the fastest path out of this overlay and into
+   a conversation, which is why it appears twice and looks the same both times. */
+function exampleChip(a, text){
+  const b = el('button','exchip', esc(text));
+  b.type = 'button';
+  b.title = 'Ask ' + a.name + ' this';
+  b.onclick = () => useExample(a, text);
+  return b;
+}
+
+/* ----------------------------------------------------------- configuration */
+function asstConfig(body, a){
+  const model = el('section','section');
+  model.append(sectionHead('Model configuration'));
+  const m = el('div','detrow');
+  m.innerHTML =
+    '<span class="detrow__ico">' + ic('spark',14) + '</span>' +
+    '<span class="detrow__nm">' + esc(a.model) + '</span>' +
+    '<span class="detrow__meta">Temperature ' + a.temp.toFixed(1) + '</span>';
+  model.append(m);
+  /* The three switches that change how an answer is produced, stated rather
+     than hidden behind the word "settings". */
+  const flags = [
+    ['Cites its sources', a.opts.cite],
+    ['Confirms before writing anywhere', a.opts.confirm],
+    ['Extended thinking', a.opts.think]
+  ].filter(f => f[1]).map(f => f[0]);
+  if (flags.length) model.append(helpNote(flags.join(' · ')));
+  body.append(model);
+
+  const caps = el('section','section');
+  caps.append(sectionHead('Capabilities',
+    infoTip('What this assistant may call, and what to ask it. Skills are chosen here, never authored.')));
+  a.skills.forEach(sk => {
+    const c = el('div','capa');
+    c.append(el('div','capa__head',
+      '<span class="capa__nm">' + esc(sk) + '</span>' +
+      '<span class="capa__desc">' + esc(D.SKILL_DESC[sk] || '') + '</span>'));
+    const list = a.ex[sk] || [];
+    if (list.length){
+      const row = el('div','capa__ex');
+      list.forEach(x => row.append(exampleChip(a, x)));
+      c.append(row);
+    }
+    caps.append(c);
+  });
+  body.append(caps);
+
+  const tools = el('section','section');
+  tools.append(sectionHead('Tools',
+    infoTip('The systems this assistant may reach. Granted here, connected in Cloud.')));
+  const conns = (a.conn || []).map(id => byId(D.CONNECTORS, id)).filter(Boolean);
+  if (!conns.length){
+    tools.append(helpNote('No connectors granted. It answers from its knowledge base and nothing else.'));
+  }
+  conns.forEach(c => {
+    const r = el('div','detrow');
+    r.innerHTML =
+      '<span class="detrow__ico">' + ic(CONN_ICON[c.kind] || 'plug',14) + '</span>' +
+      '<span class="detrow__nm">' + esc(c.name) + '</span>' +
+      '<span class="detrow__meta">' + esc(c.writes ? 'read · write' : 'read-only') + '</span>' +
+      dotLead(c.state);
+    tools.append(r);
+  });
+  const kb = el('div','detrow');
+  kb.style.marginTop = conns.length ? 'var(--s-1)' : 'var(--s-3)';
+  kb.innerHTML =
+    '<span class="detrow__ico">' + ic('library',14) + '</span>' +
+    '<span class="detrow__nm">' + esc(a.kb || 'No knowledge base') + '</span>' +
+    '<span class="detrow__meta">knowledge</span>';
+  tools.append(kb);
+  body.append(tools);
+
+  const inst = el('section','section');
+  inst.append(sectionHead('Instructions',
+    infoTip('Given to the model before your message, on every turn.')));
+  const box = el('pre','code');
+  box.style.cssText = 'white-space:pre-wrap;padding:var(--s-3);background:var(--surface);border-radius:var(--r-lg)';
+  box.textContent = a.inst;
+  inst.append(box);
+  body.append(inst);
+}
+
+/* ------------------------------------------------------------------- logs
+   Simulated the same way every answer in this prototype is, and derived from
+   the assistant rather than drawn at random — so the same assistant shows the
+   same run twice and the list can be talked about. */
+/* Minutes ago, laid out unevenly on purpose: calls seven minutes apart to the
+   second are a template, not a log. */
+const LOG_AGO = [3, 11, 26, 47, 68, 94, 129, 168];
+function asstLogs(body, a){
+  const rows = [];
+  a.skills.forEach((sk, i) => {
+    const rec = D.SKILLS.filter(s => s.name === sk)[0];
+    const base = rec ? parseFloat(rec.avg) : 1 + i * 0.8;
+    [0, 1].forEach(n => {
+      const k = i * 2 + n;
+      const at = T0 - LOG_AGO[k % LOG_AGO.length] * 60e3;
+      const bad = a.state === 'warn' && k === 0;
+      rows.push([
+        '<td class="t-mono">' + esc(clockTime(at)) + '</td>',
+        '<td class="t-mono">' + esc(sk) + '</td>',
+        '<td class="num t-mono">' + (base + (n ? 0.4 : 0)).toFixed(1) + 's</td>',
+        '<td>' + (bad ? '<span class="badge badge--warn">retried</span>'
+                      : '<span class="badge badge--ok">ok</span>') + '</td>'
+      ]);
+    });
+  });
+  const sec = tableSection('Recent calls', ['Time','Capability','Duration','Result'], rows);
+  body.append(sec);
+  body.append(helpNote('Calls are simulated locally, like every response in this prototype. ' +
+                      'A turn’s own trace stays in the thread that produced it.'));
+}
+
+/* --------------------------------------------------------------- activity */
+function asstActivity(body, a){
+  const who = a.owner === 'me' ? D.ACCOUNT.name : a.owner;
+  const events = [
+    [parseAge(a.upd),                 'Instructions edited', who],
+    [parseAge(a.upd) + 3 * 864e5,     'Model set to ' + a.model, who],
+    [parseAge(a.upd) + 9 * 864e5,     'Knowledge base bound to ' + (a.kb || '—'), who],
+    [parseAge(a.upd) + 21 * 864e5,    'Created', who]
+  ];
+  const sec = el('section','section');
+  sec.append(sectionHead('History'));
+  events.forEach(([ago, what, by]) => {
+    const at = T0 - ago;
+    const r = el('div','detrow');
+    r.innerHTML =
+      '<span class="detrow__ico">' + ic('clock',14) + '</span>' +
+      '<span class="detrow__nm">' + esc(what) + '</span>' +
+      '<span class="detrow__meta">' + esc(by + ' · ' + dayLabel(at) + ' ' + clockTime(at)) + '</span>';
+    sec.append(r);
+  });
+  body.append(sec);
+  body.append(helpNote(plural(a.threads, 'thread') + ' currently bound to this assistant.'));
+}
+
+/* ----------------------------------------------------------------- access */
+function asstAccess(body, a){
+  const owner = a.owner === 'me' ? D.ACCOUNT.name + ' (you)' : a.owner;
+  const rows = [
+    ['<td>' + esc(owner) + '</td>', '<td>Owner</td>', '<td>Edit and delete</td>'],
+    ['<td>' + esc(a.team + ' team') + '</td>', '<td>Editor</td>', '<td>Edit configuration</td>'],
+    ['<td>' + esc(D.ACCOUNT.org) + '</td>', '<td>Viewer</td>', '<td>Bind it to a message</td>']
+  ];
+  body.append(tableSection('Who can use it', ['Principal','Role','What that allows'], rows));
+  body.append(helpNote('An assistant is readable by the workspace and editable by its team. ' +
+                      'Changing that is a Cloud → Access setting, not a per-assistant one.'));
+}
+
+function renderAsstBody(){
+  const a = asstOn;
+  if (!a) return;
+  const body = $('#asstBody');
+  body.innerHTML = '';
+  body.scrollTop = 0;
+  if (asstTab === 'config') asstConfig(body, a);
+  else if (asstTab === 'logs') asstLogs(body, a);
+  else if (asstTab === 'act') asstActivity(body, a);
+  else asstAccess(body, a);
+}
+
+/* An example is a question, and a question belongs in a thread — so this closes
+   the overlay, binds the assistant, lands in a conversation and leaves the
+   question in the composer with the caret in it. It stops short of sending:
+   the point of putting it in the box is that it can be edited first. */
+function useExample(a, text){
+  closeAssistant();
+  state.assistant = a.id;
+
+  const inThread = D.THREADS.some(t => t.id === state.item.chat);
+  if (state.section !== 'chat' || !inThread){
+    /* Reuse an empty thread rather than stacking up "New chat" rows. */
+    const empty = D.THREADS.filter(t => !t.msgs.length)[0];
+    if (empty) select('chat', empty.id); else newThread();
+  } else {
+    select('chat', state.item.chat);
+  }
+
+  const input = $('#composerInput');
+  input.value = text;
+  autosize();
+  $('#sendBtn').disabled = state.busy;
+  syncAssistantChip();
+  input.focus();
+  toast(a.name + ' bound — ⌘↵ to send');
 }
 
 /* ========================================================== assistants
@@ -1351,7 +1751,10 @@ function asstTabs(){
 }
 
 function asstCard(a){
-  const c = el('article','card');
+  /* The card is the way in to the record. Its own two controls stop the click
+     from getting here — see stopPropagation on each. */
+  const c = el('article','card card--click');
+  c.onclick = () => openAssistant(a);
   c.innerHTML =
     '<div class="card__head">' +
       '<span class="dot ' + (STATE_DOT[a.state] || '') + '"></span>' +
@@ -1445,6 +1848,9 @@ function assistantsView(body){
         '<span class="row__title">' + esc(a.name) + '</span>' +
         '<span class="row__sub">' + esc(a.model) + '</span>' +
       '</span>';
+    /* Same record, same overlay — reached from wherever the name appears. */
+    $('.row__main', r).style.cursor = 'pointer';
+    $('.row__main', r).onclick = () => openAssistant(a);
     const x = el('button','iconbtn iconbtn--xs', ic('x',11));
     x.type = 'button';
     x.title = 'Remove from favourites';
@@ -1815,6 +2221,11 @@ function datasetView(body, d){
    design element. Strict lookups, not `find()` — `find()` falls back to the
    first item, which would quietly turn "nothing bound" into "the first one". */
 const byId = (list, id) => list.filter(x => x.id === id)[0] || null;
+/* A glyph per connector kind. Not brand marks: what matters in a list of grants
+   is what KIND of system it is, and a logo says which vendor instead. */
+const CONN_ICON = { warehouse:'data', drive:'folder', ticketing:'filetext', docs:'doc',
+                    repo:'branch', crm:'users', messaging:'chat', payments:'dollar',
+                    webhook:'plug', form:'checksq' };
 const skillById   = id => byId(D.SKILLS, id);
 const connById    = id => byId(D.CONNECTORS, id);
 const kbById      = id => byId(D.KBS, id);
@@ -2493,7 +2904,7 @@ function packageView(body, p){
   const open = el('button','btn btn--secondary', ic('play',13) + 'Open');
   const app = D.APPS.filter(x => x.name === p.name)[0];
   open.disabled = !app;
-  open.title = app ? 'Open ' + p.name + ' in the app rail' : 'Not on the app rail yet';
+  open.title = app ? 'Open ' + p.name + ' in the app rail' : 'Not installed on the app rail';
   open.onclick = () => { if (app) openApp(app); };
   inspectorActs(s.side, [publish, open]);
   s.side.append(noteP(blocked.length
@@ -2650,9 +3061,528 @@ function accountView(body, view){
   body.append(pad);
 }
 
-/* ========================================================== artifact pane
+/* ============================================================== leaving here
+   A result that can only be looked at is a screenshot. Three ways out: a file,
+   a link, and the bin.
+
+   Every serialiser below works off ONE reading of the result — what is tabular
+   about it, or what its text is — rather than off five shapes each. That is why
+   adding a format is a row in FORMATS and not a branch in five places. */
+const CODE_EXT = { Python:'py', 'Node.js':'js', SQL:'sql', 'cURL':'sh' };
+const CODE_LANG = { Python:'python', 'Node.js':'js', SQL:'sql', 'cURL':'bash' };
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'result';
+const shapeOf = a => a.kind === 'result' ? a.shape : a.kind;
+const isDocResult = a => shapeOf(a) === 'doc';
+
+/* Whatever is tabular about a result, as one shape: head + rows. Null when
+   there is nothing tabular in it. */
+function resultTable(a){
+  const t = shapeOf(a);
+  const trim = rows => rows.map(r => r.slice(0, a.cols.length));
+  if (t === 'grid' || t === 'chart') return { head:a.cols, rows:trim(a.rows) };
+  if (t === 'list' || t === 'table')  return { head:['Label','Value'], rows:a.rows };
+  if (t === 'bars') return { head:['Label', a.unit || 'Value'], rows:a.bars.map(b => [b[0], b[1]]) };
+  return null;
+}
+const metaLine = a => artType(a) + ' · ' + a.size + ' · ' + stampFull(a.at) + ' · from ' + a.from;
+
+/* ------------------------------------------------------------ serialisers */
+function csvCell(v){
+  /* U+2212 is a typographic minus and belongs in prose, not in a column a
+     spreadsheet is about to parse. Same normalisation the sort uses. */
+  const s = String(v == null ? '' : v).replace(/−/g, '-');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function csv(head, rows){
+  return [head].concat(rows).map(r => r.map(csvCell).join(',')).join('\n') + '\n';
+}
+function mdTable(head, rows){
+  const cell = v => String(v == null ? '' : v).replace(/\|/g, '\\|');
+  return ['| ' + head.map(cell).join(' | ') + ' |',
+          '|' + head.map(() => '---').join('|') + '|']
+         .concat(rows.map(r => '| ' + head.map((h, i) => cell(r[i])).join(' | ') + ' |'))
+         .join('\n');
+}
+/* Columns padded to their widest cell: the point of a text table is that it
+   still lines up in a mail client with no CSS. */
+function tableLines(tab){
+  const w = tab.head.map((h, i) =>
+    Math.max(String(h).length, ...tab.rows.map(r => String(r[i] == null ? '' : r[i]).length)));
+  const line = cells => cells.map((c, i) => {
+    const s = String(c == null ? '' : c);
+    return s + ' '.repeat(Math.max(0, w[i] - s.length));
+  }).join('  ').replace(/\s+$/, '');
+  return [line(tab.head), w.map(n => '-'.repeat(n)).join('  ')]
+         .concat(tab.rows.map(line));
+}
+/* Markdown out of a document, with its markers taken off. Headings keep their
+   text and lose their hashes: this is the plain-text reading of it. */
+function docLines(md){
+  return String(md).split('\n').map(l => {
+    const h = /^#{1,6}\s*(.*)$/.exec(l);
+    /* Emphasis markers, code ticks, and the few inline tags the prose renderer
+       would have swallowed — none of them are text. */
+    const t = (h ? h[1] : l)
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/<\/?(code|strong|em|b|i)>/g, '');
+    return (h ? '\x01' : '') + t;      /* \x01 = set in bold where that exists */
+  });
+}
+/* The lines a text rendering is made of, headings marked. Shared by .txt and
+   the PDF writer so the two can never drift apart. */
+function plainLines(a){
+  const out = ['\x01' + a.title, metaLine(a), ''];
+  const tab = resultTable(a);
+  if (tab){
+    const t = tableLines(tab);
+    out.push('\x01' + t[0]);
+    for (let i = 1; i < t.length; i++) out.push(t[i]);
+  } else if (isDocResult(a)){
+    docLines(a.md).forEach(l => out.push(l));
+  } else {
+    String(a.code).split('\n').forEach(l => out.push(l));
+  }
+  return out;
+}
+const unbold = l => l.charCodeAt(0) === 1 ? l.slice(1) : l;
+const txtOf = a => plainLines(a).map(unbold).join('\n') + '\n';
+
+function mdOf(a){
+  const head = '# ' + a.title + '\n\n_' + metaLine(a) + '_\n\n';
+  const tab = resultTable(a);
+  if (tab) return head + mdTable(tab.head, tab.rows) + '\n';
+  if (isDocResult(a)) return head + a.md + '\n';
+  return head + '```' + (CODE_LANG[a.size] || '') + '\n' + a.code + '\n```\n';
+}
+function jsonOf(a){
+  const o = { title:a.title, type:artType(a).toLowerCase(), from:a.from,
+              at:new Date(a.at).toISOString() };
+  const tab = resultTable(a);
+  if (tab) o.rows = tab.rows.map(r => {
+    const row = {};
+    tab.head.forEach((h, i) => { row[h] = r[i] == null ? '' : r[i]; });
+    return row;
+  });
+  else if (isDocResult(a)) o.markdown = a.md;
+  else o.source = a.code;
+  return JSON.stringify(o, null, 2) + '\n';
+}
+
+/* ---------------------------------------------------------------- as a PDF
+   There are no dependencies here, so this writes the file itself: PDF 1.4, one
+   text object per page, and an xref whose offsets are counted as the string is
+   assembled. Courier, because a table that loses its column alignment is not a
+   table any more, and Courier-Bold for the title and the header row.
+
+   Bytes are WinAnsi. The typographic characters this workspace actually uses
+   (— · € " ') have slots there; anything else becomes '?', which is honest and
+   the alternative is an embedded font. */
+const PDF = { w:595.28, h:841.89, m:48, size:9.5, lead:13 };   /* A4, 48pt */
+const WINANSI = {
+  '—':0x97, '–':0x96, '‘':0x91, '’':0x92, '“':0x93,
+  '”':0x94, '€':0x80, '…':0x85, '•':0x95, '·':0xb7,
+  '−':0x2d, '→':0x3e, '↑':0x5e, '↓':0x76
+};
+function pdfText(s){
+  let out = '';
+  const src = String(s);
+  for (let i = 0; i < src.length; i++){
+    const ch = src[i];
+    const code = src.charCodeAt(i);
+    let b = WINANSI[ch] != null ? WINANSI[ch] : code;
+    if (b > 0xff){ out += '?'; continue; }
+    const g = String.fromCharCode(b);
+    out += (g === '(' || g === ')' || g === '\\') ? '\\' + g : g;
+  }
+  return out;
+}
+function pdfDate(){
+  const d = new Date();
+  const p = n => (n < 10 ? '0' : '') + n;
+  return 'D:' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) +
+         p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+/* Hard-wrap at the column count Courier gives us, indenting continuations so a
+   wrapped table row still reads as one row. */
+function wrapLine(s, max){
+  if (s.length <= max) return [s];
+  const out = [];
+  let rest = s;
+  while (rest.length > max){
+    let cut = rest.lastIndexOf(' ', max);
+    if (cut < max * 0.5) cut = max;
+    out.push(rest.slice(0, cut));
+    rest = '  ' + rest.slice(cut).replace(/^\s+/, '');
+  }
+  out.push(rest);
+  return out;
+}
+function pdfStream(lines){
+  const x = PDF.m.toFixed(2), y = (PDF.h - PDF.m - PDF.size).toFixed(2);
+  let s = 'BT\n/F1 ' + PDF.size + ' Tf\n' + PDF.lead + ' TL\n' + x + ' ' + y + ' Td\n';
+  lines.forEach(l => {
+    const bold = l.charCodeAt(0) === 1;
+    if (bold) s += '/F2 ' + PDF.size + ' Tf\n';
+    s += '(' + pdfText(bold ? l.slice(1) : l) + ') Tj\n';
+    if (bold) s += '/F1 ' + PDF.size + ' Tf\n';
+    s += 'T*\n';
+  });
+  return s + 'ET';
+}
+function pdfBytes(a){
+  const cols = Math.floor((PDF.w - PDF.m * 2) / (PDF.size * 0.6));
+  const lines = [];
+  plainLines(a).forEach(l => {
+    const bold = l.charCodeAt(0) === 1;
+    wrapLine(bold ? l.slice(1) : l, cols)
+      .forEach((part, i) => lines.push((bold && i === 0 ? '\x01' : '') + part));
+  });
+  const per = Math.floor((PDF.h - PDF.m * 2) / PDF.lead);
+  const pages = [];
+  for (let i = 0; i < lines.length; i += per) pages.push(lines.slice(i, i + per));
+  if (!pages.length) pages.push(['']);
+
+  /* 1 catalog · 2 page tree · 3 Courier · 4 Courier-Bold · 5 info, then a page
+     and a content stream per page. */
+  const objs = [];
+  const kids = pages.map((p, i) => (6 + i * 2) + ' 0 R');
+  objs[1] = '<</Type/Catalog/Pages 2 0 R>>';
+  objs[2] = '<</Type/Pages/Count ' + pages.length + '/Kids[' + kids.join(' ') + ']>>';
+  objs[3] = '<</Type/Font/Subtype/Type1/BaseFont/Courier/Encoding/WinAnsiEncoding>>';
+  objs[4] = '<</Type/Font/Subtype/Type1/BaseFont/Courier-Bold/Encoding/WinAnsiEncoding>>';
+  objs[5] = '<</Title(' + pdfText(a.title) + ')/Producer(Nebulas prototype)' +
+            '/CreationDate(' + pdfDate() + ')>>';
+  pages.forEach((ls, i) => {
+    const stream = pdfStream(ls);
+    objs[6 + i * 2] = '<</Type/Page/Parent 2 0 R/MediaBox[0 0 ' +
+      PDF.w.toFixed(2) + ' ' + PDF.h.toFixed(2) + ']' +
+      '/Resources<</Font<</F1 3 0 R/F2 4 0 R>>>>/Contents ' + (7 + i * 2) + ' 0 R>>';
+    objs[7 + i * 2] = '<</Length ' + stream.length + '>>\nstream\n' + stream + '\nendstream';
+  });
+
+  let out = '%PDF-1.4\n';
+  const offs = [];
+  for (let n = 1; n < objs.length; n++){
+    offs[n] = out.length;
+    out += n + ' 0 obj\n' + objs[n] + '\nendobj\n';
+  }
+  const xref = out.length;
+  const pad10 = n => ('0000000000' + n).slice(-10);
+  out += 'xref\n0 ' + objs.length + '\n0000000000 65535 f \n';
+  for (let n = 1; n < objs.length; n++) out += pad10(offs[n]) + ' 00000 n \n';
+  out += 'trailer\n<</Size ' + objs.length + '/Root 1 0 R/Info 5 0 R>>\n' +
+         'startxref\n' + xref + '\n%%EOF\n';
+
+  /* One byte per character, which is also what /Length was counted in. */
+  const bytes = new Uint8Array(out.length);
+  for (let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 0xff;
+  return bytes;
+}
+
+/* ------------------------------------------------------------- the formats
+   Offered by CONTENT, not by a fixed list: a questionnaire answer has no CSV
+   worth the name, and a table has no reason to leave as a .py. The first entry
+   is the one the result already is. */
+function formatsFor(a){
+  const list = [];
+  const tab = resultTable(a);
+  if (tab){
+    list.push({ nm:'Spreadsheet', sub:'comma-separated, opens in Excel',
+                ext:'csv', mime:'text/csv', make:() => csv(tab.head, tab.rows) });
+    list.push({ nm:'Markdown', sub:'a table you can paste into a doc',
+                ext:'md', mime:'text/markdown', make:() => mdOf(a) });
+    list.push({ nm:'Plain text', sub:'columns padded, no spreadsheet needed',
+                ext:'txt', mime:'text/plain', make:() => txtOf(a) });
+    list.push({ nm:'JSON', sub:'one object per row, for code',
+                ext:'json', mime:'application/json', make:() => jsonOf(a) });
+  } else if (isDocResult(a)){
+    list.push({ nm:'Markdown', sub:'the source, headings and all',
+                ext:'md', mime:'text/markdown', make:() => mdOf(a) });
+    list.push({ nm:'Plain text', sub:'markers stripped',
+                ext:'txt', mime:'text/plain', make:() => txtOf(a) });
+  } else {
+    const ext = shapeOf(a) === 'diff' ? 'diff' : (CODE_EXT[a.size] || 'txt');
+    list.push({ nm:'Source', sub:'as written' + (CODE_EXT[a.size] ? ', in ' + a.size : ''),
+                ext:ext, mime:'text/plain', make:() => a.code + '\n' });
+    if (ext !== 'txt') list.push({ nm:'Plain text', sub:'the same lines, as .txt',
+                ext:'txt', mime:'text/plain', make:() => txtOf(a) });
+  }
+  list.push({ nm:'PDF', sub:'laid out for reading and printing',
+              ext:'pdf', mime:'application/pdf', make:() => pdfBytes(a) });
+  return list;
+}
+/* The file is assembled in the page and handed to the browser. Nothing is
+   uploaded, and no format needs a library that is not here. */
+function downloadResult(a, fmt){
+  const f = fmt || formatsFor(a)[0];
+  const body = f.make();
+  const type = f.mime + (typeof body === 'string' ? ';charset=utf-8' : '');
+  const url = URL.createObjectURL(new Blob([body], { type:type }));
+  const name = slug(a.title) + '.' + f.ext;
+  const link = el('a');
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('Downloaded ' + name);
+}
+function downloadMenu(a, anchor){
+  openMenu(anchor, formatsFor(a).map(f => ({
+    nm:f.nm, sub:f.sub, meta:'.' + f.ext, run:() => downloadResult(a, f)
+  })));
+}
+
+/* ------------------------------------------------------------------- a menu
+   Anchored to the button that opened it and positioned fixed, because the pane
+   it lives in clips its own overflow — a menu that has to fit inside a 380px
+   column is a menu with two words per row. */
+let menuNode = null;
+function closeMenu(){
+  if (!menuNode) return;
+  menuNode.remove();
+  menuNode = null;
+  document.removeEventListener('mousedown', menuOutside, true);
+  document.removeEventListener('keydown', menuKey, true);
+}
+function menuOutside(e){ if (!e.target.closest('.menu')) closeMenu(); }
+function menuKey(e){
+  if (e.key === 'Escape'){
+    /* Taken here so Escape closes the menu and not the app panel behind it. */
+    e.stopPropagation();
+    e.preventDefault();
+    closeMenu();
+  }
+}
+function openMenu(anchor, items){
+  closeMenu();
+  const m = el('div','menu');
+  m.setAttribute('role','menu');
+  items.forEach(it => {
+    const b = el('button','menu__item',
+      '<span class="menu__main"><span class="menu__nm">' + esc(it.nm) + '</span>' +
+      (it.sub ? '<span class="menu__sub">' + esc(it.sub) + '</span>' : '') + '</span>' +
+      (it.meta ? '<span class="menu__meta">' + esc(it.meta) + '</span>' : ''));
+    b.type = 'button';
+    b.setAttribute('role','menuitem');
+    b.onclick = () => { closeMenu(); it.run(); };
+    m.append(b);
+  });
+  document.body.append(m);
+  /* Reading the width settles the layout, which is also what lets the open
+     state animate rather than appearing mid-transition. */
+  const r = anchor.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+  m.style.top = (r.bottom + h + 8 > window.innerHeight ? r.top - h - 6 : r.bottom + 6) + 'px';
+  m.dataset.open = 'true';
+  menuNode = m;
+  document.addEventListener('mousedown', menuOutside, true);
+  document.addEventListener('keydown', menuKey, true);
+  return m;
+}
+
+/* --------------------------------------------------------------- the bin
+   A store you cannot delete from is a store that fills with mistakes. So a
+   result can go — immediately, with the toast that says so carrying the way
+   back. A confirmation dialog would ask the reader to be certain about
+   something they can already undo; a shared result says what deleting it costs.
+
+   A result a live widget still produces will come back the next time that
+   widget changes, because the widget is its source. That is the honest
+   behaviour: the record is derived, and deleting a derivation does not delete
+   what derives it. */
+function deleteResult(a){
+  const wasOpen = state.art.id === a.id;
+  const shared = !!a.share;
+  dropResult(a.id);
+  renderArtifact();
+  syncArtRefs();
+  toast('Deleted ' + a.title + (shared ? ' — the shared link no longer opens' : ''), {
+    label:'Undo',
+    icon:'trash',
+    run:() => {
+      upsertResult(a);
+      if (!isOpen('art') && roomForArt()){ state.pref.art = true; applyPanels(); }
+      if (wasOpen) state.art.id = a.id;
+      renderArtifact();
+      syncArtRefs();
+      toast('Restored ' + a.title);
+    }
+  });
+}
+
+/* ------------------------------------------------------------------- share
+   Access first, link second. The three audiences are the ones that actually
+   differ in consequence — nobody, the workspace, the internet — and the link
+   is not minted until one of them has been chosen. */
+const ACCESS = [
+  { id:'private', ico:'lock',  nm:'Only you',
+    sub:'The link opens for nobody else, inside the workspace or out.' },
+  { id:'org',     ico:'users', nm:'People in ' + D.ACCOUNT.org,
+    sub:'Anyone signed in to the workspace can open it.' },
+  { id:'link',    ico:'globe', nm:'Anyone with the link',
+    sub:'No sign-in required. Treat the link as public.' }
+];
+const accessOf = id => ACCESS.filter(x => x.id === id)[0] || ACCESS[1];
+const PERMS = ['Can view','Can comment'];
+const EXPIRES = ['24 hours','7 days','Never'];
+
+/* Derived from the id, not drawn at random: reopening the dialog on the same
+   result has to show the same link, or the one already sent is a lie. */
+function shareCode(id){
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffff;
+  return (h | 0x100000).toString(16).slice(-6);
+}
+const shareUrl = a => 'https://nebulas.app/r/' + shareCode(a.id);
+/* One line saying who can open it and until when, for the strip in the pane. */
+function shareLine(s){
+  return accessOf(s.access).nm + ' · ' + s.perm.toLowerCase() +
+         (s.expires === 'Never' ? ' · no expiry' : ' · expires in ' + s.expires);
+}
+
+function copyText(text){
+  const ok = () => toast('Link copied');
+  const fail = () => toast('Could not copy — the link is selected, use ⌘C');
+  const legacy = () => {
+    /* file:// is not a secure context in every browser, so the clipboard API
+       may not exist at all. This path is the reason the input is real. */
+    const t = el('textarea');
+    t.value = text;
+    t.style.cssText = 'position:fixed;top:0;opacity:0';
+    document.body.append(t);
+    t.select();
+    let done = false;
+    try{ done = document.execCommand('copy'); }catch(e){}
+    t.remove();
+    done ? ok() : fail();
+  };
+  try{
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, legacy);
+      return;
+    }
+  }catch(e){}
+  legacy();
+}
+
+/* Exclusive choice, so a radio — a checkbox where only one may be ticked lies
+   about what is going to happen. Same rows as pickList, one icon wider. */
+function radioList(items, value, onPick){
+  const list = el('div','picklist');
+  items.forEach(it => {
+    const row = el('label','picklist__row');
+    const box = el('input','check check--radio');
+    box.type = 'radio';
+    box.name = 'share-access';
+    box.checked = it.id === value;
+    box.onchange = () => { if (box.checked) onPick(it.id); };
+    row.append(box);
+    row.append(el('span','picklist__ico', ic(it.ico, 14)));
+    row.append(el('span','picklist__main',
+      '<span class="picklist__nm">' + esc(it.nm) + '</span>' +
+      '<span class="picklist__sub">' + esc(it.sub) + '</span>'));
+    list.append(row);
+  });
+  return list;
+}
+
+let shareOn = null;                 /* the result the dialog is editing */
+let shareDraft = null;              /* the choice made before a link exists */
+
+function openShare(a){
+  shareOn = a;
+  shareDraft = { access:'org', perm:PERMS[0], expires:EXPIRES[1] };
+  $('#shareIco').innerHTML = ic('share',15);
+  $('#shareSub').textContent = a.title + ' · ' + artKind(a) + ' · ' + a.size;
+  renderShare();
+  $('#shareScrim').dataset.open = 'true';
+}
+function closeShare(){
+  $('#shareScrim').dataset.open = 'false';
+  shareOn = null;
+}
+function renderShare(){
+  const a = shareOn;
+  if (!a) return;
+  const body = $('#shareBody'), foot = $('#shareFoot');
+  body.innerHTML = ''; foot.innerHTML = '';
+  const live = !!a.share;                       /* is there a link already */
+  const s = a.share || shareDraft;
+  $('#shareTitle').textContent = live ? 'Shared as a web page' : 'Share result';
+
+  /* Public means public. Said before the link, not under it. */
+  if (live && s.access === 'link')
+    body.append(banner('warn','Anyone holding this link can open the result without signing in. ' +
+                              'It carries data from <strong>' + esc(a.from) + '</strong>.'));
+
+  body.append(field('Who can open it',
+    radioList(ACCESS, s.access, v => { s.access = v; renderShare(); if (live) renderArtifact(); }),
+    live ? 'Changes apply to the link that already exists.' : null));
+
+  /* Two narrow choices side by side: stacked, they push the link itself below
+     the fold, and the link is what the dialog is for. */
+  const two = el('div');
+  two.style.cssText = 'display:flex;gap:var(--s-6);flex-wrap:wrap';
+  two.append(
+    field('They can',
+      segCtl(PERMS, s.perm, v => { s.perm = v; if (live){ renderArtifact(); renderShare(); } })),
+    field('Link expires',
+      segCtl(EXPIRES, s.expires, v => { s.expires = v; if (live){ renderArtifact(); renderShare(); } })));
+  body.append(two);
+
+  if (live){
+    const row = el('div','linkrow');
+    const input = el('input','input');
+    input.type = 'text';
+    input.readOnly = true;
+    input.value = s.url;
+    input.onclick = () => input.select();
+    const copy = el('button','btn btn--secondary btn--sm',
+      '<span style="display:flex">' + ic('copy',13) + '</span>Copy');
+    copy.type = 'button';
+    copy.onclick = () => { input.select(); copyText(s.url); };
+    row.append(input, copy);
+    body.append(field('Link', row,
+      'Shared by ' + s.by + ' · ' + stampFull(s.at) +
+      (s.expires === 'Never' ? '' : ' · expires in ' + s.expires)));
+
+    const stop = el('button','btn btn--danger','Stop sharing');
+    stop.type = 'button';
+    stop.onclick = () => {
+      a.share = null;
+      renderArtifact();
+      renderShare();
+      toast('Sharing stopped — the link no longer opens');
+    };
+    const done = el('button','btn btn--primary','Done');
+    done.type = 'button';
+    done.onclick = closeShare;
+    foot.append(stop, el('div','dialog__spacer'), done);
+  } else {
+    const cancel = el('button','btn btn--ghost','Cancel');
+    cancel.type = 'button';
+    cancel.onclick = closeShare;
+    const make = el('button','btn btn--primary',
+      '<span style="display:flex">' + ic('link',13) + '</span>Create link');
+    make.type = 'button';
+    make.onclick = () => {
+      a.share = { access:s.access, perm:s.perm, expires:s.expires,
+                  at:Date.now(), by:D.ACCOUNT.name, url:shareUrl(a) };
+      renderArtifact();
+      renderShare();
+      copyText(a.share.url);
+    };
+    foot.append(el('div','dialog__spacer'), cancel, make);
+  }
+}
+
+/* ========================================================= results column
    Panes per kind. A table gets its result and its source; a chart adds the
-   data behind it, because a bar nobody can check is decoration. */
+   data behind it, because a bar nobody can check is decoration. A result from a
+   widget has one pane: it IS the outcome. */
 function artTableNode(a){
   const sx = el('div','scroll-x');
   const t = el('table','table');
@@ -2697,12 +3627,30 @@ function artCodeNode(code){
 function artProseNode(src){
   return el('div','prose', md(src));
 }
+/* A result is one pane: it IS the outcome, and there is no source behind a
+   questionnaire or a form. */
+function resBarsNode(a){
+  const max = Math.max.apply(null, a.bars.map(b => Math.abs(b[1]))) || 1;
+  const dec = a.bars.some(b => b[1] % 1 !== 0) ? 1 : 0;
+  const wrap = el('div','barlist');
+  a.bars.forEach(([k, v]) => {
+    const neg = v < 0;
+    wrap.append(el('div','barlist__row',
+      '<span class="barlist__k">' + esc(k) + '</span>' +
+      '<span class="meter' + (neg ? ' meter--down' : '') + '">' +
+        '<i style="width:' + Math.round(Math.abs(v) / max * 100) + '%"></i></span>' +
+      '<span class="barlist__v' + (neg ? ' delta-dn' : '') + '">' +
+        esc((neg ? '' : '+') + v.toFixed(dec)) + '</span>'));
+  });
+  return wrap;
+}
 function artPanes(a){
-  /* A live widget has one pane and it is the widget itself — there is no
-     "source" behind a form, and its state is the content. */
-  if (a.kind === 'live') return [
-    { label:'Interactive', render:() => liveHost(LIVE[a.live], 'pane') }
-  ];
+  if (a.kind === 'result'){
+    const render = { list:() => artListNode(a), grid:() => artTableNode(a),
+                     bars:() => resBarsNode(a), doc:() => artProseNode(a.md),
+                     code:() => artCodeNode(a.code) }[a.shape];
+    return [{ label:artType(a), render:render }];
+  }
   if (a.kind === 'table') return [
     { label:'Result', render:() => artListNode(a) },
     { label:'Source', render:() => artCodeNode(a.code) }
@@ -2717,9 +3665,18 @@ function artPanes(a){
 }
 
 function openArtifact(id, quiet){
+  /* Reference cards outlive the record they point at — deleting a result does
+     not rewrite the turn that produced it. */
+  if (!D.ARTIFACT_BY_ID(id)) return toast('That result has been deleted');
   state.art.id = id;
   state.art.pane = 0;
   if (!quiet){ state.pref.art = true; applyPanels(); }
+  renderArtifact();
+  syncArtRefs();
+}
+/* Back to the list. The pane is a store first and a viewer second. */
+function closeResult(){
+  state.art.id = null;
   renderArtifact();
   syncArtRefs();
 }
@@ -2728,17 +3685,87 @@ function renderArtifact(){
   const a = state.art.id ? D.ARTIFACT_BY_ID(state.art.id) : null;
   const tabs = $('#artTabs'), body = $('#artBody'), foot = $('#artFoot');
   tabs.innerHTML = ''; body.innerHTML = ''; foot.innerHTML = '';
+  $('#artBack').hidden = !a;
+  /* Both act on the result being read, so neither exists in the list. */
+  $('#artDl').hidden = !a;
+  $('#artShare').hidden = !a;
 
-  /* The header names the pane, not the artifact: the artifact says what it is
-     through its content, and the thread it came from is in the footer. */
+  /* ------------------------------------------------------------- the index
+     With no result open the pane lists everything the workspace has produced,
+     newest first, under the day it happened on. This is the pane's resting
+     state: it is a store, so the names come first and a detail is one click
+     away. */
   if (!a){
-    $('#artIcon').innerHTML = '';
-    body.append(emptyState('library','Nothing open',
-      'Long output — tables, diffs, charts, documents — opens here instead of inlining, and stays put across turns.'));
+    const list = allResults();
+    $('#artIcon').innerHTML = ic('library',14);
+    $('#artTitle').textContent = 'Results';
+
+    if (!list.length){
+      body.append(emptyState('library','No results yet',
+        'When an answer settles on something definite — a table, a chart, a document, a filled form — it is kept here under a name, whichever thread it came from.'));
+    } else {
+      let day = null;
+      list.forEach(r => {
+        const d = dayLabel(r.at);
+        if (d !== day){ body.append(el('div','artday', esc(d))); day = d; }
+        const row = listRow({
+          lead:'<span class="row__icon">' + ic(artGlyph(r),14) + '</span>',
+          current:false,
+          /* Type, then where it came from: in one global list the thread is the
+             thing that tells two similar tables apart. The size is in the
+             detail, where it is about to matter. */
+          title:r.title, sub:artType(r) + ' · from ' + r.from, meta:stampShort(r.at),
+          onClick:() => openArtifact(r.id)
+        });
+        row.title = r.title + ' — ' + stampFull(r.at);
+        /* Shared is a property of the row, not a second list. */
+        if (r.share){
+          const flag = el('span','row__flag', ic('link',12));
+          flag.title = 'Shared · ' + shareLine(r.share);
+          row.insertBefore(flag, $('.row__meta', row));
+        }
+        /* The row is a button, so its delete cannot live inside it — nested
+           buttons are neither valid nor clickable. It is a sibling, and the
+           line around the two carries the hover. */
+        const line = el('div','rowline');
+        const del = el('button','row__act', ic('trash',13));
+        del.type = 'button';
+        del.title = 'Delete ' + r.title;
+        del.setAttribute('aria-label','Delete ' + r.title);
+        del.onclick = () => deleteResult(r);
+        line.append(row, del);
+        body.append(line);
+      });
+    }
+    const shared = list.filter(r => r.share).length;
+    foot.innerHTML = '<span class="t-mono">' + plural(list.length, 'result') + '</span>' +
+                     '<span style="flex:1"></span>' +
+                     (shared ? '<span style="color:var(--text-4)">' + shared + ' shared</span>' : '');
     return;
   }
 
+  /* ------------------------------------------------------------ the detail
+     Here the header names the result. The index no longer does the naming once
+     it has been left behind, and a pane whose header says "Artifact" while you
+     are reading one of six results is a pane you get lost in. */
   $('#artIcon').innerHTML = ic(artGlyph(a),14);
+  $('#artTitle').textContent = a.title;
+  $('#artShare').setAttribute('aria-pressed', String(!!a.share));
+  $('#artShare').title = a.share ? 'Shared — ' + shareLine(a.share) : 'Share…';
+  $('#artDl').title = 'Download… (' + formatsFor(a).map(f => f.ext).join(' · ') + ')';
+
+  /* Who can open this, said where the result is read. */
+  if (a.share){
+    const bar = el('div','sharebar',
+      '<span class="sharebar__ico">' + ic('link',13) + '</span>' +
+      '<span class="sharebar__txt">' + esc(shareLine(a.share)) + '</span>');
+    bar.dataset.public = String(a.share.access === 'link');
+    const manage = el('button','btn btn--ghost btn--sm','Manage');
+    manage.type = 'button';
+    manage.onclick = () => openShare(a);
+    bar.append(manage);
+    body.append(bar);
+  }
 
   const panes = artPanes(a);
   if (state.art.pane >= panes.length) state.art.pane = 0;
@@ -2753,20 +3780,36 @@ function renderArtifact(){
   }
   body.append(panes[state.art.pane].render());
 
-  foot.innerHTML = '<span class="t-mono">' + esc(artKind(a)) + ' · ' + esc(a.size) + '</span>' +
-                   '<span style="flex:1"></span>';
-  const from = el('button', null, 'from ' + esc(a.from));
-  from.style.cssText = 'color:var(--text-4);font-size:var(--t-11)';
-  from.onmouseenter = () => from.style.color = 'var(--text-2)';
-  from.onmouseleave = () => from.style.color = 'var(--text-4)';
-  from.onclick = () => gotoThreadByTitle(a.from);
+  /* Type, size, and when it was made — the three things a stored file says
+     about itself. The day is spelled out on hover, not in 40px of footer. */
+  const when = el('span', null, dayLabel(a.at) + ' ' + clockTime(a.at));
+  when.title = stampFull(a.at);
+  when.style.cssText = 'white-space:nowrap;flex:none';
+  const spacer = el('span');
+  spacer.style.flex = '1';
+  foot.innerHTML = '<span class="t-mono">' + esc(artKind(a)) + ' · ' + esc(a.size) + '</span>';
+  foot.append(when, spacer);
+  /* Not everything is produced by a thread — an app panel files results too, so
+     the origin is only a link when there is somewhere for it to go. */
+  const thread = D.THREADS.filter(x => x.title === a.from)[0];
+  const from = el(thread ? 'button' : 'span', null, 'from ' + esc(a.from));
+  from.style.cssText = 'color:var(--text-4);font-size:var(--t-11);min-width:0;' +
+                       'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+  if (thread){
+    from.onmouseenter = () => from.style.color = 'var(--text-2)';
+    from.onmouseleave = () => from.style.color = 'var(--text-4)';
+    from.onclick = () => select('chat', thread.id);
+  }
   foot.append(from);
-}
-
-function gotoThreadByTitle(title){
-  const t = D.THREADS.filter(x => x.title === title)[0];
-  if (t) select('chat', t.id);
-  else toast('That thread is no longer in the list');
+  /* Deleting belongs with the record's own facts, not up beside Close where a
+     mis-click is expensive. Quiet until you go looking for it, and undoable
+     when you find it. */
+  const del = el('button','iconbtn iconbtn--sm artpane__del', ic('trash',13));
+  del.type = 'button';
+  del.title = 'Delete this result';
+  del.setAttribute('aria-label','Delete this result');
+  del.onclick = () => deleteResult(a);
+  foot.append(del);
 }
 
 /* The artifact boundary is movable, which is what the dashed line in the
@@ -2777,7 +3820,7 @@ function initResize(){
     const cs = getComputedStyle(document.documentElement);
     const min = parseInt(cs.getPropertyValue('--art-w-min'), 10) || 320;
     const max = Math.min(parseInt(cs.getPropertyValue('--art-w-max'), 10) || 720,
-                         window.innerWidth - 520);
+                         window.innerWidth - 520 - (state.app ? sheetTarget() : 0));
     return Math.max(min, Math.min(max, px));
   };
   const setW = px => {
@@ -2823,7 +3866,7 @@ function renderApps(){
     /* Native title, not the styled tooltip: the rail scrolls, and a styled
        tooltip cannot escape a scroll container to reach open space. */
     b.title = app.name + (app.state === 'live' ? '' : ' · ' + app.state) + ' — ' + app.desc;
-    /* The rail marks which app is open in the sheet, not which solution the
+    /* The rail marks which app is open in the panel, not which solution the
        Build section happens to be showing. */
     b.setAttribute('aria-current', String(state.app === app.id));
     b.innerHTML =
@@ -2836,136 +3879,377 @@ function renderApps(){
     body.append(b);
   });
 }
-/* ============================================================== app sheet
-   Six surfaces cover ten apps. Each is built from components that already
-   exist elsewhere in the system — an app is a new arrangement, not a new
-   vocabulary. */
-function sheetStats(pairs){
-  const g = el('div','stat-grid');
-  /* The sheet is narrower than the auto-fit minimum, so three tiles would
-     wrap 2 + 1. In a fixed-width panel the column count is known. */
-  g.style.gridTemplateColumns = 'repeat(' + Math.min(pairs.length, 3) + ',minmax(0,1fr))';
-  pairs.forEach(([k, v]) => g.append(el('div','stat',
-    '<div class="stat__k">' + esc(k) + '</div>' +
-    '<div class="stat__v" style="font-size:var(--t-18)">' + esc(v) + '</div>')));
-  return g;
+/* ============================================================== app panel
+   Seven apps, six surfaces, every one assembled from components that already
+   exist elsewhere: an app is a new arrangement, not a new vocabulary.
+
+   Everything the reader can change lives in APP_STATE — not in the fixture and
+   not in the DOM. Ticking a todo, typing a note or marking a headline read has
+   to survive switching apps and leaving the section, and a panel that forgets
+   is one nobody trusts with a sentence longer than a line. */
+const APP_STATE = {};
+function appState(app){
+  if (!APP_STATE[app.id]){
+    const p = D.APP_PANELS[app.id] || {};
+    const s = {};
+    if (p.items) s.items = p.items.map(i => ({ t:i.t, due:i.due, done:!!i.done }));
+    if (p.notes){ s.notes = p.notes.slice(); s.note = 0; }
+    if (p.s === 'news') s.read = p.rows.map(r => !r[3]);
+    APP_STATE[app.id] = s;
+  }
+  return APP_STATE[app.id];
 }
-/* One row shape for both the ledger and the queue: name, one line of why,
-   and a trailing value whose state colours it. */
-function sheetRows(rows, title){
+/* Repaint the open app in place: head and footer do not change, so only the
+   body is rebuilt. Same move as rerender(w) for a widget. */
+function repaintApp(app){
+  const body = $('#appSheetBody');
+  const top = body.scrollTop;
+  body.innerHTML = '';
+  appSurface(app).forEach(n => body.append(n));
+  body.scrollTop = top;
+}
+
+/* A titled block, optionally with one control on its right. */
+function appCard(title, trailing){
   const card = el('section','card');
-  card.innerHTML = '<div class="card__head"><span class="card__title">' + esc(title) + '</span></div>';
+  const head = el('div','card__head', '<span class="card__title">' + esc(title) + '</span>');
+  if (trailing){ head.append(el('span','toolbar__spacer')); head.append(trailing); }
   const body = el('div','card__body');
-  body.style.padding = '0 var(--s-3)';
-  rows.forEach(([nm, sub, val, st]) => {
-    const r = el('div','artlist__row');
-    r.innerHTML =
-      '<span class="row__main" style="flex:1">' +
-        '<span class="row__title">' + esc(nm) + '</span>' +
-        '<span class="row__sub">' + esc(sub) + '</span>' +
-      '</span>' +
-      (st ? '<span class="badge badge--' + st + '">' + esc(val) + '</span>'
-          : '<span class="artlist__v">' + esc(val) + '</span>');
-    body.append(r);
+  card.append(head, body);
+  return { card:card, body:body, head:head };
+}
+/* A caption under something: the line that says what to do with what is above
+   it, or what it costs. Used by the app panel and the assistant overlay. */
+function helpNote(text){
+  const p = el('div','field__help', esc(text));
+  p.style.marginTop = 'var(--s-2)';
+  return p;
+}
+const FILE_ICON = { csv:'table', sql:'code', pdf:'doc', deck:'layers', image:'pie' };
+
+/* -------------------------------------------------------------- agenda
+   The month is generated from the clock and the fixture marks days by their
+   OFFSET from today, so the calendar is never wrong about what "today" is.
+   Monday-first, which is what the marks assume. */
+function appMonth(marks){
+  const now = new Date(T0);
+  const y = now.getFullYear(), m = now.getMonth(), today = now.getDate();
+  const days = new Date(y, m + 1, 0).getDate();
+  const first = new Date(y, m, 1).getDay();          /* 0 = Sunday */
+  const offset = (first + 6) % 7;                    /* → Monday-first */
+  /* Offsets become dates, and anything falling into next month is dropped
+     rather than drawn on the wrong day. */
+  const byDay = {};
+  Object.keys(marks).forEach(k => {
+    const d = today + Number(k);
+    if (d >= 1 && d <= days) byDay[d] = marks[k];
   });
-  card.append(body);
-  return card;
-}
-function sheetMeters(meters){
-  const card = el('section','card');
-  card.innerHTML = '<div class="card__head"><span class="card__title">Signals</span></div>';
-  const body = el('div','card__body');
-  const list = el('div','barlist');
-  meters.forEach(([k, pct, st]) => list.append(el('div','barlist__row',
-    '<span class="barlist__k">' + esc(k) + '</span>' +
-    '<span class="meter' + (st === 'warn' ? ' meter--warn' : '') + '"><i style="width:' + pct + '%"></i></span>' +
-    '<span class="barlist__v">' + pct + '%</span>')));
-  body.append(list);
-  card.append(body);
-  return card;
-}
-function sheetSources(rows, title){
-  const card = el('section','card');
-  card.innerHTML = '<div class="card__head"><span class="card__title">' + esc(title) + '</span></div>';
-  const body = el('div','card__body');
-  body.style.padding = '0 var(--s-3)';
-  rows.forEach(([nm, sub, st]) => {
-    const r = el('div','artlist__row');
-    r.innerHTML = dotLead(st) +
-      '<span class="row__main" style="flex:1">' +
-        '<span class="row__title" style="font-family:var(--mono);font-size:var(--t-11)">' + esc(nm) + '</span>' +
-      '</span>' +
-      '<span class="artlist__v">' + esc(sub) + '</span>';
-    body.append(r);
-  });
-  card.append(body);
-  return card;
-}
-/* A month, with the marked days carrying the value that put them there. */
-function sheetCalendar(p){
-  const card = el('section','card');
-  card.innerHTML = '<div class="card__head"><span class="card__title">' + esc(p.month) + '</span></div>';
-  const body = el('div','card__body');
+
+  const c = appCard(MONTHS[m] + ' ' + y);
   const grid = el('div','cal');
   ['M','T','W','T','F','S','S'].forEach(d => grid.append(el('div','cal__wd', d)));
-  for (let i = 0; i < p.offset; i++) grid.append(el('div','cal__d cal__d--pad','0'));
-  for (let d = 1; d <= p.days; d++){
-    const cls = 'cal__d' + (p.marks[d] ? ' cal__d--mark' : '') + (d === p.today ? ' cal__d--today' : '');
+  for (let i = 0; i < offset; i++) grid.append(el('div','cal__d cal__d--pad','0'));
+  for (let d = 1; d <= days; d++){
+    const cls = 'cal__d' + (byDay[d] ? ' cal__d--mark' : '') + (d === today ? ' cal__d--today' : '');
     const cell = el('div', cls, String(d));
-    if (p.marks[d]) cell.title = 'Renewing ' + p.marks[d];
+    if (byDay[d]) cell.title = MONTHS[m] + ' ' + d + ' — ' + byDay[d];
     grid.append(cell);
   }
-  body.append(grid);
-  card.append(body);
-  return card;
+  c.body.append(grid);
+  return c.card;
 }
-function sheetSearch(p){
-  const wrap = el('div');
-  const input = el('input','input');
-  input.placeholder = p.placeholder;
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter'){ e.preventDefault(); toast('Search — prototype'); }
+function appAgenda(app, p){
+  const nodes = [appMonth(p.marks)];
+  const c = appCard('Today');
+  c.body.style.padding = '0 var(--s-3)';
+  p.rows.forEach(([time, title, meta]) => {
+    const r = el('div','artlist__row');
+    r.innerHTML =
+      '<span class="t-mono" style="flex:none;color:var(--text-4);font-size:var(--t-11)">' + esc(time) + '</span>' +
+      '<span class="row__main" style="flex:1">' +
+        '<span class="row__title">' + esc(title) + '</span>' +
+        '<span class="row__sub">' + esc(meta) + '</span>' +
+      '</span>';
+    c.body.append(r);
   });
-  wrap.append(input);
-  const list = sheetRows(p.rows.map(([a, b, c]) => [a, b, c, '']), 'Recent');
-  list.style.marginTop = 'var(--s-4)';
-  wrap.append(list);
-  return wrap;
+  nodes.push(c.card);
+  return nodes;
+}
+
+/* ------------------------------------------------------------- extract
+   A document read into fields. Two things make it honest: a field the model
+   guessed is marked as needing a look, and the outcome can be FILED — an
+   extraction is exactly the kind of definite result the store is for. */
+function appExtract(app, p){
+  const nodes = [];
+  const src = appCard('Source');
+  src.body.style.padding = 'var(--s-3)';
+  src.body.append(el('div', null,
+    '<span style="display:flex;align-items:center;gap:var(--s-2)">' +
+      '<span style="display:flex;color:var(--text-4)">' + ic('doc',14) + '</span>' +
+      '<span style="font-size:var(--t-12);color:var(--text)">' + esc(p.file) + '</span>' +
+    '</span>' +
+    '<div class="field__help" style="margin-top:4px">' + esc(p.pages) + '</div>'));
+  nodes.push(src.card);
+
+  const f = appCard('Fields', el('span','badge badge--ok', String(p.fields.length) + ' read'));
+  f.body.append(defList(p.fields.map(([k, v, flag]) => [k,
+    esc(v) + (flag === 'check' ? ' <span class="badge badge--warn">check</span>' : '')])));
+  nodes.push(f.card);
+
+  if (p.chips){
+    const c = appCard(p.chipsLabel || 'Found');
+    const wrap = el('div');
+    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:var(--s-2)';
+    p.chips.forEach(s => wrap.append(el('span','chip','<span>' + esc(s) + '</span>')));
+    c.body.append(wrap);
+    nodes.push(c.card);
+  }
+  if (p.check) nodes.push(banner('info', esc(p.check)));
+  if (p.note)  nodes.push(banner('warn', esc(p.note)));
+
+  if (p.queue){
+    const q = appCard(p.queueLabel || 'Queue');
+    q.body.style.padding = '0 var(--s-3)';
+    p.queue.forEach(([nm, sub, st]) => {
+      const r = el('div','artlist__row');
+      r.innerHTML = dotLead(st) +
+        '<span class="row__main" style="flex:1">' +
+          '<span class="row__title">' + esc(nm) + '</span>' +
+          '<span class="row__sub">' + esc(sub) + '</span>' +
+        '</span>';
+      q.body.append(r);
+    });
+    nodes.push(q.card);
+  }
+
+  /* The one action worth having here: put the fields where every other outcome
+     in the workspace is kept, under a name. */
+  const acts = el('div','live__acts');
+  const save = el('button','btn btn--primary btn--sm', ic('check',13) + 'Save to results');
+  save.type = 'button';
+  save.onclick = () => fileResult({
+    id:'r-' + app.id, title:p.res, from:app.name, shape:'list',
+    size:plural(p.fields.length, 'field'),
+    rows:p.fields.map(([k, v]) => [k, v])
+  });
+  acts.append(save);
+  nodes.push(acts);
+  return nodes;
+}
+
+/* --------------------------------------------------------------- files
+   Clicking a file attaches it to the next message. That is the whole reason
+   this app is beside the composer rather than a page of its own. */
+function appFiles(app, p){
+  const c = appCard('Uploads');
+  c.body.style.padding = 'var(--s-1) var(--s-2)';
+  p.rows.forEach(([nm, kind, size, when]) => {
+    const row = listRow({
+      lead:'<span class="row__icon">' + ic(FILE_ICON[kind] || 'file',14) + '</span>',
+      title:nm, sub:kind + ' · ' + size, meta:when,
+      onClick:() => attachFile(nm)
+    });
+    row.title = 'Attach ' + nm + ' to the next message';
+    c.body.append(row);
+  });
+  return [c.card, helpNote('Click a file to attach it to your next message.')];
+}
+
+/* ---------------------------------------------------------------- news
+   Headlines wrap rather than truncate: the headline IS the content. Clicking
+   one marks it read and asks the thread about it. */
+function appNews(app, p){
+  const st = appState(app);
+  const unread = st.read.filter(x => !x).length;
+  const c = appCard('Feed', el('span','badge' + (unread ? ' badge--info' : ''),
+    unread ? unread + ' unread' : 'all read'));
+  c.body.style.padding = 'var(--s-1) var(--s-2)';
+  p.rows.forEach(([title, src, when], i) => {
+    const row = listRow({
+      lead:'<span class="dot ' + (st.read[i] ? 'dot--read' : 'dot--unread') + '"></span>',
+      title:title, sub:src, meta:when,
+      onClick:() => {
+        st.read[i] = true;
+        repaintApp(app);
+        askAbout(title, src);
+      }
+    });
+    row.classList.add('row--wrap');
+    row.title = 'Ask about this in the thread';
+    c.body.append(row);
+  });
+  return [c.card, helpNote('Clicking a headline marks it read and writes the question into the composer.')];
+}
+
+/* ---------------------------------------------------------------- note
+   The one app that is a text editor, so it is the one that proves the panel
+   holds state: what you type survives switching apps, sections and threads.
+
+   A note is one string and its first line is its title, which is why there is
+   no title field — a second control for text that is already on screen. */
+const noteTitle = b => (String(b).split('\n').filter(l => l.trim())[0] || '').trim().slice(0, 48) || 'Empty note';
+function noteWords(b){
+  const n = b.trim() ? b.trim().split(/\s+/).length : 0;
+  return plural(n, 'word');
+}
+function appNoteSurface(app){
+  const st = appState(app);
+  const add = el('button','btn btn--ghost btn--sm', ic('plus',12) + 'New');
+  add.type = 'button';
+  add.onclick = () => { st.notes.unshift(''); st.note = 0; repaintApp(app); };
+  const c = appCard('Notes', add);
+  c.body.style.padding = 'var(--s-1) var(--s-2)';
+
+  let open = null;                  /* the row of the note being edited */
+  st.notes.forEach((b, i) => {
+    const row = listRow({
+      title:noteTitle(b), sub:noteWords(b), current:i === st.note,
+      onClick:() => { st.note = i; repaintApp(app); }
+    });
+    if (i === st.note) open = row;
+    c.body.append(row);
+  });
+
+  const ta = el('textarea','textarea textarea--prose');
+  ta.value = st.notes[st.note];
+  ta.rows = 10;
+  ta.placeholder = 'First line is the title…';
+  /* Saved on every keystroke, into the instance. The row above is patched by
+     hand rather than re-rendered: a repaint per character would take the caret
+     with it. */
+  ta.oninput = () => {
+    st.notes[st.note] = ta.value;
+    if (open){
+      $('.row__title', open).textContent = noteTitle(ta.value);
+      $('.row__sub', open).textContent = noteWords(ta.value);
+    }
+  };
+  return [c.card, ta];
+}
+
+/* ---------------------------------------------------------------- todo
+   Ticking a box has to mean something, so it does: the count and the meter in
+   the card head move with it, and done items grey out in place rather than
+   jumping to the bottom under the reader's cursor. */
+function appTodo(app){
+  const st = appState(app);
+  const done = st.items.filter(i => i.done).length;
+  const c = appCard('Items', el('span','badge' + (done === st.items.length ? ' badge--ok' : ''),
+    done + ' of ' + st.items.length + ' done'));
+  c.body.style.padding = '0';
+
+  const meter = el('span','meter');
+  meter.style.margin = 'var(--s-3) var(--s-3) var(--s-2)';
+  meter.innerHTML = '<i style="width:' + Math.round(done / st.items.length * 100) + '%"></i>';
+  c.body.append(meter);
+
+  const list = el('div','picklist');
+  list.style.cssText = 'border:0;border-radius:0';
+  st.items.forEach(it => {
+    const row = el('label','picklist__row');
+    row.dataset.done = String(it.done);
+    const box = el('input','check');
+    box.type = 'checkbox';
+    box.checked = it.done;
+    box.onchange = () => { it.done = box.checked; repaintApp(app); };
+    row.append(box);
+    row.append(el('span','picklist__main','<span class="picklist__nm">' + esc(it.t) + '</span>'));
+    if (it.due) row.append(el('span','badge' + (it.due === 'today' ? ' badge--warn' : ''), esc(it.due)));
+    list.append(row);
+  });
+  c.body.append(list);
+
+  const add = el('form');
+  add.style.cssText = 'display:flex;gap:var(--s-2)';
+  const input = el('input','input');
+  input.type = 'text';
+  input.placeholder = 'Add an item…';
+  const go = el('button','btn btn--secondary btn--sm','Add');
+  go.type = 'submit';
+  add.append(input, go);
+  add.onsubmit = e => {
+    e.preventDefault();
+    const v = input.value.trim();
+    if (!v) return;
+    st.items.unshift({ t:v, due:'', done:false });
+    repaintApp(app);
+  };
+  return [c.card, add];
 }
 
 function appSurface(app){
   const p = D.APP_PANELS[app.id];
-  const nodes = [];
   if (!p) return [emptyState('cube', app.name, app.desc)];
-
-  if (p.s === 'ledger' || p.s === 'queue'){
-    if (p.stats) nodes.push(sheetStats(p.stats));
-    nodes.push(sheetRows(p.rows, p.s === 'queue' ? 'Queue' : 'Breakdown'));
-  } else if (p.s === 'health'){
-    nodes.push(sheetMeters(p.meters));
-    nodes.push(sheetSources(p.rows, 'Sources'));
-  } else if (p.s === 'calendar'){
-    nodes.push(sheetCalendar(p));
-    nodes.push(sheetRows(p.rows.map(([d, nm, m]) => [nm, d, m, '']), 'Next up'));
-  } else if (p.s === 'note'){
-    const card = el('section','card');
-    card.innerHTML = '<div class="card__head"><span class="card__title">Draft</span></div>';
-    const b = el('div','card__body');
-    b.append(el('div','prose', md(p.md)));
-    b.firstChild.style.fontSize = 'var(--t-13)';
-    card.append(b);
-    nodes.push(card);
-  } else if (p.s === 'search'){
-    nodes.push(sheetSearch(p));
-  }
-  return nodes;
+  if (p.s === 'agenda')  return appAgenda(app, p);
+  if (p.s === 'extract') return appExtract(app, p);
+  if (p.s === 'files')   return appFiles(app, p);
+  if (p.s === 'news')    return appNews(app, p);
+  if (p.s === 'note')    return appNoteSurface(app);
+  if (p.s === 'todo')    return appTodo(app);
+  return [emptyState('cube', app.name, app.desc)];
 }
 
-/* An app opens beside the rail rather than replacing the page. Clicking the
-   app that is already open closes it, so the tile is a toggle. */
+/* Two things an app in this column can do to the thread beside it. Both are
+   the reason the panel is a column and not a page: the composer is still on
+   screen when they happen. */
+function attachFile(name){
+  const c = el('div','chip chip--removable',
+    '<span style="display:flex;color:var(--text-4)">' + ic('file',12) + '</span><span>' + esc(name) + '</span>');
+  const x = el('button','chip__x', ic('x',11));
+  x.type = 'button';
+  x.onclick = () => c.remove();
+  c.append(x);
+  $('#composerChips').append(c);
+  toast('Attached ' + name);
+}
+function askAbout(title, src){
+  const input = $('#composerInput');
+  input.value = 'What does this mean for us? "' + title + '" (' + src + ')';
+  autosize();
+  $('#sendBtn').disabled = state.busy;
+  if (state.section === 'chat') input.focus();
+  else toast('Written into the composer — open Chat to send it');
+}
+
+/* ------------------------------------------------------- room to think
+   Four columns can be open at once and only one of them is the conversation.
+   A panel that takes width has to know what it is taking it from, so these
+   answer one question — what would the conversation be left with — before
+   anything animates. A grid column's target width is not measurable until its
+   transition has finished, which is why these are computed rather than read. */
+const CHAT_MIN = 560;
+const cssPx = (n, el) => parseFloat(getComputedStyle(el || document.documentElement).getPropertyValue(n)) || 0;
+/* Mirrors --sheet-w-open and the 34vw cap in tokens.css / layout.css. */
+function sheetTarget(){ return Math.min(cssPx('--sheet-w-open'), window.innerWidth * 0.34); }
+function artTarget(){ return cssPx('--art-w-user', $('#app')) || 440; }
+function chatRoom(art, sheet){
+  return window.innerWidth
+    - $('#rail').offsetWidth
+    - $('.listcol').offsetWidth          /* 0 when closed, so no condition */
+    - $('#apprail').offsetWidth
+    - (art ? artTarget() : 0)
+    - (sheet ? sheetTarget() : 0);
+}
+/* Is there room to open the results column as well as whatever is open now? */
+function roomForArt(){ return chatRoom(true, !!state.app) >= CHAT_MIN; }
+
+/* An app opens into the column beside the rail rather than over the page.
+   Clicking the app that is already open closes it, so the tile is a toggle. */
 function openApp(app){
   if (state.app === app.id) return closeApp();
   state.app = app.id;
+  state.lastApp = app.id;
+
+  /* On a laptop these two cannot both have their width. The results column is
+     the one that yields — it is the one panel with a way back from the content
+     itself — and it is put back when the app closes, so the yield is a loan
+     rather than a decision made on the reader's behalf. */
+  if (isOpen('art') && chatRoom(true, true) < CHAT_MIN){
+    state.artYielded = true;
+    state.pref.art = false;
+    toast('Results hidden to make room — ⌘. brings it back');
+  }
   const p = D.APP_PANELS[app.id];
 
   const tile = $('#appSheetTile');
@@ -2976,34 +4260,38 @@ function openApp(app){
   $('#appSheetState').innerHTML = app.state === 'live' ? ''
     : '<span class="badge badge--' + (app.state === 'warn' ? 'warn' : 'info') + '">' + esc(app.state) + '</span>';
 
-  const body = $('#appSheetBody');
-  body.innerHTML = '';
-  appSurface(app).forEach(n => body.append(n));
-  body.scrollTop = 0;
+  repaintApp(app);
+  $('#appSheetBody').scrollTop = 0;
+  /* The footer carries a fact the header does not — where the data comes from,
+     or what happens to it. With nothing to add it stays out of the way. */
+  const foot = (p && p.foot) || '';
+  $('#appSheetFoot').innerHTML = foot ? '<span>' + esc(foot) + '</span>' : '';
+  $('#appSheetFoot').hidden = !foot;
 
-  /* The solution behind the app is still reachable — the app is its front
-     end, not a replacement for it. */
-  const foot = $('#appSheetFoot');
-  foot.innerHTML = '<span>' + esc(app.desc) + '</span><span style="flex:1"></span>';
-  const sol = D.SOLUTIONS.filter(s => s.app === app.short)[0];
-  if (sol){
-    const b = el('button','btn btn--ghost btn--sm', 'Open in Build');
-    b.type = 'button';
-    b.onclick = () => { closeApp(); select('build', key('so', sol.id)); };
-    foot.append(b);
-  }
-
-  const sheet = $('#appSheet');
-  sheet.dataset.open = 'true';
-  sheet.setAttribute('aria-hidden','false');
+  $('#appSheet').setAttribute('aria-hidden','false');
+  $('#app').dataset.sheet = 'open';
+  $('#appsBtn').setAttribute('aria-pressed','true');
+  applyPanels();
   renderApps();
 }
 function closeApp(){
   state.app = null;
-  const sheet = $('#appSheet');
-  sheet.dataset.open = 'false';
-  sheet.setAttribute('aria-hidden','true');
+  $('#appSheet').setAttribute('aria-hidden','true');
+  $('#app').dataset.sheet = 'closed';
+  $('#appsBtn').setAttribute('aria-pressed','false');
+  /* Give back what was borrowed, and only what was borrowed. */
+  const back = state.artYielded;
+  state.artYielded = false;
+  if (back) state.pref.art = true;
+  applyPanels();
   renderApps();
+}
+/* The topbar toggle and ⌘] reopen whichever app you had last: the rail is
+   always there, so what the shortcut is for is the panel. */
+function toggleAppPanel(){
+  if (state.app) return closeApp();
+  const app = D.APPS.filter(a => a.id === state.lastApp)[0] || D.APPS[0];
+  openApp(app);
 }
 
 /* ================================================================ routing */
@@ -3238,12 +4526,14 @@ async function runTurn(userText, script){
     const a = D.ARTIFACT_BY_ID(reply.artifactId);
     if (a){ wrap.append(artRefNode(a)); openArtifact(a.id); }
   }
-  /* A live widget starts in the thread, where the question was asked. Moving it
-     to the pane is the reader's call, not the model's. */
+  /* The widget stays in the thread. What it has settled on is registered as a
+     named result in the artifact column — immediately for a table, a chart or a
+     snippet, and only once acted on for a form or a questionnaire. */
   let w = null;
   if (reply.w){
     w = makeLive(reply.w, thread ? thread.title : 'this thread');
-    wrap.append(liveHost(w, 'thread'));
+    wrap.append(liveHost(w));
+    syncResult(w);
   }
   if (reply.cites) wrap.append(citesNode(reply.cites));
   $('[data-dur]', head).textContent = dur;
@@ -3374,8 +4664,9 @@ function palRender(q){
     items.push({ g:'Knowledge', nm:k.name, sub:k.docs + ' docs', run:() => select('knowledge', key('kb', k.id)) }); });
   D.DATASETS.forEach(d => { if (hitOnly(d.name))
     items.push({ g:'Sources', nm:d.name, sub:d.source, run:() => select('knowledge', key('ds', d.id)) }); });
-  D.ARTIFACTS.forEach(a => { if (hitOnly(a.title))
-    items.push({ g:'Artifacts', nm:a.title, sub:a.kind, run:() => openArtifact(a.id) }); });
+  /* One store, so the palette group is the store's name. */
+  allResults().forEach(a => { if (hitOnly(a.title))
+    items.push({ g:'Results', nm:a.title, sub:artKind(a), run:() => openArtifact(a.id) }); });
   /* Skills are chosen inside an assistant rather than authored, so the palette
      lands on the assistants that hold one. */
   D.CONNECTORS.forEach(c => { if (hitOnly(c.name))
@@ -3432,8 +4723,8 @@ const COMMANDS = [
   { g:'Actions', nm:'New chat', sub:'', run:newThread },
   { g:'Actions', nm:'Toggle theme', sub:'⌘J', run:() => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark') },
   { g:'Actions', nm:'Toggle sidebar', sub:'⌘\\', run:() => setPanel('list') },
-  { g:'Actions', nm:'Toggle artifact pane', sub:'⌘.', run:() => setPanel('art') },
-  { g:'Actions', nm:'Toggle app rail', sub:'⌘]', run:() => setPanel('apps') },
+  { g:'Actions', nm:'Toggle results column', sub:'⌘.', run:() => setPanel('art') },
+  { g:'Actions', nm:'Toggle app panel', sub:'⌘]', run:toggleAppPanel },
   { g:'Actions', nm:'Density: compact', sub:'', run:() => setDensity('compact') },
   { g:'Actions', nm:'Density: comfortable', sub:'', run:() => setDensity('') },
   { g:'Actions', nm:'Density: roomy', sub:'', run:() => setDensity('roomy') },
@@ -3461,26 +4752,37 @@ function setDensity(d){
 }
 
 /* ---------------------------------------------------- panel management
-   Four columns want more width than a laptop has. Each one has the width
-   below which it stops being worth the space it takes; an explicit choice
-   overrides that, and null hands control back to the viewport. */
-const BREAK = { apps:900, list:1120, art:1400 };
+   Six columns want more width than a laptop has. Each collapsible one has the
+   width below which it stops being worth the space it takes; an explicit choice
+   overrides that, and null hands control back to the viewport. The app rail is
+   not in here — it never collapses — and the app panel is not either: it is
+   opened deliberately, and what it takes is width from the conversation. */
+const BREAK = { list:1120, art:1400 };
 
+/* The results column is the one panel that has to earn its width: with no
+   explicit choice it stays shut while the store is empty, and the first result
+   filed opens it (see syncResult). An explicit choice still wins both ways —
+   the toggle can open an empty column, which is where the empty state is. */
 function isOpen(kind){
-  return state.pref[kind] === null ? window.innerWidth >= BREAK[kind] : state.pref[kind];
+  if (state.pref[kind] !== null) return state.pref[kind];
+  if (kind === 'art' && !D.ARTIFACTS.length) return false;
+  return window.innerWidth >= BREAK[kind];
 }
 function applyPanels(){
   const app = $('#app');
-  const list = isOpen('list'), art = isOpen('art'), apps = isOpen('apps');
+  const list = isOpen('list'), art = isOpen('art');
   app.dataset.list = list ? 'open' : 'closed';
   app.dataset.art  = art  ? 'open' : 'closed';
-  app.dataset.apps = apps ? (state.appsWide ? 'wide' : 'open') : 'closed';
+  /* The rail is always open; "wide" only decides whether it shows names. */
+  app.dataset.apps = state.appsWide ? 'wide' : 'open';
   $('#artBtn').setAttribute('aria-pressed', String(art));
-  $('#appsBtn').setAttribute('aria-pressed', String(apps));
   $('#appsMore').setAttribute('aria-label', state.appsWide ? 'Hide app names' : 'Show app names');
 }
 function setPanel(kind, value){
   state.pref[kind] = value === undefined ? !isOpen(kind) : value;
+  /* Asking for the results column yourself ends the loan: closing the app
+     should not then undo what you just asked for. */
+  if (kind === 'art') state.artYielded = false;
   applyPanels();
 }
 
@@ -3548,8 +4850,14 @@ function boot(){
   /* chrome */
   $('#searchBtn').onclick = palOpen;
   $('#artBtn').onclick  = () => setPanel('art');
-  $('#appsBtn').onclick = () => setPanel('apps');
+  $('#appsBtn').onclick = toggleAppPanel;
   $('#artClose').onclick = () => setPanel('art', false);
+  $('#artBack').onclick = closeResult;
+  $('#artDl').onclick = () => {
+    const a = D.ARTIFACT_BY_ID(state.art.id);
+    if (a) downloadMenu(a, $('#artDl'));
+  };
+  $('#artShare').onclick = () => { const a = D.ARTIFACT_BY_ID(state.art.id); if (a) openShare(a); };
   $('#appsMore').onclick = () => { state.appsWide = !state.appsWide; applyPanels(); store('appswide', state.appsWide ? '1' : ''); };
   $('#mainMore').onclick = () => toast('Thread menu — prototype');
   $('#appSheetClose').onclick = closeApp;
@@ -3564,6 +4872,14 @@ function boot(){
     else if (e.key === 'Escape'){ palClose(); }
   });
   $('#scrim').addEventListener('mousedown', e => { if (e.target === $('#scrim')) palClose(); });
+
+  /* assistant overlay */
+  $('#asstClose').onclick = closeAssistant;
+  $('#asstScrim').addEventListener('mousedown', e => { if (e.target === $('#asstScrim')) closeAssistant(); });
+
+  /* share dialog */
+  $('#shareClose').onclick = closeShare;
+  $('#shareScrim').addEventListener('mousedown', e => { if (e.target === $('#shareScrim')) closeShare(); });
 
   /* status bar */
   $('#stThemeBtn').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
@@ -3584,9 +4900,14 @@ function boot(){
     } else if (mod && e.key === '.'){
       e.preventDefault(); setPanel('art');
     } else if (mod && e.key === ']'){
-      e.preventDefault(); setPanel('apps');
+      e.preventDefault(); toggleAppPanel();
     } else if (mod && e.key.toLowerCase() === 'j'){
       e.preventDefault(); setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+    } else if (e.key === 'Escape' && $('#asstScrim').dataset.open === 'true'){
+      closeAssistant();
+    } else if (e.key === 'Escape' && $('#shareScrim').dataset.open === 'true'){
+      /* Opened last, so it takes Escape first. */
+      closeShare();
     } else if (e.key === 'Escape' && $('#scrim').dataset.open === 'true'){
       palClose();
     } else if (e.key === 'Escape' && state.app){
@@ -3604,6 +4925,10 @@ function boot(){
   setTheme(load('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   setDensity(load('density') || '');
   state.appsWide = load('appswide') === '1';
+
+  /* Before applyPanels, which asks whether there is anything to show, and
+     before renderArtifact, which sorts on the timestamps this writes. */
+  initResults();
 
   initResize();
   applyPanels();

@@ -5,8 +5,8 @@ dependencies, no network calls — open a file in a browser and it runs.
 
 | Page | What it is |
 |---|---|
-| [index.html](index.html) | The workspace: rail · sidebar · conversation · artifact pane · app rail |
-| ↳ **start here** | Open a new chat and click a starter — each one runs a worked case ending in something you can fill in, answer, sort or move to the artifact pane |
+| [index.html](index.html) | The workspace: rail · sidebar · conversation · results column · app panel · app rail |
+| ↳ **start here** | Open a new chat and click a starter — each one runs a worked case ending in something you can fill in, answer or sort, and whatever it settles on is filed in the results column on the right, which can hand it back as a file (csv · md · txt · json · pdf, offered from what the content can take), as a shared link behind an access choice, or delete it with an undo |
 | [nebulas-cloud.html](nebulas-cloud.html) | Cloud setting — twelve-module enterprise deployment, gated by a tenant-onboarding dialog |
 | [v1-single-file.html](v1-single-file.html) | The earlier conversation-only prototype, kept for reference |
 
@@ -17,7 +17,7 @@ css/components.css   reusable parts. None know where they sit on screen.
 css/layout.css       the workspace shell and its overlays
 css/install.css      the cloud page shell: menu · configuration
 js/data.js           fixtures for every workspace surface
-js/app.js            routing, section renderers, artifact pane, app sheets
+js/app.js            routing, section renderers, the results store, the app panel
 js/install-data.js   the twelve deployment modules, as configuration
 js/install.js        the cloud page's dialog, menu and configuration surface
 ```
@@ -49,6 +49,29 @@ python3 -m http.server
 exceptions, why the artifact moved out of the thread, why an app is a layer
 rather than a destination, why Build puts the inspector on the right, and what
 is still missing.
+
+The **results column** on the right is one store for everything the workspace has
+produced, whichever thread produced it — a day-grouped list with the time and the
+type on every row, a detail one click away, and each result downloadable as the
+format it already is or shareable as a link whose audience you choose first
+(only you · the workspace · anyone with the link). It opens itself when a result
+appears and stays shut while there are none.
+
+In **Chat → Assistants**, clicking an assistant opens its whole record in an
+overlay — model and temperature, capabilities with example questions, the systems
+it may reach, and its instructions, plus logs, activity and access. Clicking any
+example closes the overlay, binds that assistant and drops the question into the
+composer, ready to edit and send.
+
+The **app rail** on the far right is always there, and clicking a tile opens that
+app in a panel *beside* the conversation rather than over it — a column of the
+shell, so the chat compresses instead of being covered, and the composer stays on
+screen. Seven apps: **Calendar**, **CV extractor**, **Invoice extractor**, **My
+files**, **News**, **Note**, **Todo**. They are wired into the rest of the
+workspace rather than being pictures of apps — a file attaches to your next
+message, a headline writes the question into the composer, an extraction is filed
+in the results column, and a ticked box or a typed note survives switching apps
+and sections.
 
 The workspace's **Build** section is the maker's half, and it has three groups:
 **assistants**, **solutions** (with a publish checklist that says what is still
