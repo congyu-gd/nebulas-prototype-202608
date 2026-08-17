@@ -232,6 +232,9 @@
    above them tightens so the two read as one block. */
 .pagehead--tight{ margin-bottom:var(--s-4) }
 .pane__acts{ display:flex; flex-wrap:wrap; gap:var(--s-2); margin-bottom:var(--s-6) }
+/* The composer, borrowed into a page. The wrapper carries the spacing so the
+   borrowed node itself goes back unchanged. */
+.pane__ask{ margin-bottom:var(--s-7) }
 
 .section{ margin-bottom:var(--s-8) }
 .section__head{

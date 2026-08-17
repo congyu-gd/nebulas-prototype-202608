@@ -381,6 +381,8 @@ should land next to the thing it affects.
 | A `Description` field | written from the settings and marked as written. Someone who has chosen what a project reads has already said what it is for |
 | Knowledge and Assistant as open lists | folded rows that name what is chosen. A form you scroll before naming the thing feels like work |
 | Help text under every setting, forever | hints with an `×` that retire after the dialog's first use, and a `?` in the header that brings them back |
+| `New thread here`, as a button | the composer itself, borrowed into the project page. A button beside a box you can type in was two doors into one room |
+| A thread called "New chat" for as long as it lives | named from its first message, cut to a row's width. A project's thread list was otherwise three rows of the same word |
 | Projects as an undifferentiated list of folders | a row that carries the glyph its owner picked, a clock if it runs by itself, and a `users` mark if the workspace can see it. Personal is the default, so personal is what goes unmarked |
 
 ## The knowledge detail is tabbed
@@ -484,6 +486,25 @@ underneath — `daily 07:00 · next run in 14 h` — and the schedule row and th
 project's `run` are kept as one fact in two places: saving the project writes the
 row, switching the schedule off deletes it, and Chat → Schedule never lists a run
 that no longer exists.
+
+**The box is the way in.** A project is somewhere a conversation starts more
+often than it is something to read about, so the composer sits directly under the
+name — and it is *the* composer, borrowed into the page the way the hero borrows
+it, not a second input that can do less. Attach a file, bind an assistant, route
+a model, `⌘↵`: what it can do there is what it can do anywhere, because it is the
+same node with the same listeners. Only its placeholder changes, and
+`detachComposer` hands that back along with the node.
+
+Sending from a project page opens a thread in the project and puts the message in
+it, which is the one thing the submit handler has to know: every other surface
+already has the thread its turn belongs to. The project's assistant is bound at
+the same moment, so the answer comes back under its name.
+
+There is no `New thread here` button any more. A button next to a box you can
+type in was two doors into one room — and the box is the door that carries the
+message. A thread that arrives this way **takes its title from its first
+message**, cut to a row's width, because "New chat · New chat · New chat" in a
+project's thread list is a list of nothing.
 
 **`Run now`, because a weekly project is hard to believe in on a Tuesday.** It
 produces a real record in the global store — timestamped, downloadable,

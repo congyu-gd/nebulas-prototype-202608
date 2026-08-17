@@ -358,7 +358,9 @@ const SECTIONS = {
       if (kindOf(v) === 'p')  return projectView(body, find(D.PROJECTS, idOf(v)));
       return threadView(body, find(D.THREADS, v));
     },
-    composer(){ const v = state.item.chat; return v !== 'assistants' && v !== 'schedule' && kindOf(v) !== 'p'; }
+    /* A project page borrows the composer into itself rather than having it
+       pinned below (see projectView), but it still needs it un-hidden. */
+    composer(){ const v = state.item.chat; return v !== 'assistants' && v !== 'schedule'; }
   },
 
   /* -------------------------------------------------------- knowledge
@@ -1290,12 +1292,26 @@ let heroMode = 'Work';
 let heroNew = false;           /* the new-dashboard form is open */
 
 /* The composer is a single node with its listeners already bound, so it MOVES
-   between the hero and its pinned position rather than being rebuilt. Anything
-   that clears #mainBody has to hand it back first or it is destroyed. */
+   between the pages that borrow it and its pinned position rather than being
+   rebuilt. Anything that clears #mainBody has to hand it back first or it is
+   destroyed — and hand back its placeholder too, since a page that borrows it
+   may have relabelled it. */
+let COMPOSER_PH = '';
 function detachComposer(){
   const c = $('#composerWrap');
   c.classList.remove('composer-wrap--inline');
+  $('#composerInput').placeholder = COMPOSER_PH;
   $('.chatpane').append(c);
+}
+/* Borrowed into the page itself rather than pinned under it: in the hero
+   because the box is what the starters write into, in a project because
+   starting a conversation there is what the page is for. The placeholder is the
+   one thing that changes with the context, so it is the argument. */
+function inlineComposer(placeholder){
+  const c = $('#composerWrap');
+  c.classList.add('composer-wrap--inline');
+  if (placeholder) $('#composerInput').placeholder = placeholder;
+  return c;
 }
 
 function heroNode(){
@@ -1332,9 +1348,7 @@ function heroNode(){
 
   /* The input follows the starters, because a starter is a half-written
      message and the place it lands should be the next thing under it. */
-  const c = $('#composerWrap');
-  c.classList.add('composer-wrap--inline');
-  h.append(c);
+  h.append(inlineComposer());
 
   if (heroMode === 'Data Discovery') h.append(dashboardsNode());
   return h;
@@ -2350,16 +2364,26 @@ function projectView(body, p){
     b.onclick = run;
     return b;
   };
-  acts.append(mk('New thread here', 'plus', 'primary', () => newThread(p.id)));
   if (p.run) acts.append(mk('Run now', 'play', 'secondary', () => runProject(p)));
   acts.append(mk('Settings', 'gear', 'ghost', () => openProject(p)));
   pad.append(acts);
+
+  /* The way in. A project is where a conversation starts more often than it is
+     something to read about, so the box is the first thing under the name —
+     the real composer, borrowed, so what it can do here is what it can do
+     anywhere: attach a file, bind an assistant, route a model, ⌘↵. Sending
+     opens a thread in this project and puts the message in it (see the submit
+     handler in boot). A separate "New thread" button next to a box you can type
+     in was two doors into one room. */
+  const ask = el('div','pane__ask');
+  ask.append(inlineComposer('Ask anything in ' + p.name + ' — the thread stays in the project'));
+  pad.append(ask);
 
   /* A folder, and nothing has been switched on yet. Said once, with the way out
      of it — not as four zeroed stats above four empty sections. */
   if (!threads.length && !reads.length && !p.assistant && !p.run){
     pad.append(emptyState('folder','A folder, for now',
-      'Threads you start here stay together. Attach knowledge, bind an assistant, or ' +
+      'Threads you start above stay together here. Attach knowledge, bind an assistant, or ' +
       'have it produce a result on a schedule — all of that is in Settings.'));
     body.append(pad);
     return;
@@ -4827,6 +4851,14 @@ function select(section, itemId){
   render();
 }
 
+/* A thread's own words, cut to a row's worth. Its first message is the only
+   thing that can name it, and quoting it is more use than paraphrasing it. */
+function threadTitle(text){
+  const one = text.replace(/\s+/g, ' ').trim();
+  const cut = one.length > 48 ? one.slice(0, 47).replace(/\s\S*$/, '') + '…' : one;
+  return cut.replace(/[.,;:!?]+$/, '') || 'New chat';
+}
+
 /* Started from a project, a thread belongs to it — that is what a project is
    for. Called straight from an onClick elsewhere, so the argument is checked
    rather than trusted: an event object is not a project id. */
@@ -4846,6 +4878,17 @@ function newThread(projectId){
   $('#composerInput').focus();
 }
 
+/* The sidebar on its own. A turn that renames the thread it is in has to be
+   able to redraw the row without rebuilding the pane it is streaming into. */
+function renderList(){
+  const S = SECTIONS[state.section];
+  const lb = $('#listBody');
+  /* Miller columns scroll per column, so the body stops being the scroller. */
+  lb.classList.toggle('listcol__body--miller', !!S.miller);
+  lb.innerHTML = '';
+  S.list(lb);
+}
+
 function render(){
   const S = SECTIONS[state.section];
 
@@ -4857,11 +4900,7 @@ function render(){
   /* The section is on the shell, so a section can widen the sidebar by
      redefining --list-w rather than by anything here knowing a pixel. */
   $('#app').dataset.section = state.section;
-  const lb = $('#listBody');
-  /* Miller columns scroll per column, so the body stops being the scroller. */
-  lb.classList.toggle('listcol__body--miller', !!S.miller);
-  lb.innerHTML = '';
-  S.list(lb);
+  renderList();
 
   const head = S.head();
   $('#mainTitle').textContent = head.title;
@@ -5076,7 +5115,15 @@ async function runTurn(userText, script){
       artifactId:reply.artifactId || null, liveId:w ? w.id : null
     };
     if (!ai.artifactId) delete ai.artifactId;
+    /* A thread still called "New chat" has not been named at all, and its first
+       message is the only thing that can name it. Checked before the push, so
+       "first message" means what it says. */
+    const naming = thread.title === 'New chat' && !thread.msgs.length;
     thread.msgs.push({ role:'user', text:userText }, ai);
+    if (naming){
+      thread.title = threadTitle(userText);
+      renderList();
+    }
     if (w) w.msg = ai;
     /* The topbar counted turns before this one existed. */
     syncHead();
@@ -5317,6 +5364,9 @@ function setPanel(kind, value){
 
 /* =================================================================== boot */
 function boot(){
+  /* The markup's own placeholder is the default one, so a page that relabels the
+     composer has something to hand back. */
+  COMPOSER_PH = $('#composerInput').placeholder;
   const rail = $('#rail');
   ORDER.forEach(k => {
     const b = el('button','rail__btn tip', ic(SECTIONS[k].icon, 17));
@@ -5352,6 +5402,11 @@ function boot(){
     /* Attachments were for that message; the assistant binding survives it,
        so it is put back after the row is cleared. */
     $('#composerChips').innerHTML = '';
+    /* Typed on a project page, where there is no thread yet: one is opened in
+       the project, which is also what binds its assistant, and the turn lands
+       there. Every other surface already has the thread it belongs to. */
+    if (state.section === 'chat' && kindOf(state.item.chat) === 'p')
+      newThread(idOf(state.item.chat));
     syncAssistantChip();
     runTurn(v);
   });
