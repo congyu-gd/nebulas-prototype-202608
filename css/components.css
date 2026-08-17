@@ -971,10 +971,69 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .dialog__body{ padding:var(--s-4); max-height:min(560px,62vh); overflow:auto }
 .dialog__body .field:last-child{ margin-bottom:0 }
-/* A form with eight answers in it rather than three. Wider and taller than the
-   share dialog, so the optional half is visible without scrolling first. */
-.dialog--tall{ width:min(520px,94vw) }
-.dialog--tall .dialog__body{ max-height:min(640px,72vh) }
+/* A form with more answers in it than the share dialog has. Wider, not taller:
+   the two list-shaped settings fold shut, so the height stays a screen. */
+.dialog--wide{ width:min(520px,94vw) }
+.dialog--wide .dialog__body{ max-height:min(520px,64vh) }
+
+/* ================================================================= hints
+   The line that says what a setting does. Worth its space the first time and
+   furniture after that, so each one has an × and the set retires once the
+   dialog has been used — see the hint()/setHints() pair in app.js. Raised
+   rather than plain help text, because it is temporary and should read that
+   way beside the permanent labels. */
+.hint{
+  display:flex; align-items:flex-start; gap:var(--s-2);
+  margin-top:var(--s-2);
+  padding:var(--s-2);
+  border-radius:var(--r-md);
+  background:var(--raised);
+  font-size:var(--t-11); color:var(--text-4);
+}
+.hint__ico{ display:flex; flex:none; margin-top:1px }
+.hint__t{ flex:1 }
+.hint__x{
+  display:flex; flex:none;
+  margin:-1px -1px 0 0; padding:2px;
+  border-radius:var(--r-sm);
+  color:var(--text-4);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.hint__x:hover{ background:var(--line); color:var(--text-2) }
+/* The concept banner carries the same × and inherits the banner's own colour. */
+.banner .hint__x{ color:currentColor; opacity:.7 }
+.banner .hint__x:hover{ background:transparent; opacity:1 }
+
+/* ================================================================== fold
+   A setting whose control is a list. Closed, the row is its name and what is
+   currently chosen — enough to decide whether to open it, which is why the
+   summary sits on the same line rather than under it. */
+.fold{
+  margin-bottom:var(--s-4);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+}
+.fold__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-2) var(--s-3);
+  border-radius:var(--r-lg);
+  cursor:pointer;
+  list-style:none;
+  transition:background var(--fast) var(--ease);
+}
+.fold__head::-webkit-details-marker{ display:none }
+.fold__head:hover{ background:var(--raised) }
+.fold__head:focus-visible{ outline:var(--ring) solid var(--accent); outline-offset:-1px }
+.fold__chev{ display:flex; flex:none; color:var(--text-4); transition:rotate var(--fast) var(--ease) }
+.fold[open] .fold__chev{ rotate:90deg }
+.fold__nm{ flex:none; font-size:var(--t-12); color:var(--text) }
+.fold__sum{
+  flex:1; min-width:0;
+  text-align:right;
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.fold__body{ padding:0 var(--s-3) var(--s-3) }
 .dialog__foot{
   display:flex; align-items:center; gap:var(--s-2);
   padding:var(--s-3) var(--s-4);

@@ -378,6 +378,9 @@ should land next to the thing it affects.
 | Apps as ten analytical solution front-ends | the workspace's own seven tools — calendar, two extractors, files, news, note, todo. What you want open beside a conversation, not another dashboard |
 | `New project` as a toast saying "prototype" | a dialog that makes one. Name required, everything else optional, and one switch that turns the folder into something that produces a result on a schedule |
 | A project you could open but not change | the same dialog, reopened from `Settings` in the project view. Create and edit are the same answers, so they are the same screen |
+| A `Description` field | written from the settings and marked as written. Someone who has chosen what a project reads has already said what it is for |
+| Knowledge and Assistant as open lists | folded rows that name what is chosen. A form you scroll before naming the thing feels like work |
+| Help text under every setting, forever | hints with an `×` that retire after the dialog's first use, and a `?` in the header that brings them back |
 | Projects as an undifferentiated list of folders | a row that carries the glyph its owner picked, a clock if it runs by itself, and a `users` mark if the workspace can see it. Personal is the default, so personal is what goes unmarked |
 
 ## The knowledge detail is tabbed
@@ -434,26 +437,45 @@ it changes what the project does:
 
 | Answer | Why it is there |
 |---|---|
-| **Name** | the only required one. The help line under it says the rest is optional |
-| **Description** | one line, shown as the page's own subtitle |
+| **Name** | the only required one, and the only text anyone types |
 | **Icon** | eight glyphs naming kinds of work — General · Analysis · Engineering · Team · Ideas · Planning · Writing · Money |
 | **Who can see it** | Personal or shared with the workspace, with the consequence stated under whichever is picked, and *this can change afterwards* said out loud |
-| **Knowledge** | bases and datasets in one list, because both are "things it may read" |
-| **Assistant** | bound to new threads here; a thread can still pick another |
+| **Knowledge** *(folded)* | bases and datasets in one list, because both are "things it may read" |
+| **Assistant** *(folded)* | bound to new threads here; a thread can still pick another |
 | **Runs by itself** | the switch that decides which of the two things this is |
 
 `Icon` and `Who can see it` sit side by side: stacked, two one-line choices push
-the optional half of the form another 90px down for no gain.
+the rest of the form another 90px down for no gain.
+
+**The two list-shaped settings are folded shut**, because a list is tall and a
+form you have to scroll before you can name the thing is a form that feels like
+work. Closed, each row carries its name and *what is currently chosen* —
+`Knowledge · Finance corpus · q3_ledger`, `Assistant · Board writer` — which is
+the only thing a reader needs before deciding whether to open it. Native
+`<details>`, so the keyboard and the accessibility tree get it for free, and the
+summary is rewritten the moment the list inside is touched. Everything shut, the
+dialog is 334px of body: one screen, no scrolling.
+
+**Nobody writes the description.** By the time someone has said what a project
+reads, who answers in it and whether it runs, they have already said what it is
+for — a text field asking again is asking twice. So the description is composed
+from the settings (`Produces a result every week, written by Board writer, from
+Finance corpus and accounts_health.`) and rewritten on every save while it stays
+automatic, which means it cannot describe a project that has since changed. The
+project page marks it with one `?` naming its author. A description that came
+from somewhere else — the fixtures' hand-written ones — is left alone.
+
+**Instructions expire.** Each setting can carry one line saying what it does, and
+that line is worth its space exactly once. So every hint has an `×`, the concept
+banner has one too, and the whole set retires when the dialog is first closed —
+one flag in `localStorage`, not a count of visits. The `?` in the dialog header
+brings them back for anyone who wants the tour again, which is why they are
+hidden rather than deleted. First open: 609px and five hints. Second: 334px and
+none.
 
 **Icons, not colours.** A glyph that names a kind of work is the cheapest way to
 say what a project is for, and eight of them are a vocabulary. A colour picker
 would be a second accent and a craft project.
-
-**One explanation, once.** The dialog opens with a single info banner saying what
-a project keeps together and what the schedule switch turns it into. It appears
-only when creating — nobody editing their fourth project needs the lesson — and
-the only other instruction is the `?` beside *Runs by itself* in the project
-view. That is the whole teaching budget.
 
 **Three cadences: every day, every week, every month.** A fourth would be a cron
 expression, and something that needs cron is a scheduled task, which Chat →

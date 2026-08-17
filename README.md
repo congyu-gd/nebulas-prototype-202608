@@ -59,13 +59,17 @@ appears and stays shut while there are none.
 
 A **project** is made with one answer: type a name and press Create. Everything
 else in the dialog is optional and changeable afterwards — an icon from eight
-naming kinds of work, personal or shared with the workspace, knowledge bases and
-datasets it may read, an assistant bound to new threads in it. Leave the rest
-empty and a project is a folder. Switch on **a result on a schedule** and the same
-project becomes a small application: every day, week or month it produces a
-result and files it in the results column, `Run now` does it immediately, and the
-run appears in Chat → Schedule. Sidebar rows say which is which — a clock if it
-runs by itself, a `users` mark if the workspace can see it.
+naming kinds of work, personal or shared with the workspace, and two folded rows
+for the knowledge it reads and the assistant that answers in it, each naming what
+is chosen so you only open what you want to change. Nobody writes the
+description: it is composed from those settings and rewritten when they change.
+Leave the rest empty and a project is a folder. Switch on **a result on a
+schedule** and the same project becomes a small application: every day, week or
+month it produces a result and files it in the results column, `Run now` does it
+immediately, and the run appears in Chat → Schedule. Sidebar rows say which is
+which — a clock if it runs by itself, a `users` mark if the workspace can see it.
+Each setting explains itself the first time and the hints retire once you have
+used the dialog; the `?` in its header brings them back.
 
 In **Chat → Assistants**, clicking an assistant opens its whole record in an
 overlay — model and temperature, capabilities with example questions, the systems

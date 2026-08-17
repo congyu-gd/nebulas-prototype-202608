@@ -268,15 +268,22 @@
      same answers and none of them is final. Only the name is required: leave
      the rest and the project is a folder; switch on a schedule and it becomes
      something that produces a result on its own. Rendered by renderProject.
+
+     The two list-shaped settings are folded shut, so the form is a screen
+     rather than a scroll. `projHelp` toggles the per-setting instructions,
+     which retire by themselves once the dialog has been used once.
 -->
 <div class="scrim" id="projScrim" data-open="false">
-  <div class="dialog dialog--tall" role="dialog" aria-modal="true" aria-labelledby="projTitle">
+  <div class="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="projTitle">
     <header class="dialog__head">
       <span class="dialog__ico" id="projIco" aria-hidden="true"></span>
       <span class="dialog__id">
         <span class="dialog__title" id="projTitle">New project</span>
         <span class="dialog__sub" id="projSub"></span>
       </span>
+      <button class="iconbtn iconbtn--sm" id="projHelp" title="Show what each setting does" aria-label="Show what each setting does" aria-pressed="false">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .9-1 1.6v.4"/><path d="M12 17h.01"/></svg>
+      </button>
       <button class="iconbtn iconbtn--sm" id="projClose" title="Close (esc)" aria-label="Close">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>

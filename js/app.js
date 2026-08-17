@@ -1499,6 +1499,11 @@ function asstPrompts(a){
 const infoTip = text =>
   '<span class="tip" data-tip="' + esc(text) + '" style="display:flex;color:var(--text-4)">' +
   ic('help',13) + '</span>';
+/* The same thing at the end of a sentence rather than beside a heading, which
+   is a different display value and nothing else. */
+const inlineTip = text =>
+  '<span class="tip" data-tip="' + esc(text) + '" ' +
+  'style="display:inline-flex;vertical-align:-2px;color:var(--text-4)">' + ic('help',13) + '</span>';
 
 function openAssistant(a){
   asstOn = a;
@@ -1940,21 +1945,103 @@ let projOn = null;                 /* the project being edited — null while cr
 let projDraft = null;
 let projN = D.PROJECTS.length;
 
+/* ------------------------------------------------------------------ hints
+   An instruction is worth its space the first time and is furniture after
+   that. So each setting can carry one, every one has an ×, and the whole set
+   retires once the dialog has been used: seen it, closed it, gone. The `?` in
+   the header brings them back for somebody who wants the tour again.
+
+   Retiring them is remembered rather than counted — one flag, so there is no
+   "you have opened this four times" bookkeeping to get wrong. */
+const HINTS_KEY = 'projHints';
+let projHints = load(HINTS_KEY) !== 'off';
+const hintGone = {};               /* dismissed this session, by key */
+
+function hint(key, text){
+  if (!projHints || hintGone[key]) return null;
+  const n = el('div','hint');
+  n.dataset.hint = key;
+  n.innerHTML = '<span class="hint__ico">' + ic('help',12) + '</span>' +
+                '<span class="hint__t">' + esc(text) + '</span>';
+  const x = el('button','hint__x', ic('x',11));
+  x.type = 'button';
+  x.title = 'Hide this hint';
+  x.setAttribute('aria-label','Hide this hint');
+  x.onclick = e => { e.preventDefault(); hintGone[key] = true; n.remove(); };
+  n.append(x);
+  return n;
+}
+/* A field with its instruction under it, when there is one to show. */
+function fieldH(label, control, key, text){
+  const f = field(label, control);
+  const h = hint(key, text);
+  if (h) f.append(h);
+  return f;
+}
+function setHints(on){
+  projHints = on;
+  store(HINTS_KEY, on ? 'on' : 'off');
+  if (on) Object.keys(hintGone).forEach(k => delete hintGone[k]);
+  if (projDraft) renderProject();
+}
+
 /* Bases and datasets are both "things it may read", so the picker is one list
    and each row says which kind it is rather than making two sections of it. */
 function knowledgeItems(){
   return D.KBS.map(k => ({ id:'kb:' + k.name, nm:k.name, sub:'Knowledge base', meta:k.docs + ' docs' }))
     .concat(D.DATASETS.map(d => ({ id:'ds:' + d.name, nm:d.name, sub:d.source, meta:d.rows + ' rows' })));
 }
+
+/* ------------------------------------------------------------- a fold
+   Two of the settings are lists, and a list is tall. Collapsed, the row says
+   its name and what is currently chosen — which is the only thing a reader
+   needs before deciding whether to open it. Native <details>, so the keyboard
+   and the accessibility tree get the behaviour for free. */
+function fold(label, summaryOf, build){
+  const d = el('details','fold');
+  const head = el('summary','fold__head',
+    '<span class="fold__chev">' + ic('chevR',13) + '</span>' +
+    '<span class="fold__nm">' + esc(label) + '</span>');
+  const sum = el('span','fold__sum', esc(summaryOf()));
+  head.append(sum);
+  const body = el('div','fold__body');
+  d.append(head, body);
+  /* The summary is only true until the list is touched, so touching it says so. */
+  build(body, () => { sum.textContent = summaryOf(); });
+  return d;
+}
+
+/* The description is written from the settings rather than typed. By the time
+   somebody has said what a project reads and who answers in it, they have said
+   what it is for; a text field asking again is asking twice. Rewritten on every
+   save while it stays automatic, so it cannot describe a project that has since
+   changed — and left alone the moment a description arrives from anywhere else. */
+function autoDesc(p){
+  const reads = (p.kbs || []).concat(p.sources || []);
+  const list = reads.length > 2
+    ? reads.slice(0, 2).join(', ') + ' and ' + (reads.length - 2) + ' more'
+    : reads.join(' and ');
+  if (p.run){
+    return 'Produces a result ' + p.run.every.toLowerCase() +
+           (p.assistant ? ', written by ' + p.assistant : '') +
+           (reads.length ? ', from ' + list : '') + '.';
+  }
+  if (p.assistant){
+    return 'Threads here are answered by ' + p.assistant +
+           (reads.length ? ', reading ' + list : '') + '.';
+  }
+  if (reads.length) return 'Threads and results kept together, scoped to ' + list + '.';
+  return 'A folder for ' + p.name + ' — threads you start here stay together.';
+}
 const isBase = it => it.id.slice(0, 2) === 'kb';
 
 function openProject(p){
   projOn = p || null;
   projDraft = p
-    ? { name:p.name, desc:p.desc || '', icon:p.icon || 'folder', shared:!!p.shared,
+    ? { name:p.name, icon:p.icon || 'folder', shared:!!p.shared,
         assistant:p.assistant || '', kbs:(p.kbs || []).slice(), sources:(p.sources || []).slice(),
         run:p.run ? { every:p.run.every, ask:p.run.ask, sched:p.run.sched } : null }
-    : { name:'', desc:'', icon:'folder', shared:false, assistant:'',
+    : { name:'', icon:'folder', shared:false, assistant:'',
         kbs:[], sources:[], run:null };
   $('#projIco').innerHTML = ic(p ? 'gear' : 'plus', 15);
   renderProject();
@@ -1966,6 +2053,9 @@ function closeProject(){
   $('#projScrim').dataset.open = 'false';
   projOn = null;
   projDraft = null;
+  /* Used once, so the instructions retire. The `?` in the header is how they
+     come back, which is why they are hidden rather than deleted. */
+  if (projHints) setHints(false);
 }
 
 function renderProject(){
@@ -1978,12 +2068,24 @@ function renderProject(){
   $('#projSub').textContent = fresh ? 'A name is all it needs'
     : projOn.name + ' · ' + (d.run ? CADENCE_ADJ[d.run.every].toLowerCase() : 'no schedule');
 
+  $('#projHelp').setAttribute('aria-pressed', String(projHints));
+
   /* The explanation of what a project is, said once — on the way in, not over
-     the shoulder of somebody who already has three of them. */
-  if (fresh) body.append(banner('info',
-    'A project keeps one piece of work together: its threads, what it reads, and who ' +
-    'answers in it. Leave the rest of this empty and it is a folder. Switch on ' +
-    '<strong>a result on a schedule</strong> and it runs by itself.'));
+     the shoulder of somebody who already has three of them. It retires with the
+     rest of the hints, and has its own × for anyone who is done with it sooner. */
+  if (fresh && projHints && !hintGone.concept){
+    const b = banner('info',
+      'A project keeps one piece of work together: its threads, what it reads, and who ' +
+      'answers in it. Leave the rest of this empty and it is a folder. Switch on ' +
+      '<strong>a result on a schedule</strong> and it runs by itself.');
+    const x = el('button','hint__x', ic('x',11));
+    x.type = 'button';
+    x.title = 'Hide this';
+    x.setAttribute('aria-label','Hide this');
+    x.onclick = () => { hintGone.concept = true; b.remove(); };
+    b.append(x);
+    body.append(b);
+  }
 
   /* Built first, because the name field switches it on as you type. */
   const save = el('button','btn btn--primary', fresh ? 'Create project' : 'Save changes');
@@ -2002,14 +2104,9 @@ function renderProject(){
   nameIn.onkeydown = e => {
     if (e.key === 'Enter' && d.name.trim()){ e.preventDefault(); saveProject(); }
   };
-  body.append(field('Name', nameIn, 'Everything below is optional, and none of it is final.'));
-
-  const descIn = el('input','input');
-  descIn.type = 'text';
-  descIn.value = d.desc;
-  descIn.placeholder = 'What this project is for, in one line';
-  descIn.oninput = () => { d.desc = descIn.value; };
-  body.append(field('Description', descIn));
+  body.append(fieldH('Name', nameIn, 'name',
+    'The only required answer. Everything else is optional, changeable, and ' +
+    'the description is written for you from what you choose.'));
 
   const icons = el('div','iconpick');
   PROJ_ICONS.forEach(nm => {
@@ -2024,44 +2121,59 @@ function renderProject(){
     };
     icons.append(b);
   });
-  const visHelp = el('div','field__help');
-  visHelp.style.marginTop = 'var(--s-2)';
+  const visHint = hint('vis', VIS_HELP[d.shared ? 'Shared' : 'Personal'] +
+    ' Either way, this can change afterwards.');
   const setVis = v => {
     d.shared = v === 'Shared';
-    visHelp.textContent = VIS_HELP[v] + ' Either way, this can change afterwards.';
+    if (visHint) $('.hint__t', visHint).textContent =
+      VIS_HELP[v] + ' Either way, this can change afterwards.';
   };
-  setVis(d.shared ? 'Shared' : 'Personal');
 
-  /* Two one-line choices, side by side: stacked, they push the optional half of
-     the form another 90px down for no gain. */
+  /* Two one-line choices, side by side: stacked, they push the rest of the form
+     another 90px down for no gain. */
   const two = el('div');
-  two.style.cssText = 'display:flex; gap:var(--s-6); flex-wrap:wrap; margin-bottom:var(--s-2)';
+  two.style.cssText = 'display:flex; gap:var(--s-6); flex-wrap:wrap; margin-bottom:var(--s-4)';
   const visWrap = el('div');
   visWrap.append(segCtl(PROJ_VIS, d.shared ? 'Shared' : 'Personal', setVis));
   two.append(field('Icon', icons), field('Who can see it', visWrap));
-  /* The line under both of them belongs to the choice on the right, so the two
+  /* The hint under both of them belongs to the choice on the right, so the two
      fields give up their own bottom margin and it carries the gap. */
   $$('.field', two).forEach(f => f.style.marginBottom = '0');
-  visHelp.style.margin = '0 0 var(--s-5)';
-  body.append(two, visHelp);
+  if (visHint){ two.style.marginBottom = 'var(--s-2)'; visHint.style.margin = '0 0 var(--s-4)'; }
+  body.append(two);
+  if (visHint) body.append(visHint);
 
-  const list = pickList(knowledgeItems(),
-    it => (isBase(it) ? d.kbs : d.sources).indexOf(it.nm) > -1,
-    (it, on) => {
-      const arr = isBase(it) ? d.kbs : d.sources;
-      const i = arr.indexOf(it.nm);
-      if (on && i < 0) arr.push(it.nm);
-      else if (!on && i > -1) arr.splice(i, 1);
-    });
-  list.classList.add('picklist--scroll');
-  body.append(field('Knowledge — optional', list,
-    'What answers in this project may read. Nothing ticked means it answers from the model alone.'));
+  /* The two list-shaped settings, folded. Closed, each row names what is chosen
+     — which is what a reader wants before deciding whether to open it. */
+  const readList = () => (d.kbs || []).concat(d.sources || []);
+  body.append(fold('Knowledge',
+    () => readList().length ? readList().join(' · ') : 'Nothing attached',
+    (into, touched) => {
+      const list = pickList(knowledgeItems(),
+        it => (isBase(it) ? d.kbs : d.sources).indexOf(it.nm) > -1,
+        (it, on) => {
+          const arr = isBase(it) ? d.kbs : d.sources;
+          const i = arr.indexOf(it.nm);
+          if (on && i < 0) arr.push(it.nm);
+          else if (!on && i > -1) arr.splice(i, 1);
+          touched();
+        });
+      list.classList.add('picklist--scroll');
+      into.append(list);
+      const h = hint('kb', 'What answers in this project may read. Nothing ticked means it ' +
+                           'answers from the model alone.');
+      if (h) into.append(h);
+    }));
 
   const NONE = 'No assistant';
-  body.append(field('Assistant — optional',
-    selectCtl([NONE].concat(D.ASSISTANTS.map(a => a.name)), d.assistant || NONE,
-      v => { d.assistant = v === NONE ? '' : v; }),
-    'Bound to new threads here. A thread can still pick another one.'));
+  body.append(fold('Assistant',
+    () => d.assistant || NONE,
+    (into, touched) => {
+      into.append(selectCtl([NONE].concat(D.ASSISTANTS.map(a => a.name)), d.assistant || NONE,
+        v => { d.assistant = v === NONE ? '' : v; touched(); }));
+      const h = hint('as', 'Bound to new threads here. A thread can still pick another one.');
+      if (h) into.append(h);
+    }));
 
   /* The switch that decides which of the two things a project is. Everything
      under it only exists while it is on, because a cadence with nothing to
@@ -2091,7 +2203,7 @@ function renderProject(){
     ask.style.marginTop = 'var(--s-3)';
     runWrap.append(cad, when, ask);
   }
-  body.append(field('Runs by itself — optional', runWrap,
+  body.append(fieldH('Runs by itself', runWrap, 'run',
     d.run ? 'Each run files a result in the results column, timestamped. It is listed in Chat → Schedule too.'
           : 'Off, this project is a folder. On, it produces a result on its own and files it in the results column.'));
 
@@ -2138,10 +2250,13 @@ function saveProject(){
   const d = projDraft;
   if (!d || !d.name.trim()) return;
   const fresh = !projOn;
-  const p = projOn || { id:'p' + (++projN) };
+  const p = projOn || { id:'p' + (++projN), descAuto:true };
   const prevSched = p.run && p.run.sched;
-  Object.assign(p, { name:d.name.trim(), desc:d.desc.trim(), icon:d.icon, shared:d.shared,
+  Object.assign(p, { name:d.name.trim(), icon:d.icon, shared:d.shared,
     assistant:d.assistant, kbs:d.kbs, sources:d.sources, run:d.run, when:'now' });
+  /* Nobody typed a description, so one is written from the settings. A
+     hand-written one — the fixtures have them — is left alone. */
+  if (p.descAuto || !p.desc){ p.desc = autoDesc(p); p.descAuto = true; }
   syncProjectRun(p, prevSched);
   if (fresh) D.PROJECTS.unshift(p);
   closeProject();
@@ -2221,6 +2336,10 @@ function projectView(body, p){
     '<span class="badge">' + ic(p.shared ? 'users' : 'lock', 12) +
     '<span>' + esc(p.shared ? 'Shared' : 'Personal') + '</span></span>');
   head.classList.add('pagehead--tight');
+  /* A written description says who wrote it, quietly — the line is derived from
+     the settings, so it changes when they do. */
+  if (p.descAuto && p.desc) $('.pagehead__desc', head).insertAdjacentHTML('beforeend',
+    ' ' + inlineTip('Written by Nebulas from this project\'s settings, and rewritten when they change.'));
   pad.append(head);
 
   const acts = el('div','pane__acts');
@@ -5293,6 +5412,7 @@ function boot(){
 
   /* project dialog */
   $('#projClose').onclick = closeProject;
+  $('#projHelp').onclick = () => setHints(!projHints);
   $('#projScrim').addEventListener('mousedown', e => { if (e.target === $('#projScrim')) closeProject(); });
 
   /* status bar */
