@@ -376,6 +376,9 @@ should land next to the thing it affects.
 | App sheet floating over the page | a column of the shell. Opening an app takes width from the conversation instead of covering it, so nothing has to be dismissed before the page is usable again |
 | App-rail toggle (`⌘]`, topbar) | the rail is permanent; the shortcut and the button now open the *panel*, on the app you had last |
 | Apps as ten analytical solution front-ends | the workspace's own seven tools — calendar, two extractors, files, news, note, todo. What you want open beside a conversation, not another dashboard |
+| `New project` as a toast saying "prototype" | a dialog that makes one. Name required, everything else optional, and one switch that turns the folder into something that produces a result on a schedule |
+| A project you could open but not change | the same dialog, reopened from `Settings` in the project view. Create and edit are the same answers, so they are the same screen |
+| Projects as an undifferentiated list of folders | a row that carries the glyph its owner picked, a clock if it runs by itself, and a `users` mark if the workspace can see it. Personal is the default, so personal is what goes unmarked |
 
 ## The knowledge detail is tabbed
 
@@ -410,6 +413,65 @@ Sorting is real, not decorative: Size sorts on a byte count and Date added on a
 timestamp, both carried in the fixture beside the display string, because
 `"2.1 MB"` and `"412 MB"` sort backwards as text. Ascending points up and
 descending points down, from one rotated glyph so the two cannot drift apart.
+
+## A project is a folder until you switch something on
+
+A project is the only container in this workspace that people make for
+themselves, so making one has to cost almost nothing: **type a name, press
+Create.** Every other answer in the dialog is marked optional, and none of them
+is a decision you are stuck with.
+
+That is what lets one object be two things. With nothing filled in, a project is
+a folder — threads you start in it stay together and the assistant, if there is
+one, answers in all of them. Switch on **a result on a schedule** and the same
+project is a small application: it runs without being asked and files what it
+produces in the results column. Nothing in the interface announces which kind it
+is, because the switch is the only difference.
+
+**One screen, not a wizard.** A wizard implies the answers arrive in an order
+that matters. Here only the name is required, so the form is ordered by how much
+it changes what the project does:
+
+| Answer | Why it is there |
+|---|---|
+| **Name** | the only required one. The help line under it says the rest is optional |
+| **Description** | one line, shown as the page's own subtitle |
+| **Icon** | eight glyphs naming kinds of work — General · Analysis · Engineering · Team · Ideas · Planning · Writing · Money |
+| **Who can see it** | Personal or shared with the workspace, with the consequence stated under whichever is picked, and *this can change afterwards* said out loud |
+| **Knowledge** | bases and datasets in one list, because both are "things it may read" |
+| **Assistant** | bound to new threads here; a thread can still pick another |
+| **Runs by itself** | the switch that decides which of the two things this is |
+
+`Icon` and `Who can see it` sit side by side: stacked, two one-line choices push
+the optional half of the form another 90px down for no gain.
+
+**Icons, not colours.** A glyph that names a kind of work is the cheapest way to
+say what a project is for, and eight of them are a vocabulary. A colour picker
+would be a second accent and a craft project.
+
+**One explanation, once.** The dialog opens with a single info banner saying what
+a project keeps together and what the schedule switch turns it into. It appears
+only when creating — nobody editing their fourth project needs the lesson — and
+the only other instruction is the `?` beside *Runs by itself* in the project
+view. That is the whole teaching budget.
+
+**Three cadences: every day, every week, every month.** A fourth would be a cron
+expression, and something that needs cron is a scheduled task, which Chat →
+Schedule already holds. The cadence chosen states its own consequence
+underneath — `daily 07:00 · next run in 14 h` — and the schedule row and the
+project's `run` are kept as one fact in two places: saving the project writes the
+row, switching the schedule off deletes it, and Chat → Schedule never lists a run
+that no longer exists.
+
+**`Run now`, because a weekly project is hard to believe in on a Tuesday.** It
+produces a real record in the global store — timestamped, downloadable,
+shareable, deletable — under the project's name rather than a thread's. The
+project view lists what it has produced, so the loop closes where it started.
+
+**Deleting keeps the threads.** They outlive the folder they were filed in, so
+they return to History and the toast says how many. Undoable for six seconds,
+which is why there is no confirmation dialog — the same rule the results column
+follows.
 
 ## Assistants: filter the list, shortlist the ones you use
 

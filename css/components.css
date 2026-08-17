@@ -205,6 +205,25 @@ button.chip--plain:hover{ background:var(--raised) }
 .switch input:checked ~ .switch__track::after{ translate:12px 0 }
 .switch input:focus-visible ~ .switch__track{ outline:var(--ring) solid var(--accent); outline-offset:2px }
 
+/* ============================================================ icon picker
+   Eight glyphs, one row, no colours. A project's icon is how its row reads in
+   a sidebar of twelve, so the choice is a vocabulary of kinds of work — not a
+   palette, which would be a second accent and a craft project. */
+.iconpick{ display:flex; flex-wrap:wrap; gap:var(--s-1) }
+.iconpick__b{
+  display:flex; align-items:center; justify-content:center;
+  width:var(--ctl-md); height:var(--ctl-md);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-md);
+  color:var(--text-3);
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease),
+             border-color var(--fast) var(--ease);
+}
+.iconpick__b:hover{ background:var(--raised); color:var(--text) }
+.iconpick__b[aria-pressed="true"]{
+  border-color:var(--accent); color:var(--accent); background:var(--accent-soft);
+}
+
 /* ======================================================== segmented tabs */
 .seg{ display:flex; gap:2px; padding:2px; border-radius:var(--r-md); background:var(--raised-2) }
 /* A single-pane artifact leaves the tab strip empty, and an empty strip still
@@ -952,6 +971,10 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .dialog__body{ padding:var(--s-4); max-height:min(560px,62vh); overflow:auto }
 .dialog__body .field:last-child{ margin-bottom:0 }
+/* A form with eight answers in it rather than three. Wider and taller than the
+   share dialog, so the optional half is visible without scrolling first. */
+.dialog--tall{ width:min(520px,94vw) }
+.dialog--tall .dialog__body{ max-height:min(640px,72vh) }
 .dialog__foot{
   display:flex; align-items:center; gap:var(--s-2);
   padding:var(--s-3) var(--s-4);
@@ -1107,6 +1130,9 @@ button.chip--plain:hover{ background:var(--raised) }
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .picklist__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+/* Inside a dialog, a list of everything the workspace knows would push the
+   footer off the screen. It scrolls in place instead. */
+.picklist--scroll{ max-height:136px; overflow:auto }
 /* Done, and still where it was: a list that reorders itself under the cursor
    makes the next tick a guess. */
 .picklist__row[data-done="true"] .picklist__nm{ color:var(--text-4); text-decoration:line-through }

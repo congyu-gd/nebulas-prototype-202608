@@ -57,6 +57,16 @@ format it already is or shareable as a link whose audience you choose first
 (only you · the workspace · anyone with the link). It opens itself when a result
 appears and stays shut while there are none.
 
+A **project** is made with one answer: type a name and press Create. Everything
+else in the dialog is optional and changeable afterwards — an icon from eight
+naming kinds of work, personal or shared with the workspace, knowledge bases and
+datasets it may read, an assistant bound to new threads in it. Leave the rest
+empty and a project is a folder. Switch on **a result on a schedule** and the same
+project becomes a small application: every day, week or month it produces a
+result and files it in the results column, `Run now` does it immediately, and the
+run appears in Chat → Schedule. Sidebar rows say which is which — a clock if it
+runs by itself, a `users` mark if the workspace can see it.
+
 In **Chat → Assistants**, clicking an assistant opens its whole record in an
 overlay — model and temperature, capabilities with example questions, the systems
 it may reach, and its instructions, plus logs, activity and access. Clicking any

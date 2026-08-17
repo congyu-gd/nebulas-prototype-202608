@@ -287,7 +287,7 @@ const SECTIONS = {
       const pinned = el('div','listcol__pinned');
       pinned.append(listRow({
         lead:'<span class="row__icon">' + ic('plus',13) + '</span>',
-        title:'New chat', onClick:newThread
+        title:'New chat', onClick:() => newThread()
       }));
       pinned.append(listRow({
         lead:'<span class="row__icon">' + ic('agent',13) + '</span>',
@@ -304,14 +304,27 @@ const SECTIONS = {
       body.append(pinned);
 
       /* A project is a container, not an event — its age says nothing useful,
-         so the row carries only the name. */
-      body.append(groupLabel('Projects', { tip:'New project', onClick:() => toast('New project — prototype') }));
-      D.PROJECTS.forEach(p => body.append(listRow({
-        lead:'<span class="row__icon">' + ic('folder',13) + '</span>',
-        title:p.name,
-        current:state.item.chat === key('p', p.id),
-        onClick:() => select('chat', key('p', p.id))
-      })));
+         so the row carries the name, the glyph its owner picked, and one mark:
+         whether what you put in it is visible to the workspace. Personal is the
+         default, so personal is what goes unmarked. */
+      body.append(groupLabel('Projects', { tip:'New project', onClick:() => openProject(null) }));
+      D.PROJECTS.forEach(p => {
+        const row = listRow({
+          lead:'<span class="row__icon">' + ic(p.icon || 'folder',13) + '</span>',
+          title:p.name,
+          current:state.item.chat === key('p', p.id),
+          onClick:() => select('chat', key('p', p.id))
+        });
+        /* A project that runs on its own is a different kind of thing from a
+           folder, and the row is where that difference is cheapest to say. */
+        if (p.run) row.insertAdjacentHTML('beforeend',
+          '<span class="row__flag tip tip--below" data-tip="Runs ' + esc(p.run.every.toLowerCase()) + '">' +
+          ic('clock',12) + '</span>');
+        if (p.shared) row.insertAdjacentHTML('beforeend',
+          '<span class="row__flag tip tip--below" data-tip="Shared with ' + esc(D.ACCOUNT.org) + '">' +
+          ic('users',12) + '</span>');
+        body.append(row);
+      });
 
       /* One history, ordered by recency. Splitting it into Today / Earlier
          made two headers out of information the timestamps already carry. */
@@ -327,10 +340,16 @@ const SECTIONS = {
       if (v === 'schedule')   return { title:'Schedule', sub:D.SCHEDULE.length + ' tasks' };
       if (kindOf(v) === 'p'){
         const p = find(D.PROJECTS, idOf(v));
-        return { title:p.name, sub:plural(D.THREADS.filter(t => t.project === p.id).length, 'thread') };
+        return { title:p.name,
+                 sub:(p.shared ? 'Shared · ' : 'Personal · ') +
+                     plural(D.THREADS.filter(t => t.project === p.id).length, 'thread') };
       }
       const t = find(D.THREADS, v);
-      return { title:t.title, sub:t.msgs.length ? plural(t.msgs.length, 'turn') : 'empty' };
+      const turns = t.msgs.length ? plural(t.msgs.length, 'turn') : 'empty';
+      /* A thread filed in a project says so here: it is the one place the
+         scoping is visible once you are reading the conversation. */
+      const p = t.project ? find(D.PROJECTS, t.project) : null;
+      return { title:t.title, sub:p ? p.name + ' · ' + turns : turns };
     },
     main(body){
       const v = state.item.chat;
@@ -1884,41 +1903,419 @@ function scheduleView(body){
   body.append(pad);
 }
 
+/* ================================================== making a project
+   A project is the only container people make for themselves, so making one
+   has to cost almost nothing: type a name, press Create, and it is a folder.
+   Everything else in the dialog is marked optional and can be set afterwards
+   from the same dialog — including the one switch that changes what a project
+   *is*, from somewhere you keep things to something that produces a result on
+   its own every week.
+
+   One screen rather than a wizard. A wizard implies the answers arrive in an
+   order that matters; here only the name is required, and none of the rest is
+   a decision you are stuck with. */
+const PROJ_ICONS = ['folder','chart','code','users','spark','calendar','doc','dollar'];
+/* The glyph names a kind of work, which is the cheapest way to say what a
+   project is for — a row of eight is a vocabulary, a colour picker is a craft
+   project. */
+const ICON_NAME = { folder:'General', chart:'Analysis', code:'Engineering', users:'Team',
+  spark:'Ideas', calendar:'Planning', doc:'Writing', dollar:'Money' };
+/* Two audiences, so two buttons rather than two radio rows with a paragraph
+   each: the consequence goes in one line under whichever is chosen. */
+const PROJ_VIS = ['Personal','Shared'];
+const VIS_HELP = {
+  'Personal':'Only you can open it, its threads and its results. You can share it later.',
+  'Shared':'Anyone in ' + D.ACCOUNT.org + ' can open it and start threads in it.'
+};
+/* Three cadences. A fourth would be a cron expression, and something that
+   needs cron is a scheduled task — Chat → Schedule already holds those. */
+const CADENCE = ['Every day','Every week','Every month'];
+const CRON_OF = { 'Every day':'daily 07:00', 'Every week':'Mon 07:00', 'Every month':'1st 07:00' };
+const NEXT_OF = { 'Every day':'in 14 h', 'Every week':'in 3 d', 'Every month':'in 12 d' };
+/* "Every week" is how it is chosen; "Weekly" is how a one-word stat reads. */
+const CADENCE_ADJ = { 'Every day':'Daily', 'Every week':'Weekly', 'Every month':'Monthly' };
+const runLine = r => CRON_OF[r.every] + ' · next run ' + NEXT_OF[r.every];
+
+let projOn = null;                 /* the project being edited — null while creating */
+let projDraft = null;
+let projN = D.PROJECTS.length;
+
+/* Bases and datasets are both "things it may read", so the picker is one list
+   and each row says which kind it is rather than making two sections of it. */
+function knowledgeItems(){
+  return D.KBS.map(k => ({ id:'kb:' + k.name, nm:k.name, sub:'Knowledge base', meta:k.docs + ' docs' }))
+    .concat(D.DATASETS.map(d => ({ id:'ds:' + d.name, nm:d.name, sub:d.source, meta:d.rows + ' rows' })));
+}
+const isBase = it => it.id.slice(0, 2) === 'kb';
+
+function openProject(p){
+  projOn = p || null;
+  projDraft = p
+    ? { name:p.name, desc:p.desc || '', icon:p.icon || 'folder', shared:!!p.shared,
+        assistant:p.assistant || '', kbs:(p.kbs || []).slice(), sources:(p.sources || []).slice(),
+        run:p.run ? { every:p.run.every, ask:p.run.ask, sched:p.run.sched } : null }
+    : { name:'', desc:'', icon:'folder', shared:false, assistant:'',
+        kbs:[], sources:[], run:null };
+  $('#projIco').innerHTML = ic(p ? 'gear' : 'plus', 15);
+  renderProject();
+  $('#projScrim').dataset.open = 'true';
+  const nm = $('#projNameInput');
+  if (nm && !p) nm.focus();
+}
+function closeProject(){
+  $('#projScrim').dataset.open = 'false';
+  projOn = null;
+  projDraft = null;
+}
+
+function renderProject(){
+  const d = projDraft;
+  if (!d) return;
+  const body = $('#projBody'), foot = $('#projFoot');
+  body.innerHTML = ''; foot.innerHTML = '';
+  const fresh = !projOn;
+  $('#projTitle').textContent = fresh ? 'New project' : 'Project settings';
+  $('#projSub').textContent = fresh ? 'A name is all it needs'
+    : projOn.name + ' · ' + (d.run ? CADENCE_ADJ[d.run.every].toLowerCase() : 'no schedule');
+
+  /* The explanation of what a project is, said once — on the way in, not over
+     the shoulder of somebody who already has three of them. */
+  if (fresh) body.append(banner('info',
+    'A project keeps one piece of work together: its threads, what it reads, and who ' +
+    'answers in it. Leave the rest of this empty and it is a folder. Switch on ' +
+    '<strong>a result on a schedule</strong> and it runs by itself.'));
+
+  /* Built first, because the name field switches it on as you type. */
+  const save = el('button','btn btn--primary', fresh ? 'Create project' : 'Save changes');
+  save.type = 'button';
+  save.disabled = !d.name.trim();
+  save.onclick = saveProject;
+
+  /* Not inputCtl: that commits on blur, and this one has to update the button
+     on every keystroke. */
+  const nameIn = el('input','input');
+  nameIn.id = 'projNameInput';
+  nameIn.type = 'text';
+  nameIn.value = d.name;
+  nameIn.placeholder = 'Q4 planning';
+  nameIn.oninput = () => { d.name = nameIn.value; save.disabled = !d.name.trim(); };
+  nameIn.onkeydown = e => {
+    if (e.key === 'Enter' && d.name.trim()){ e.preventDefault(); saveProject(); }
+  };
+  body.append(field('Name', nameIn, 'Everything below is optional, and none of it is final.'));
+
+  const descIn = el('input','input');
+  descIn.type = 'text';
+  descIn.value = d.desc;
+  descIn.placeholder = 'What this project is for, in one line';
+  descIn.oninput = () => { d.desc = descIn.value; };
+  body.append(field('Description', descIn));
+
+  const icons = el('div','iconpick');
+  PROJ_ICONS.forEach(nm => {
+    const b = el('button','iconpick__b', ic(nm, 15));
+    b.type = 'button';
+    b.title = ICON_NAME[nm];
+    b.setAttribute('aria-label', ICON_NAME[nm]);
+    b.setAttribute('aria-pressed', String(nm === d.icon));
+    b.onclick = () => {
+      d.icon = nm;
+      $$('.iconpick__b', icons).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    };
+    icons.append(b);
+  });
+  const visHelp = el('div','field__help');
+  visHelp.style.marginTop = 'var(--s-2)';
+  const setVis = v => {
+    d.shared = v === 'Shared';
+    visHelp.textContent = VIS_HELP[v] + ' Either way, this can change afterwards.';
+  };
+  setVis(d.shared ? 'Shared' : 'Personal');
+
+  /* Two one-line choices, side by side: stacked, they push the optional half of
+     the form another 90px down for no gain. */
+  const two = el('div');
+  two.style.cssText = 'display:flex; gap:var(--s-6); flex-wrap:wrap; margin-bottom:var(--s-2)';
+  const visWrap = el('div');
+  visWrap.append(segCtl(PROJ_VIS, d.shared ? 'Shared' : 'Personal', setVis));
+  two.append(field('Icon', icons), field('Who can see it', visWrap));
+  /* The line under both of them belongs to the choice on the right, so the two
+     fields give up their own bottom margin and it carries the gap. */
+  $$('.field', two).forEach(f => f.style.marginBottom = '0');
+  visHelp.style.margin = '0 0 var(--s-5)';
+  body.append(two, visHelp);
+
+  const list = pickList(knowledgeItems(),
+    it => (isBase(it) ? d.kbs : d.sources).indexOf(it.nm) > -1,
+    (it, on) => {
+      const arr = isBase(it) ? d.kbs : d.sources;
+      const i = arr.indexOf(it.nm);
+      if (on && i < 0) arr.push(it.nm);
+      else if (!on && i > -1) arr.splice(i, 1);
+    });
+  list.classList.add('picklist--scroll');
+  body.append(field('Knowledge — optional', list,
+    'What answers in this project may read. Nothing ticked means it answers from the model alone.'));
+
+  const NONE = 'No assistant';
+  body.append(field('Assistant — optional',
+    selectCtl([NONE].concat(D.ASSISTANTS.map(a => a.name)), d.assistant || NONE,
+      v => { d.assistant = v === NONE ? '' : v; }),
+    'Bound to new threads here. A thread can still pick another one.'));
+
+  /* The switch that decides which of the two things a project is. Everything
+     under it only exists while it is on, because a cadence with nothing to
+     produce is a setting nobody can act on. */
+  const runWrap = el('div');
+  const sw = switchCtl('Produce a result on a schedule', !!d.run);
+  $('input', sw).onchange = e => {
+    d.run = e.target.checked
+      ? { every:'Every week', ask:'', sched:(projOn && projOn.run && projOn.run.sched) || null }
+      : null;
+    renderProject();
+  };
+  runWrap.append(sw);
+  if (d.run){
+    const when = el('div','field__help', runLine(d.run));
+    when.style.marginTop = 'var(--s-2)';
+    const cad = segCtl(CADENCE, d.run.every, v => {
+      d.run.every = v;
+      when.textContent = runLine(d.run);
+    });
+    cad.style.marginTop = 'var(--s-3)';
+    const ask = el('textarea','textarea textarea--prose');
+    ask.rows = 3;
+    ask.value = d.run.ask;
+    ask.placeholder = 'Summarise what changed this week and list what needs a decision.';
+    ask.oninput = () => { d.run.ask = ask.value; };
+    ask.style.marginTop = 'var(--s-3)';
+    runWrap.append(cad, when, ask);
+  }
+  body.append(field('Runs by itself — optional', runWrap,
+    d.run ? 'Each run files a result in the results column, timestamped. It is listed in Chat → Schedule too.'
+          : 'Off, this project is a folder. On, it produces a result on its own and files it in the results column.'));
+
+  const cancel = el('button','btn btn--ghost','Cancel');
+  cancel.type = 'button';
+  cancel.onclick = closeProject;
+  if (!fresh){
+    const del = el('button','btn btn--danger','Delete project');
+    del.type = 'button';
+    del.onclick = () => deleteProject(projOn);
+    foot.append(del);
+  }
+  foot.append(el('div','dialog__spacer'), cancel, save);
+}
+
+/* The schedule row and the project's own `run` are one fact in two places —
+   Chat → Schedule lists everything recurring in the workspace, and a project
+   that runs is one of those. So saving the project writes the row. */
+function syncProjectRun(p, prevSched){
+  /* Switching the schedule off leaves nothing on the project pointing at the
+     row, so the id it used to have has to be passed in — otherwise the row
+     outlives the setting that created it. */
+  const id = (p.run && p.run.sched) || prevSched;
+  const i = id ? D.SCHEDULE.map(s => s.id).indexOf(id) : -1;
+  if (!p.run){
+    if (i > -1) D.SCHEDULE.splice(i, 1);
+    return;
+  }
+  if (i > -1){
+    /* The row keeps its own name: "Churn watchlist refresh" says more than
+       "Churn program run", and renaming it was never what was asked for. */
+    Object.assign(D.SCHEDULE[i], { cron:CRON_OF[p.run.every], next:NEXT_OF[p.run.every],
+      target:p.name, assistant:p.assistant || '—' });
+    return;
+  }
+  const row = { id:'sc-' + p.id, name:p.name + ' run', cron:CRON_OF[p.run.every],
+    next:NEXT_OF[p.run.every], state:'idle', target:p.name,
+    assistant:p.assistant || '—', last:'—' };
+  p.run.sched = row.id;
+  D.SCHEDULE.push(row);
+}
+
+function saveProject(){
+  const d = projDraft;
+  if (!d || !d.name.trim()) return;
+  const fresh = !projOn;
+  const p = projOn || { id:'p' + (++projN) };
+  const prevSched = p.run && p.run.sched;
+  Object.assign(p, { name:d.name.trim(), desc:d.desc.trim(), icon:d.icon, shared:d.shared,
+    assistant:d.assistant, kbs:d.kbs, sources:d.sources, run:d.run, when:'now' });
+  syncProjectRun(p, prevSched);
+  if (fresh) D.PROJECTS.unshift(p);
+  closeProject();
+  select('chat', key('p', p.id));
+  toast(fresh
+    ? 'Created ' + p.name + (p.run ? ' — first run ' + NEXT_OF[p.run.every] : '')
+    : 'Saved ' + p.name);
+}
+
+/* Threads outlive the folder they were filed in, so deleting a project keeps
+   them and says so. Undoable, so it does not need a confirmation dialog —
+   the same rule the results column follows. */
+function deleteProject(p){
+  const i = D.PROJECTS.indexOf(p);
+  if (i < 0) return;
+  const sid = p.run && p.run.sched;
+  const si = sid ? D.SCHEDULE.map(s => s.id).indexOf(sid) : -1;
+  const srow = si > -1 ? D.SCHEDULE[si] : null;
+  const kept = D.THREADS.filter(t => t.project === p.id);
+  D.PROJECTS.splice(i, 1);
+  if (si > -1) D.SCHEDULE.splice(si, 1);
+  kept.forEach(t => t.project = null);
+  closeProject();
+  select('chat', D.THREADS.length ? D.THREADS[0].id : 'assistants');
+  toast('Deleted ' + p.name + (kept.length ? ' — ' + plural(kept.length, 'thread') + ' kept in History' : ''), {
+    label:'Undo',
+    icon:'trash',
+    run:() => {
+      D.PROJECTS.splice(i, 0, p);
+      if (srow) D.SCHEDULE.splice(si, 0, srow);
+      kept.forEach(t => t.project = p.id);
+      select('chat', key('p', p.id));
+      toast('Restored ' + p.name);
+    }
+  });
+}
+
+/* What "it runs by itself" looks like when you do not want to wait for Monday.
+   The result lands in the store like every other one — timestamped, downloadable,
+   shareable — because a project that runs produces results, not notifications. */
+function runProject(p){
+  const now = Date.now();
+  const reads = (p.kbs || []).concat(p.sources || []);
+  const n = allResults().filter(a => a.from === p.name).length + 1;
+  const md = [
+    p.run && p.run.ask ? '**' + p.run.ask + '**' : '**Scheduled run of ' + p.name + '.**',
+    '',
+    'Ran ' + stampFull(now) + (p.run ? ' · ' + p.run.every.toLowerCase() : ' · on request') + '.',
+    '',
+    '- **Read** — ' + (reads.length ? reads.join(', ') : 'no knowledge attached'),
+    '- **Answered by** — ' + (p.assistant || 'no assistant bound'),
+    '- **In scope** — ' + plural(D.THREADS.filter(t => t.project === p.id).length, 'thread'),
+    '',
+    'The run itself is simulated here, as every answer in this prototype is: a real one ' +
+    'would leave the assistant\'s output in this pane.'
+  ].join('\n');
+  fileResult({ id:'r-' + p.id + '-' + n, title:p.name + ' run ' + n, from:p.name,
+    shape:'doc', size:plural(4, 'line'), md:md });
+  p.when = 'now';
+  const row = p.run && p.run.sched ? D.SCHEDULE.filter(s => s.id === p.run.sched)[0] : null;
+  if (row){ row.state = 'ok'; row.last = '0:12'; }
+  render();
+}
+
+/* ------------------------------------------------------------ one project
+   Two projects can be different kinds of thing, so the view leads with what
+   this one actually has: what it produces on its own, if anything, then the
+   threads in it, then what it reads, then what it has produced. A project with
+   none of that set says so plainly instead of showing four empty sections. */
 function projectView(body, p){
   const pad = el('div','pane__pad');
-  pad.append(pageHead(p.name, p.desc));
   const threads = D.THREADS.filter(t => t.project === p.id);
+  const reads = (p.kbs || []).concat(p.sources || []);
+  const mine = allResults().filter(a => a.from === p.name);
+
+  const head = pageHead(p.name, p.desc,
+    '<span class="badge">' + ic(p.shared ? 'users' : 'lock', 12) +
+    '<span>' + esc(p.shared ? 'Shared' : 'Personal') + '</span></span>');
+  head.classList.add('pagehead--tight');
+  pad.append(head);
+
+  const acts = el('div','pane__acts');
+  const mk = (label, icon, cls, run) => {
+    const b = el('button','btn btn--' + cls + ' btn--sm',
+      '<span style="display:flex">' + ic(icon, 13) + '</span>' + esc(label));
+    b.type = 'button';
+    b.onclick = run;
+    return b;
+  };
+  acts.append(mk('New thread here', 'plus', 'primary', () => newThread(p.id)));
+  if (p.run) acts.append(mk('Run now', 'play', 'secondary', () => runProject(p)));
+  acts.append(mk('Settings', 'gear', 'ghost', () => openProject(p)));
+  pad.append(acts);
+
+  /* A folder, and nothing has been switched on yet. Said once, with the way out
+     of it — not as four zeroed stats above four empty sections. */
+  if (!threads.length && !reads.length && !p.assistant && !p.run){
+    pad.append(emptyState('folder','A folder, for now',
+      'Threads you start here stay together. Attach knowledge, bind an assistant, or ' +
+      'have it produce a result on a schedule — all of that is in Settings.'));
+    body.append(pad);
+    return;
+  }
+
+  /* Four, not five: what the project *is*. "Updated" would be a fifth that
+     wraps the row and says less than the results list below it. */
   pad.append(statGrid([
     ['Threads', String(threads.length)],
-    ['Assistant', p.assistant],
-    ['Sources', String(p.sources.length)],
-    ['Updated', p.when]
-  ], ['Assistant','Updated']));
+    ['Assistant', p.assistant || 'None'],
+    ['Knowledge', String(reads.length)],
+    ['Runs', p.run ? CADENCE_ADJ[p.run.every] : 'On request']
+  ], ['Assistant','Runs']));
   pad.lastChild.style.marginBottom = 'var(--s-8)';
+
+  if (p.run){
+    const sec = el('section','section');
+    sec.append(sectionHead('Runs by itself',
+      infoTip('Nebulas runs this without being asked and files each result in the results column.')));
+    const r = el('div','detrow');
+    r.innerHTML =
+      '<span class="detrow__ico">' + ic('clock',14) + '</span>' +
+      '<span class="detrow__nm">' + esc(p.run.every) + '</span>' +
+      '<span class="detrow__meta">' + esc(runLine(p.run)) + '</span>';
+    sec.append(r);
+    if (p.run.ask) sec.append(helpNote('Produces: ' + p.run.ask));
+    pad.append(sec);
+  }
 
   const sec = el('section','section');
   sec.append(sectionHead('Threads'));
   if (!threads.length){
-    sec.append(emptyState('chat','No threads in this project','Threads you start from here are scoped to the project\'s sources and assistant.'));
+    sec.append(emptyState('chat','No threads in this project',
+      'Threads you start from here are scoped to the project\'s knowledge and assistant.'));
   } else {
-    threads.forEach(t => {
-      const r = listRow({ title:t.title, meta:t.when, onClick:() => select('chat', t.id) });
-      sec.append(r);
-    });
+    threads.forEach(t => sec.append(listRow({
+      title:t.title, meta:t.when, onClick:() => select('chat', t.id)
+    })));
   }
   pad.append(sec);
 
-  pad.append(tableSection('Sources',
-    ['Source','Type','Rows','Updated'],
-    p.sources.map(n => {
-      const d = D.DATASETS.filter(x => x.name === n)[0];
-      return d ? [
-        '<td style="font-family:var(--mono);color:var(--text)">' + esc(d.name) + '</td>',
-        '<td>' + esc(d.source) + '</td>',
-        '<td class="num">' + esc(d.rows) + '</td>',
-        '<td>' + esc(d.updated) + '</td>'
-      ] : ['<td>' + esc(n) + '</td>','<td>—</td>','<td class="num">—</td>','<td>—</td>'];
+  if (reads.length){
+    const know = el('section','section');
+    know.append(sectionHead('Knowledge'));
+    (p.kbs || []).forEach(nm => {
+      const k = D.KBS.filter(x => x.name === nm)[0];
+      const r = el('div','detrow');
+      r.innerHTML =
+        '<span class="detrow__ico">' + ic('library',14) + '</span>' +
+        '<span class="detrow__nm">' + esc(nm) + '</span>' +
+        '<span class="detrow__meta">' + esc(k ? k.docs + ' docs · ' + k.updated : 'base') + '</span>';
+      know.append(r);
+    });
+    (p.sources || []).forEach(nm => {
+      const dsx = D.DATASETS.filter(x => x.name === nm)[0];
+      const r = el('div','detrow');
+      r.innerHTML =
+        '<span class="detrow__ico">' + ic('data',14) + '</span>' +
+        '<span class="detrow__nm t-mono">' + esc(nm) + '</span>' +
+        '<span class="detrow__meta">' + esc(dsx ? dsx.source + ' · ' + dsx.rows + ' rows' : 'source') + '</span>';
+      know.append(r);
+    });
+    pad.append(know);
+  }
+
+  if (mine.length){
+    const res = el('section','section');
+    res.append(sectionHead('Results from this project'));
+    mine.forEach(a => res.append(listRow({
+      lead:'<span class="row__icon">' + ic(artGlyph(a),13) + '</span>',
+      title:a.title, meta:stampShort(a.at), sub:artType(a) + ' · ' + a.size,
+      onClick:() => openArtifact(a.id)
     })));
+    pad.append(res);
+  }
   body.append(pad);
 }
 
@@ -4311,10 +4708,22 @@ function select(section, itemId){
   render();
 }
 
-function newThread(){
-  const t = { id:'n' + (++newThreadN), title:'New chat', when:'now', group:'Today', project:null, msgs:[] };
+/* Started from a project, a thread belongs to it — that is what a project is
+   for. Called straight from an onClick elsewhere, so the argument is checked
+   rather than trusted: an event object is not a project id. */
+function newThread(projectId){
+  const pid = typeof projectId === 'string' ? projectId : null;
+  const t = { id:'n' + (++newThreadN), title:'New chat', when:'now', group:'Today', project:pid, msgs:[] };
   D.THREADS.unshift(t);
+  /* The project's assistant answers in the project, unless the thread is later
+     bound to another one. */
+  const p = pid ? find(D.PROJECTS, pid) : null;
+  if (p && p.assistant){
+    const a = D.ASSISTANTS.filter(x => x.name === p.assistant)[0];
+    if (a) state.assistant = a.id;
+  }
   select('chat', t.id);
+  syncAssistantChip();
   $('#composerInput').focus();
 }
 
@@ -4720,7 +5129,8 @@ function palClose(){
 }
 
 const COMMANDS = [
-  { g:'Actions', nm:'New chat', sub:'', run:newThread },
+  { g:'Actions', nm:'New chat', sub:'', run:() => newThread() },
+  { g:'Actions', nm:'New project', sub:'', run:() => openProject(null) },
   { g:'Actions', nm:'Toggle theme', sub:'⌘J', run:() => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark') },
   { g:'Actions', nm:'Toggle sidebar', sub:'⌘\\', run:() => setPanel('list') },
   { g:'Actions', nm:'Toggle results column', sub:'⌘.', run:() => setPanel('art') },
@@ -4881,6 +5291,10 @@ function boot(){
   $('#shareClose').onclick = closeShare;
   $('#shareScrim').addEventListener('mousedown', e => { if (e.target === $('#shareScrim')) closeShare(); });
 
+  /* project dialog */
+  $('#projClose').onclick = closeProject;
+  $('#projScrim').addEventListener('mousedown', e => { if (e.target === $('#projScrim')) closeProject(); });
+
   /* status bar */
   $('#stThemeBtn').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   $('#stDensityBtn').onclick = () => {
@@ -4908,6 +5322,8 @@ function boot(){
     } else if (e.key === 'Escape' && $('#shareScrim').dataset.open === 'true'){
       /* Opened last, so it takes Escape first. */
       closeShare();
+    } else if (e.key === 'Escape' && $('#projScrim').dataset.open === 'true'){
+      closeProject();
     } else if (e.key === 'Escape' && $('#scrim').dataset.open === 'true'){
       palClose();
     } else if (e.key === 'Escape' && state.app){

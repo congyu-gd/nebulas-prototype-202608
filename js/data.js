@@ -272,14 +272,36 @@ const THREADS = [
 
 /* --------------------------------------------------------------- projects
    A project scopes threads, sources and an assistant. It is the unit people
-   actually organise work into, which is why it sits above the thread list. */
+   actually organise work into, which is why it sits above the thread list.
+
+   Every field except `name` and `icon` is optional, and that is the point: a
+   project with none of them filled in is a folder, and the same project with
+   `run` set is a small application that produces a result on its own. What it
+   is depends on what its owner switched on — see openProject in app.js.
+
+     icon    the glyph on its sidebar row, chosen from PROJ_ICONS
+     shared  false = personal; true = readable by everyone in the workspace
+     kbs     knowledge bases it draws on, by name
+     sources datasets it draws on, by name
+     run     null, or { every, ask, sched } — the schedule that makes it an app
+             (`sched` points at the SCHEDULE row so the two cannot drift) */
 const PROJECTS = [
-  { id:'p1', name:'Q3 close', desc:'Everything feeding the Q3 revenue close and the Q4 forecast handed to the board.',
-    assistant:'Revenue analyst', sources:['q3_ledger','renewals_export'], when:'2m' },
-  { id:'p2', name:'Pipeline health', desc:'Ingestion reliability work — backpressure, adapter budgets, the ADR-014 follow-through.',
-    assistant:'Code reviewer', sources:['support_tickets'], when:'1h' },
-  { id:'p3', name:'Churn program', desc:'Enterprise retention: signals, the account watchlist, and what the CRM knows before usage does.',
-    assistant:'Revenue analyst', sources:['accounts_health','support_tickets'], when:'1d' }
+  { id:'p1', name:'Q3 close', icon:'chart', shared:true,
+    desc:'Everything feeding the Q3 revenue close and the Q4 forecast handed to the board.',
+    assistant:'Revenue analyst', kbs:['Finance corpus'], sources:['q3_ledger','renewals_export'],
+    run:{ every:'Every week', sched:'sc6',
+          ask:'Rebuild the forecast bridge and flag every line that moved more than 5% against plan.' },
+    when:'2m' },
+  { id:'p2', name:'Pipeline health', icon:'code', shared:true,
+    desc:'Ingestion reliability work — backpressure, adapter budgets, the ADR-014 follow-through.',
+    assistant:'Code reviewer', kbs:['Engineering docs'], sources:['support_tickets'],
+    run:null, when:'1h' },
+  { id:'p3', name:'Churn program', icon:'users', shared:false,
+    desc:'Enterprise retention: signals, the account watchlist, and what the CRM knows before usage does.',
+    assistant:'Revenue analyst', kbs:['Support corpus'], sources:['accounts_health','support_tickets'],
+    run:{ every:'Every day', sched:'sc3',
+          ask:'Refresh the watchlist and name the accounts whose churn signal moved since yesterday.' },
+    when:'1d' }
 ];
 
 /* ------------------------------------------------------------- assistants

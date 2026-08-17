@@ -263,6 +263,29 @@
   </div>
 </div>
 
+<!-- ======================================================= make a project
+     The same dialog creates one and edits one, because the answers are the
+     same answers and none of them is final. Only the name is required: leave
+     the rest and the project is a folder; switch on a schedule and it becomes
+     something that produces a result on its own. Rendered by renderProject.
+-->
+<div class="scrim" id="projScrim" data-open="false">
+  <div class="dialog dialog--tall" role="dialog" aria-modal="true" aria-labelledby="projTitle">
+    <header class="dialog__head">
+      <span class="dialog__ico" id="projIco" aria-hidden="true"></span>
+      <span class="dialog__id">
+        <span class="dialog__title" id="projTitle">New project</span>
+        <span class="dialog__sub" id="projSub"></span>
+      </span>
+      <button class="iconbtn iconbtn--sm" id="projClose" title="Close (esc)" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="dialog__body" id="projBody"></div>
+    <footer class="dialog__foot" id="projFoot"></footer>
+  </div>
+</div>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="js/data.js"></script>
