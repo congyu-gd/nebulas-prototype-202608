@@ -4130,7 +4130,7 @@ function closeMenu(){
   document.removeEventListener('mousedown', menuOutside, true);
   document.removeEventListener('keydown', menuKey, true);
 }
-function menuOutside(e){ if (!e.target.closest('.menu')) closeMenu(); }
+function menuOutside(e){ if (!e.target.closest('.popmenu')) closeMenu(); }
 function menuKey(e){
   if (e.key === 'Escape'){
     /* Taken here so Escape closes the menu and not the app panel behind it. */
@@ -4141,13 +4141,13 @@ function menuKey(e){
 }
 function openMenu(anchor, items){
   closeMenu();
-  const m = el('div','menu');
+  const m = el('div','popmenu');
   m.setAttribute('role','menu');
   items.forEach(it => {
-    const b = el('button','menu__item',
-      '<span class="menu__main"><span class="menu__nm">' + esc(it.nm) + '</span>' +
-      (it.sub ? '<span class="menu__sub">' + esc(it.sub) + '</span>' : '') + '</span>' +
-      (it.meta ? '<span class="menu__meta">' + esc(it.meta) + '</span>' : ''));
+    const b = el('button','popmenu__item',
+      '<span class="popmenu__main"><span class="popmenu__nm">' + esc(it.nm) + '</span>' +
+      (it.sub ? '<span class="popmenu__sub">' + esc(it.sub) + '</span>' : '') + '</span>' +
+      (it.meta ? '<span class="popmenu__meta">' + esc(it.meta) + '</span>' : ''));
     b.type = 'button';
     b.setAttribute('role','menuitem');
     b.onclick = () => { closeMenu(); it.run(); };

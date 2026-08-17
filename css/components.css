@@ -1046,11 +1046,17 @@ button.chip--plain:hover{ background:var(--raised) }
 .linkrow .input{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-3) }
 .linkrow .btn{ flex:none }
 
-/* ================================================================== menu
+/* ============================================================== popmenu
    A short list of choices anchored to the control that opened it. Fixed
    position, because the panes it opens from clip their own overflow — and a
-   menu that has to fit inside a 380px column is a menu with two words a row. */
-.menu{
+   menu that has to fit inside a 380px column is a menu with two words a row.
+   The sibling of .pop above, which anchors to its control instead.
+
+   Named popmenu, not menu: this file is shared, and `menu` is the cloud page's
+   left column (css/install.css). A component here may not take a name a page
+   shell already uses — it would inherit these floating, invisible-until-open
+   properties and vanish. */
+.popmenu{
   position:fixed; z-index:90;
   min-width:240px; max-width:min(320px,92vw);
   padding:var(--s-1);
@@ -1061,23 +1067,23 @@ button.chip--plain:hover{ background:var(--raised) }
   opacity:0; translate:0 -4px;
   transition:opacity var(--fast) var(--ease), translate var(--fast) var(--ease);
 }
-.menu[data-open="true"]{ opacity:1; translate:0 0 }
-.menu__item{
+.popmenu[data-open="true"]{ opacity:1; translate:0 0 }
+.popmenu__item{
   display:flex; align-items:center; gap:var(--s-3);
   width:100%; text-align:left;
   padding:var(--s-2);
   border-radius:var(--r-md);
   transition:background var(--fast) var(--ease);
 }
-.menu__item:hover{ background:var(--raised) }
-.menu__main{ flex:1; min-width:0 }
-.menu__nm{ display:block; font-size:var(--t-12); color:var(--text) }
-.menu__sub{
+.popmenu__item:hover{ background:var(--raised) }
+.popmenu__main{ flex:1; min-width:0 }
+.popmenu__nm{ display:block; font-size:var(--t-12); color:var(--text) }
+.popmenu__sub{
   display:block;
   font-size:var(--t-11); color:var(--text-4);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.menu__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.popmenu__meta{ flex:none; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
 
 /* ============================================================ live widget
    Something in an answer you can act on: a form, a questionnaire, a chart to

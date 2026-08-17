@@ -27,6 +27,16 @@ js/install.js        the initialisation dialog, menu and configuration surface
 `nebulas-cloud.html` shares `tokens.css`, `base.css` and `components.css` with
 the workspace and nothing else — no shared script, no shared layout.
 
+Which makes the class names in `components.css` a namespace two pages live in,
+and taking a name a page shell already uses breaks that page silently. It has
+happened once: a `.menu` popover added for the results column landed on the
+cloud page's `<aside class="menu">`, whose own rules in `install.css` could not
+override properties they never declare — the left column inherited
+`position:fixed` and `opacity:0` and disappeared, taking the grid with it. The
+popover is `.popmenu` now. A component that belongs to one page is named in
+that page's stylesheet; a component in `components.css` checks both pages
+first.
+
 Plain `<script src>`, not modules, so `file://` works with no server.
 Load order matters: `data.js` before `app.js`.
 
