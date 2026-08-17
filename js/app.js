@@ -183,7 +183,13 @@ const state = {
   lastApp:null,                /* reopened by the topbar toggle and ⌘] */
   /* True while the results column has been lent to an open app panel, so
      closing the app can hand it back. */
-  artYielded:false
+  artYielded:false,
+  /* The same loan, made by a project page — which has a panel of its own on the
+     left and a box on the right, and needs the width for both. `artBefore` is
+     what the reader had chosen before the loan, so leaving gives that back
+     rather than a guess. */
+  projLoan:false,
+  artBefore:null
 };
 let replyIx = 0, newThreadN = 0;
 /* Ids for things made in this session. Fixture ids are hand-written, so a
@@ -2329,140 +2335,232 @@ function runProject(p){
   ].join('\n');
   fileResult({ id:'r-' + p.id + '-' + n, title:p.name + ' run ' + n, from:p.name,
     shape:'doc', size:plural(4, 'line'), md:md });
+  /* The result opened the results column, so the project is no longer borrowing
+     it: leaving should not take back a column the reader has just been given. */
+  state.projLoan = false;
+  state.artBefore = null;
   p.when = 'now';
   const row = p.run && p.run.sched ? D.SCHEDULE.filter(s => s.id === p.run.sched)[0] : null;
   if (row){ row.state = 'ok'; row.last = '0:12'; }
   render();
 }
 
+/* One or two buttons under a block, as a row of their own: an action that acts
+   on the block above it belongs with it, not in a bar at the top of the page. */
+function rowActs(buttons){
+  const r = el('div','rowacts');
+  buttons.forEach(b => r.append(b));
+  return r;
+}
+
+/* ---------------------------------------------------- what to ask a project
+   Four questions this project in particular could be asked, in the order they
+   are worth offering: what it already produces on a schedule, then what its
+   assistant is good for, then the sources it can read. Nothing invented — the
+   examples are the assistant's own, the ones its record offers. */
+function projectPrompts(p){
+  const out = [];
+  if (p.run && p.run.ask) out.push(p.run.ask);
+  const a = p.assistant ? D.ASSISTANTS.filter(x => x.name === p.assistant)[0] : null;
+  if (a) asstPrompts(a).slice(0, 3).forEach(q => out.push(q));
+  const reads = (p.kbs || []).concat(p.sources || []);
+  if (reads.length && out.length < 4) out.push('What changed in ' + reads[0] + ' recently?');
+  if (!out.length) out.push(
+    'Summarise where this project stands.',
+    'What should I look at first?',
+    'Draft a short update on this for the team.');
+  return out.slice(0, 4);
+}
+/* A suggestion goes in the box rather than being sent. The point of putting it
+   there is that it can be edited first — the same rule the assistant overlay's
+   examples follow. */
+function askChip(text){
+  const b = el('button','exchip', esc(text));
+  b.type = 'button';
+  b.title = 'Put this in the box';
+  b.onclick = () => {
+    const i = $('#composerInput');
+    i.value = text;
+    autosize();
+    $('#sendBtn').disabled = state.busy;
+    i.focus();
+  };
+  return b;
+}
+
 /* ------------------------------------------------------------ one project
-   The name, its facts as one line, the two things you can do to it, and then
-   the box — because a project is somewhere a conversation starts more often
-   than it is something to read about. Under the hairline, what this project
-   actually has: what it produces on its own, if anything, then the threads in
-   it, then what it reads, then what it has produced. A project with none of
-   that set says so plainly instead of showing four empty sections. */
+   A project answers two different questions and one long page answered neither.
+   So: a panel on the left carrying what this project *is* — its name, the
+   description written for it, who can see it, then the assistant, the knowledge
+   and the workflow, then what has happened in it — and the rest of the pane for
+   the one thing the page is for, asking it something.
+
+   The panel takes the sidebar's own surface and hairline, because it is the same
+   kind of thing: a fixed column of what you are working inside. Read across, the
+   shell now goes rail → menu → this project → the conversation.
+
+   Every row in the panel is a door: the assistant opens its record, a base opens
+   in Knowledge, a thread opens, a result opens in the results column. A fact you
+   can act on is worth more than a fact you can read. */
 function projectView(body, p){
-  const pad = el('div','pane__pad');
   const threads = D.THREADS.filter(t => t.project === p.id);
   const reads = (p.kbs || []).concat(p.sources || []);
   const mine = allResults().filter(a => a.from === p.name);
 
-  const head = pageHead(p.name, p.desc,
-    '<span class="badge">' + ic(p.shared ? 'users' : 'lock', 12) +
-    '<span>' + esc(p.shared ? 'Shared' : 'Personal') + '</span></span>');
-  head.classList.add('pagehead--tight');
-  /* A written description says who wrote it, quietly — the line is derived from
-     the settings, so it changes when they do. */
-  if (p.descAuto && p.desc) $('.pagehead__desc', head).insertAdjacentHTML('beforeend',
-    ' ' + inlineTip('Written by Nebulas from this project\'s settings, and rewritten when they change.'));
+  const wrap = el('div','projwrap');
+  const panel = el('aside','projpanel');
+  const main = el('div','projmain');
+  wrap.append(panel, main);
+  body.append(wrap);
 
-  /* What four stat cards used to say, as one line under the name. A project's
-     numbers are small and known — one thread, one assistant, three sources —
-     and small known numbers do not need a card each. The sections below carry
-     the same facts in full, which is what a card was standing in for. */
-  const facts = [plural(threads.length, 'thread')];
-  if (p.assistant) facts.push(p.assistant);
-  if (reads.length) facts.push(plural(reads.length, 'source'));
-  if (p.run) facts.push('runs ' + CADENCE_ADJ[p.run.every].toLowerCase());
-  if (mine.length) facts.push(plural(mine.length, 'result'));
-  head.append(el('div','pagehead__meta', esc(facts.join(' · '))));
-  pad.append(head);
+  /* ------------------------------------------------------------- identity
+     Name, the description Nebulas wrote, and who can see it — the three facts
+     that are true of the project itself rather than of anything in it. */
+  const idb = el('div','projid');
+  idb.innerHTML =
+    '<div class="projid__top">' +
+      '<span class="projid__ico">' + ic(p.icon || 'folder', 16) + '</span>' +
+      '<h2 class="projid__name">' + esc(p.name) + '</h2>' +
+    '</div>' +
+    (p.desc ? '<p class="projid__desc">' + esc(p.desc) +
+      (p.descAuto ? ' ' + inlineTip('Written by Nebulas from this project\'s settings, ' +
+                                    'and rewritten when they change.') : '') + '</p>' : '');
+  /* "Shared" rather than "Shared with Gnomon Digital": the panel is 268px, the
+     tooltip has the room to name the audience, and the row is a control. */
+  const vis = el('button','projid__vis',
+    ic(p.shared ? 'users' : 'lock', 12) +
+    '<span>' + esc(p.shared ? 'Shared' : 'Personal') + '</span>');
+  vis.type = 'button';
+  vis.title = p.shared
+    ? 'Anyone in ' + D.ACCOUNT.org + ' can open it — click to change'
+    : 'Only you can open it — click to change';
+  vis.onclick = () => openProject(p);
+  const gear = el('button','iconbtn iconbtn--sm tip tip--below', ic('gear',14));
+  gear.type = 'button';
+  gear.setAttribute('data-tip','Project settings');
+  gear.setAttribute('aria-label','Project settings');
+  gear.onclick = () => openProject(p);
+  const row = el('div','projid__row');
+  row.append(vis, gear);
+  idb.append(row);
+  panel.append(idb);
 
-  const acts = el('div','pane__acts');
-  const mk = (label, icon, cls, run) => {
-    const b = el('button','btn btn--' + cls + ' btn--sm',
-      '<span style="display:flex">' + ic(icon, 13) + '</span>' + esc(label));
-    b.type = 'button';
-    b.onclick = run;
-    return b;
-  };
-  if (p.run) acts.append(mk('Run now', 'play', 'secondary', () => runProject(p)));
-  acts.append(mk('Settings', 'gear', 'ghost', () => openProject(p)));
-  pad.append(acts);
-
-  /* The way in. A project is where a conversation starts more often than it is
-     something to read about, so the box is the first thing under the name —
-     the real composer, borrowed, so what it can do here is what it can do
-     anywhere: attach a file, bind an assistant, route a model, ⌘↵. Sending
-     opens a thread in this project and puts the message in it (see the submit
-     handler in boot). A separate "New thread" button next to a box you can type
-     in was two doors into one room. */
-  const ask = el('div','pane__ask');
-  ask.append(inlineComposer('Ask anything in ' + p.name + ' — the thread stays in the project'));
-  pad.append(ask);
-
-  /* A folder, and nothing has been switched on yet. Said once, with the way out
-     of it — not as four zeroed stats above four empty sections. */
-  if (!threads.length && !reads.length && !p.assistant && !p.run){
-    pad.append(emptyState('folder','A folder, for now',
-      'Threads you start above stay together here. Attach knowledge, bind an assistant, or ' +
-      'have it produce a result on a schedule — all of that is in Settings.'));
-    body.append(pad);
-    return;
-  }
-
-  if (p.run){
-    const sec = el('section','section');
-    sec.append(sectionHead('Runs by itself',
-      infoTip('Nebulas runs this without being asked and files each result in the results column.')));
-    const r = el('div','detrow');
-    r.innerHTML =
-      '<span class="detrow__ico">' + ic('clock',14) + '</span>' +
-      '<span class="detrow__nm">' + esc(p.run.every) + '</span>' +
-      '<span class="detrow__meta">' + esc(runLine(p.run)) + '</span>';
-    sec.append(r);
-    if (p.run.ask) sec.append(helpNote('Produces: ' + p.run.ask));
-    pad.append(sec);
-  }
-
+  const asst = p.assistant ? D.ASSISTANTS.filter(x => x.name === p.assistant)[0] : null;
   const sec = el('section','section');
-  sec.append(sectionHead('Threads'));
-  if (!threads.length){
-    sec.append(emptyState('chat','No threads in this project',
-      'Threads you start from here are scoped to the project\'s knowledge and assistant.'));
+  sec.append(sectionHead('Assistant'));
+  sec.append(listRow({
+    lead:'<span class="row__icon">' + ic('agent',13) + '</span>',
+    title:p.assistant || 'None',
+    sub:asst ? asst.model : 'Answers come from the model alone',
+    onClick:asst ? () => openAssistant(asst) : () => openProject(p)
+  }));
+  panel.append(sec);
+
+  /* Two kinds of thing it may read, and the row says which: a base is documents,
+     a dataset is a table. */
+  const know = el('section','section');
+  know.append(sectionHead('Knowledge'));
+  (p.kbs || []).forEach(nm => {
+    const k = D.KBS.filter(x => x.name === nm)[0];
+    know.append(listRow({
+      lead:'<span class="row__icon">' + ic('library',13) + '</span>',
+      title:nm, sub:k ? k.docs + ' documents' : 'Knowledge base', meta:'docs',
+      onClick:k ? () => select('knowledge', key('kb', k.id)) : () => openProject(p)
+    }));
+  });
+  (p.sources || []).forEach(nm => {
+    const dsx = D.DATASETS.filter(x => x.name === nm)[0];
+    know.append(listRow({
+      lead:'<span class="row__icon">' + ic('data',13) + '</span>',
+      title:nm, sub:dsx ? dsx.source + ' · ' + dsx.rows + ' rows' : 'Source', meta:'table',
+      onClick:dsx ? () => select('knowledge', key('ds', dsx.id)) : () => openProject(p)
+    }));
+  });
+  if (!reads.length) know.append(listRow({
+    lead:'<span class="row__icon">' + ic('library',13) + '</span>',
+    title:'None attached', sub:'Answers here read nothing of yours',
+    onClick:() => openProject(p)
+  }));
+  panel.append(know);
+
+  /* ----------------------------------------------------------- the workflow
+     What the project does without being asked: when it runs, and the script it
+     runs — which is a sentence, because that is what the model is given. The
+     button is there because a weekly project is hard to believe in on a
+     Tuesday. */
+  const auto = el('section','section');
+  auto.append(sectionHead('Workflow',
+    infoTip('Nebulas runs this without being asked and files each result in the results column.')));
+  if (p.run){
+    auto.append(listRow({
+      lead:'<span class="row__icon">' + ic('clock',13) + '</span>',
+      title:p.run.every, sub:runLine(p.run),
+      onClick:() => openProject(p)
+    }));
+    if (p.run.ask){
+      const script = el('pre','projscript');
+      script.textContent = p.run.ask;
+      auto.append(script);
+    }
+    const now = el('button','btn btn--secondary btn--sm',
+      '<span style="display:flex">' + ic('play',13) + '</span>Run now');
+    now.type = 'button';
+    now.onclick = () => runProject(p);
+    auto.append(rowActs([now]));
   } else {
-    threads.forEach(t => sec.append(listRow({
+    auto.append(helpNote('None. This project produces results only when somebody asks it ' +
+                         'something.'));
+    const set = el('button','btn btn--ghost btn--sm',
+      '<span style="display:flex">' + ic('clock',13) + '</span>Set up a schedule');
+    set.type = 'button';
+    set.onclick = () => openProject(p);
+    auto.append(rowActs([set]));
+  }
+  panel.append(auto);
+
+  const count = n => '<span class="t-mono" style="color:var(--text-4)">' + n + '</span>';
+  const hist = el('section','section');
+  hist.append(sectionHead('Threads', threads.length ? count(threads.length) : ''));
+  if (!threads.length){
+    hist.append(helpNote('None yet. The first message you send starts one.'));
+  } else {
+    threads.forEach(t => hist.append(listRow({
       title:t.title, meta:t.when, onClick:() => select('chat', t.id)
     })));
   }
-  pad.append(sec);
-
-  if (reads.length){
-    const know = el('section','section');
-    know.append(sectionHead('Knowledge'));
-    (p.kbs || []).forEach(nm => {
-      const k = D.KBS.filter(x => x.name === nm)[0];
-      const r = el('div','detrow');
-      r.innerHTML =
-        '<span class="detrow__ico">' + ic('library',14) + '</span>' +
-        '<span class="detrow__nm">' + esc(nm) + '</span>' +
-        '<span class="detrow__meta">' + esc(k ? k.docs + ' docs · ' + k.updated : 'base') + '</span>';
-      know.append(r);
-    });
-    (p.sources || []).forEach(nm => {
-      const dsx = D.DATASETS.filter(x => x.name === nm)[0];
-      const r = el('div','detrow');
-      r.innerHTML =
-        '<span class="detrow__ico">' + ic('data',14) + '</span>' +
-        '<span class="detrow__nm t-mono">' + esc(nm) + '</span>' +
-        '<span class="detrow__meta">' + esc(dsx ? dsx.source + ' · ' + dsx.rows + ' rows' : 'source') + '</span>';
-      know.append(r);
-    });
-    pad.append(know);
-  }
+  panel.append(hist);
 
   if (mine.length){
     const res = el('section','section');
-    res.append(sectionHead('Results from this project'));
+    res.append(sectionHead('Results', count(mine.length)));
     mine.forEach(a => res.append(listRow({
       lead:'<span class="row__icon">' + ic(artGlyph(a),13) + '</span>',
       title:a.title, meta:stampShort(a.at), sub:artType(a) + ' · ' + a.size,
       onClick:() => openArtifact(a.id)
     })));
-    pad.append(res);
+    panel.append(res);
   }
-  body.append(pad);
+
+  /* ------------------------------------------------------------- the ask
+     The real composer, borrowed, so what it can do here is what it can do
+     anywhere: attach a file, bind an assistant, route a model, ⌘↵. Sending
+     opens a thread in this project and puts the message in it — see the submit
+     handler in boot. */
+  const askSec = el('section','section');
+  askSec.append(sectionHead('Ask',
+    infoTip('Anything you send here opens a thread inside this project.')));
+  const box = el('div','pane__ask');
+  box.append(inlineComposer('Ask anything in ' + p.name));
+  askSec.append(box);
+
+  /* The suggestions belong to the box, so they sit inside its section rather
+     than under a heading of their own. */
+  askSec.append(el('div','askchips__lead','Or start from one of these'));
+  const chips = el('div','askchips');
+  projectPrompts(p).forEach(q => chips.append(askChip(q)));
+  askSec.append(chips);
+  if (p.assistant) askSec.append(helpNote(p.assistant + ' answers here unless a thread picks another.'));
+  main.append(askSec);
 }
 
 /* ====================================================== knowledge detail
@@ -4851,7 +4949,29 @@ function select(section, itemId){
     state.build.open = kindOf(itemId);
     state.build.last[kindOf(itemId)] = idOf(itemId);
   }
+  syncProjectLoan();
   render();
+}
+
+/* A project page is already two columns — its own panel and its own box — so
+   the results column is the third one too many, and it is the one with a way
+   back from the content itself (⌘. or a filed result). Arriving borrows it;
+   leaving returns exactly what was borrowed. The same loan an open app makes. */
+function syncProjectLoan(){
+  const onProject = state.section === 'chat' && kindOf(state.item.chat) === 'p';
+  if (onProject && !state.projLoan){
+    if (isOpen('art')){
+      state.projLoan = true;
+      state.artBefore = state.pref.art;
+      state.pref.art = false;
+      applyPanels();
+    }
+  } else if (!onProject && state.projLoan){
+    state.projLoan = false;
+    state.pref.art = state.artBefore;
+    state.artBefore = null;
+    applyPanels();
+  }
 }
 
 /* A thread's own words, cut to a row's worth. Its first message is the only
@@ -5359,9 +5479,9 @@ function applyPanels(){
 }
 function setPanel(kind, value){
   state.pref[kind] = value === undefined ? !isOpen(kind) : value;
-  /* Asking for the results column yourself ends the loan: closing the app
-     should not then undo what you just asked for. */
-  if (kind === 'art') state.artYielded = false;
+  /* Asking for the results column yourself ends either loan: closing the app,
+     or leaving the project, should not undo what you just asked for. */
+  if (kind === 'art'){ state.artYielded = false; state.projLoan = false; }
   applyPanels();
 }
 

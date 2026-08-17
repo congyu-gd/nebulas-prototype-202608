@@ -229,12 +229,78 @@
 /* The page's own numbers, as a line rather than a row of cards: four cards for
    four small known values is a dashboard where a sentence would do. */
 .pagehead__meta{ margin-top:var(--s-2); font-size:var(--t-11); color:var(--text-4) }
-/* What can be done to the thing the page is about, under its name rather than
-   beside it: three buttons in the header row would compete with the title for
-   the first read, and wrap first in a 560px conversation column. The header
-   above them tightens so the two read as one block. */
-.pagehead--tight{ margin-bottom:var(--s-4) }
-.pane__acts{ display:flex; flex-wrap:wrap; gap:var(--s-2); margin-bottom:var(--s-6) }
+/* An action that acts on the block above it belongs under that block, not in a
+   bar at the top of the page competing with the title. */
+.rowacts{ display:flex; flex-wrap:wrap; gap:var(--s-2); margin-top:var(--s-3) }
+
+/* -------------------------------------------------------- a project's panel
+   What the project *is*, as a column of the shell rather than a block of the
+   page: the sidebar's own surface and hairline, because it is the same kind of
+   thing — a fixed column naming what you are working inside. Read across, the
+   shell goes rail → menu → this project → the conversation.
+
+   It does not wrap under the content: a panel that becomes a full-width band is
+   no longer a panel. It shrinks instead, and the composer's toolbar wraps if the
+   remainder gets tight. */
+.projwrap{ display:flex; align-items:stretch; min-height:100% }
+.projpanel{
+  flex:0 1 268px; min-width:0;
+  padding:var(--s-5) var(--s-4);
+  background:var(--surface);
+  border-right:var(--border) solid var(--line);
+}
+.projmain{ flex:1 1 auto; min-width:0; padding:var(--s-6) }
+.projwrap .section{ margin-bottom:var(--s-6) }
+.projwrap .section:last-child{ margin-bottom:0 }
+/* Rows in the panel sit flush with its padding, the way the sidebar's do. */
+.projpanel .row{ padding-left:var(--s-2); padding-right:var(--s-2) }
+
+/* The project, named. The one place its own glyph is shown at size, since it is
+   the glyph its owner picked to recognise it by. */
+.projid{ margin-bottom:var(--s-6) }
+.projid__top{ display:flex; align-items:center; gap:var(--s-2); margin-bottom:var(--s-2) }
+.projid__ico{ display:flex; flex:none; color:var(--text-3) }
+.projid__name{
+  margin:0; min-width:0;
+  font-size:var(--t-15); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
+}
+.projid__desc{ margin:0 0 var(--s-3); font-size:var(--t-12); line-height:1.55; color:var(--text-3) }
+.projid__row{ display:flex; align-items:center; gap:var(--s-2) }
+/* Who can see it, as the control that changes it. */
+.projid__vis{
+  display:inline-flex; align-items:center; gap:5px;
+  height:var(--ctl-xs); padding:0 var(--s-2);
+  border-radius:var(--r-sm);
+  background:var(--raised); color:var(--text-3);
+  font-size:var(--t-11); font-weight:var(--w-medium);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.projid__vis:hover{ background:var(--raised-2); color:var(--text) }
+.projid__row .iconbtn{ margin-left:auto; flex:none }
+
+/* The workflow's script: what the model is given on every run. A sentence, so
+   it wraps — but monospace, because it is a stored instruction and not prose
+   somebody is reading for pleasure. */
+.projscript{
+  margin:var(--s-2) 0 0;
+  padding:var(--s-2) var(--s-3);
+  border-radius:var(--r-md);
+  background:var(--bg);
+  border:var(--border) solid var(--line);
+  font-family:var(--mono); font-size:var(--t-11); line-height:1.5;
+  color:var(--text-3);
+  white-space:pre-wrap;
+}
+/* A question a click puts in the box. Stacked rather than wrapped into a cloud:
+   four of them are a list to read down, not a set of tags. The lead-in is a
+   caption rather than a second eyebrow — they belong to the box above them. */
+.askchips__lead{ margin:var(--s-5) 0 var(--s-2); font-size:var(--t-11); color:var(--text-4) }
+.askchips{
+  display:flex; flex-direction:column; align-items:flex-start; gap:var(--s-2);
+  max-width:var(--ask-max);
+}
+
 /* The composer, borrowed into a page. The wrapper carries the spacing so the
    borrowed node itself goes back unchanged.
 
@@ -242,14 +308,12 @@
    for, so it is narrower than the reading column, left-aligned with everything
    else, flat instead of raised, and it takes a grey focus rather than the
    accent — the accent means "this is the surface you are working in", which on
-   a project page is the page. The hairline is there because a box you type into
-   sitting a paragraph away from a list reads as a search field for that list. */
-.pane__ask{
-  padding-bottom:var(--s-6);
-  border-bottom:var(--border) solid var(--line);
-  margin-bottom:var(--s-7);
-}
+   a project page is the page. */
 .pane__ask .composer{ max-width:var(--ask-max); margin:0; box-shadow:none }
+/* ⌘↵ is a hint, not a control, and the 28px it costs is the difference between a
+   toolbar on one line and a toolbar on two once a reader reopens the results
+   column beside the panel. The shortcut still works. */
+.pane__ask .kbd{ display:none }
 .pane__ask .composer:focus-within{
   border-color:var(--text-4);
   box-shadow:0 0 0 3px var(--raised-2);
@@ -561,7 +625,7 @@
 }
 .composer__input::placeholder{ color:var(--text-4) }
 .composer__bar{
-  display:flex; align-items:center; gap:var(--s-1);
+  display:flex; align-items:center; gap:var(--s-1); flex-wrap:wrap;
   padding:0 var(--s-2) var(--s-2);
 }
 .composer__spacer{ flex:1 }

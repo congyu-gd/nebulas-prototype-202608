@@ -71,10 +71,17 @@ which — a clock if it runs by itself, a `users` mark if the workspace can see 
 Each setting explains itself the first time and the hints retire once you have
 used the dialog; the `?` in its header brings them back.
 
-Its page opens with the composer itself — the real one, borrowed into the page, so
-attach, the assistant picker, model routing and `⌘↵` work as they do anywhere.
-Typing there opens a thread inside the project, binds the project's assistant, and
-names the thread from what you asked.
+Its page is a **panel and a box**. On the left, a column with the sidebar's own
+surface — the project's name, the description written for it, who can see it, then
+its assistant, its knowledge (documents and tables), its workflow with the script
+it runs and a `Run now`, then its threads and results. Every row is a door: the
+assistant opens its record, a base opens in Knowledge, a result opens in the
+results column. On the right, the composer itself — borrowed, so attach, the
+assistant picker, model routing and `⌘↵` work as they do anywhere — with four
+questions worth asking this project in particular. Typing there opens a thread
+inside the project, binds the project's assistant, and names the thread from what
+you asked. The results column steps aside while you are on a project page and
+comes back when you leave.
 
 In **Chat → Assistants**, clicking an assistant opens its whole record in an
 overlay — model and temperature, capabilities with example questions, the systems

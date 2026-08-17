@@ -383,7 +383,9 @@ should land next to the thing it affects.
 | Help text under every setting, forever | hints with an `×` that retire after the dialog's first use, and a `?` in the header that brings them back |
 | `New thread here`, as a button | the composer itself, borrowed into the project page. A button beside a box you can type in was two doors into one room |
 | A thread called "New chat" for as long as it lives | named from its first message, cut to a row's width. A project's thread list was otherwise three rows of the same word |
-| Four stat cards on the project page | one line under the name — `2 threads · Revenue analyst · 3 sources · runs daily`. Four cards for four small known numbers is a dashboard where a sentence would do, and the sections below already carry the same facts in full |
+| Four stat cards on the project page | ~~one line under the name~~ → the panel itself. Four cards for four small known numbers was a dashboard where a sentence would do; then the sentence became a column that says the same things and opens each one |
+| The project's facts as page content | a panel with the sidebar's surface and hairline. It is a column of the shell, not a block of the page, because it names what you are working inside |
+| The results column, open on a project page | closed on arrival, as a loan. Panel + box + results is three columns too many, and the results column is the one with a way back from the content |
 | Projects as an undifferentiated list of folders | a row that carries the glyph its owner picked, a clock if it runs by itself, and a `users` mark if the workspace can see it. Personal is the default, so personal is what goes unmarked |
 
 ## The knowledge detail is tabbed
@@ -488,22 +490,62 @@ project's `run` are kept as one fact in two places: saving the project writes th
 row, switching the schedule off deletes it, and Chat → Schedule never lists a run
 that no longer exists.
 
-**The box is the way in.** A project is somewhere a conversation starts more
-often than it is something to read about, so the composer sits directly under the
-name — and it is *the* composer, borrowed into the page the way the hero borrows
-it, not a second input that can do less. Attach a file, bind an assistant, route
-a model, `⌘↵`: what it can do there is what it can do anywhere, because it is the
-same node with the same listeners. Only its placeholder changes, and
+### A project page is a panel and a box
+
+A project answers two different questions, and one long page answered neither. So
+the page is split, and the split is not two columns of content — it is a **column
+of the shell and a page beside it**:
+
+```
+rail │ menu (chat list) │ this project │ ask it something
+```
+
+The panel on the left takes the sidebar's own surface and hairline, because it is
+the same kind of thing: a fixed column naming what you are working inside. It
+does not wrap under the content when the pane narrows — a panel that becomes a
+full-width band is no longer a panel — it shrinks, and the composer's toolbar
+wraps if the remainder gets tight.
+
+**What the panel says, in the order it says it.** The three facts that are true
+of the project itself — its **name** under the glyph its owner picked, the
+**description** written for it, and **who can see it**, as the control that
+changes it — then the three that decide what an answer will be: the
+**assistant**, the **knowledge** (a base is documents, a dataset is a table, and
+the row says which), and the **workflow**: when it runs, the script it runs, and
+`Run now`. Then what has happened: **threads**, then **results**.
+
+**Every row is a door.** The assistant opens its record, a base opens in
+Knowledge, a dataset opens beside it, a thread opens, a result opens in the
+results column, and anything the project has not got — no assistant, no
+knowledge, no workflow — opens the settings dialog at the place that would fix
+it. A fact you can act on is worth more than a fact you can read.
+
+**The results column closes when you arrive.** A project page already has a panel
+and a box; the results column is the third column too many, and it is the one
+with a way back from the content itself. So arriving borrows it — the same loan an
+open app makes — and leaving hands back exactly what was borrowed, including an
+explicit choice made before the loan. `⌘.` on a project page ends the loan, and so
+does a result filed by `Run now`: the reader has just been given the column, and
+leaving should not take it away.
+
+**The box is the way in.** The right-hand side is the one thing a project page is
+for: the composer, four questions worth asking this project in particular, and
+nothing else. It is *the* composer, borrowed into the page the way the hero
+borrows it, not a second input that can do less — attach a file, bind an
+assistant, route a model, `⌘↵`. Only its placeholder changes, and
 `detachComposer` hands that back along with the node.
 
-**Borrowed, it is dressed down.** In the thread the composer is the surface you
-are working in: full column width, raised on a shadow, accent border on focus. In
-a project page it is one part among several, so it is 540px rather than the full
-760, left-aligned with everything else, flat, and its focus ring is grey — the
-accent says *this is the thing you are using*, and on a project page that is the
-page. Under it, a hairline: a box you can type into sitting one paragraph above a
-list of threads reads as a search field for that list, and the rule says it is
-not.
+**Borrowed, it is dressed down.** In a thread the composer is the surface you are
+working in: full column width, raised on a shadow, accent border on focus. On a
+project page it is one part of the page, so it is 540px rather than 760,
+left-aligned with everything else, flat, and its focus ring is grey. The accent
+says *this is the thing you are using*, and on a project page that is the page.
+
+**The suggestions are the project's own.** What it produces on a schedule, then
+its assistant's own example questions, then a question about the first source it
+reads — and for a project with none of that, three generic openers. A click puts
+one in the box rather than sending it, because the point of putting it there is
+that it can be edited first.
 
 Sending from a project page opens a thread in the project and puts the message in
 it, which is the one thing the submit handler has to know: every other surface
