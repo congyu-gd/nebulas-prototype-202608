@@ -226,6 +226,9 @@
 .pagehead__title{ margin:0 0 var(--s-2) }
 .pagehead__desc{ font-size:var(--t-13); color:var(--text-3); max-width:64ch; margin:0 }
 .pagehead__row{ display:flex; align-items:flex-end; gap:var(--s-4); margin-bottom:var(--s-2) }
+/* The page's own numbers, as a line rather than a row of cards: four cards for
+   four small known values is a dashboard where a sentence would do. */
+.pagehead__meta{ margin-top:var(--s-2); font-size:var(--t-11); color:var(--text-4) }
 /* What can be done to the thing the page is about, under its name rather than
    beside it: three buttons in the header row would compete with the title for
    the first read, and wrap first in a 560px conversation column. The header
@@ -233,8 +236,27 @@
 .pagehead--tight{ margin-bottom:var(--s-4) }
 .pane__acts{ display:flex; flex-wrap:wrap; gap:var(--s-2); margin-bottom:var(--s-6) }
 /* The composer, borrowed into a page. The wrapper carries the spacing so the
-   borrowed node itself goes back unchanged. */
-.pane__ask{ margin-bottom:var(--s-7) }
+   borrowed node itself goes back unchanged.
+
+   In a page it is one part among several rather than the thing the screen is
+   for, so it is narrower than the reading column, left-aligned with everything
+   else, flat instead of raised, and it takes a grey focus rather than the
+   accent — the accent means "this is the surface you are working in", which on
+   a project page is the page. The hairline is there because a box you type into
+   sitting a paragraph away from a list reads as a search field for that list. */
+.pane__ask{
+  padding-bottom:var(--s-6);
+  border-bottom:var(--border) solid var(--line);
+  margin-bottom:var(--s-7);
+}
+.pane__ask .composer{ max-width:var(--ask-max); margin:0; box-shadow:none }
+.pane__ask .composer:focus-within{
+  border-color:var(--text-4);
+  box-shadow:0 0 0 3px var(--raised-2);
+}
+/* Left with the box it belongs to, not centred in a column the box no longer
+   fills. */
+.pane__ask .composer__hint{ max-width:var(--ask-max); text-align:left }
 
 .section{ margin-bottom:var(--s-8) }
 .section__head{

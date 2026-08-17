@@ -2336,10 +2336,12 @@ function runProject(p){
 }
 
 /* ------------------------------------------------------------ one project
-   Two projects can be different kinds of thing, so the view leads with what
-   this one actually has: what it produces on its own, if anything, then the
-   threads in it, then what it reads, then what it has produced. A project with
-   none of that set says so plainly instead of showing four empty sections. */
+   The name, its facts as one line, the two things you can do to it, and then
+   the box — because a project is somewhere a conversation starts more often
+   than it is something to read about. Under the hairline, what this project
+   actually has: what it produces on its own, if anything, then the threads in
+   it, then what it reads, then what it has produced. A project with none of
+   that set says so plainly instead of showing four empty sections. */
 function projectView(body, p){
   const pad = el('div','pane__pad');
   const threads = D.THREADS.filter(t => t.project === p.id);
@@ -2354,6 +2356,17 @@ function projectView(body, p){
      the settings, so it changes when they do. */
   if (p.descAuto && p.desc) $('.pagehead__desc', head).insertAdjacentHTML('beforeend',
     ' ' + inlineTip('Written by Nebulas from this project\'s settings, and rewritten when they change.'));
+
+  /* What four stat cards used to say, as one line under the name. A project's
+     numbers are small and known — one thread, one assistant, three sources —
+     and small known numbers do not need a card each. The sections below carry
+     the same facts in full, which is what a card was standing in for. */
+  const facts = [plural(threads.length, 'thread')];
+  if (p.assistant) facts.push(p.assistant);
+  if (reads.length) facts.push(plural(reads.length, 'source'));
+  if (p.run) facts.push('runs ' + CADENCE_ADJ[p.run.every].toLowerCase());
+  if (mine.length) facts.push(plural(mine.length, 'result'));
+  head.append(el('div','pagehead__meta', esc(facts.join(' · '))));
   pad.append(head);
 
   const acts = el('div','pane__acts');
@@ -2388,16 +2401,6 @@ function projectView(body, p){
     body.append(pad);
     return;
   }
-
-  /* Four, not five: what the project *is*. "Updated" would be a fifth that
-     wraps the row and says less than the results list below it. */
-  pad.append(statGrid([
-    ['Threads', String(threads.length)],
-    ['Assistant', p.assistant || 'None'],
-    ['Knowledge', String(reads.length)],
-    ['Runs', p.run ? CADENCE_ADJ[p.run.every] : 'On request']
-  ], ['Assistant','Runs']));
-  pad.lastChild.style.marginBottom = 'var(--s-8)';
 
   if (p.run){
     const sec = el('section','section');

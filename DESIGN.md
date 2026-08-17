@@ -383,6 +383,7 @@ should land next to the thing it affects.
 | Help text under every setting, forever | hints with an `×` that retire after the dialog's first use, and a `?` in the header that brings them back |
 | `New thread here`, as a button | the composer itself, borrowed into the project page. A button beside a box you can type in was two doors into one room |
 | A thread called "New chat" for as long as it lives | named from its first message, cut to a row's width. A project's thread list was otherwise three rows of the same word |
+| Four stat cards on the project page | one line under the name — `2 threads · Revenue analyst · 3 sources · runs daily`. Four cards for four small known numbers is a dashboard where a sentence would do, and the sections below already carry the same facts in full |
 | Projects as an undifferentiated list of folders | a row that carries the glyph its owner picked, a clock if it runs by itself, and a `users` mark if the workspace can see it. Personal is the default, so personal is what goes unmarked |
 
 ## The knowledge detail is tabbed
@@ -494,6 +495,15 @@ it, not a second input that can do less. Attach a file, bind an assistant, route
 a model, `⌘↵`: what it can do there is what it can do anywhere, because it is the
 same node with the same listeners. Only its placeholder changes, and
 `detachComposer` hands that back along with the node.
+
+**Borrowed, it is dressed down.** In the thread the composer is the surface you
+are working in: full column width, raised on a shadow, accent border on focus. In
+a project page it is one part among several, so it is 540px rather than the full
+760, left-aligned with everything else, flat, and its focus ring is grey — the
+accent says *this is the thing you are using*, and on a project page that is the
+page. Under it, a hairline: a box you can type into sitting one paragraph above a
+list of threads reads as a search field for that list, and the rule says it is
+not.
 
 Sending from a project page opens a thread in the project and puts the message in
 it, which is the one thing the submit handler has to know: every other surface

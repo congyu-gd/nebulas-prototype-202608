@@ -140,6 +140,10 @@
   --status-h:26px;
   --measure:760px;          /* reading column cap */
   --composer-max:760px;
+  /* The composer borrowed into a page (see .pane__ask): narrower than the
+     column it sits in, because there it is one part of the page and not the
+     whole surface. */
+  --ask-max:540px;
   --brand:28px;
   --app-tile:32px;
 }
