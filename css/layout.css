@@ -249,7 +249,16 @@
   background:var(--surface);
   border-right:var(--border) solid var(--line);
 }
-.projmain{ flex:1 1 auto; min-width:0; padding:var(--s-6) }
+/* The right-hand side is one column of one thing, so it is centred in whatever
+   room is left — horizontally by the flex box, vertically by `margin:auto 0`
+   rather than justify-content, which clips the top of anything taller than the
+   pane instead of scrolling it. */
+.projmain{
+  flex:1 1 auto; min-width:0;
+  display:flex; flex-direction:column; align-items:center;
+  padding:var(--s-6);
+}
+.projmain__inner{ width:100%; max-width:var(--ask-max); margin:auto 0 }
 .projwrap .section{ margin-bottom:var(--s-6) }
 .projwrap .section:last-child{ margin-bottom:0 }
 /* Rows in the panel sit flush with its padding, the way the sidebar's do. */

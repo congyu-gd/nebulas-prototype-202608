@@ -528,12 +528,32 @@ explicit choice made before the loan. `⌘.` on a project page ends the loan, an
 does a result filed by `Run now`: the reader has just been given the column, and
 leaving should not take it away.
 
-**The box is the way in.** The right-hand side is the one thing a project page is
-for: the composer, four questions worth asking this project in particular, and
-nothing else. It is *the* composer, borrowed into the page the way the hero
-borrows it, not a second input that can do less — attach a file, bind an
-assistant, route a model, `⌘↵`. Only its placeholder changes, and
-`detachComposer` hands that back along with the node.
+**Three modes, because a project is asked for three kinds of thing.** The
+right-hand side is one column of one thing, centred in whatever room is left, and
+the modes are the only heading it needs:
+
+| Mode | What it is |
+|---|---|
+| **Work** | the box, and four questions worth asking this project — what it produces on a schedule, its assistant's own examples, its first source |
+| **Data** | the same box, pointed at the tables: `Profile q3_ledger — columns, ranges, what is missing`. Every suggestion names a source this project actually reads, because "profile a table" is a tutorial and "profile q3_ledger" is a question |
+| **Auto program** | not a question, so not a box: what the project should produce, how often, and `Save` · `Run now` · `Turn it off` |
+
+The same control the empty thread's hero uses, for the same reason — a mode says
+what you are here for before you have written anything. It belongs to the project
+you opened rather than to you, so opening another one starts at Work.
+
+**The box is the way in** in two of the three. It is *the* composer, borrowed into
+the page the way the hero borrows it, not a second input that can do less —
+attach a file, bind an assistant, route a model, `⌘↵`. Only its placeholder
+changes, and `detachComposer` hands that back along with the node. Auto program
+has no question to type, so the section predicate hides the composer outright
+rather than leaving it pinned under a form.
+
+**Auto program is the same program the dialog holds**, editable where you are
+looking at it: the three cadences, the script, and the schedule row kept in step
+by the same `syncProjectRun`. Turning it off is undoable for six seconds — the
+rule the results column, the project bin and this now share — and saving rewrites
+the generated description, since what a project produces is most of what it is.
 
 **Borrowed, it is dressed down.** In a thread the composer is the surface you are
 working in: full column width, raised on a shadow, accent border on focus. On a
@@ -546,6 +566,10 @@ its assistant's own example questions, then a question about the first source it
 reads — and for a project with none of that, three generic openers. A click puts
 one in the box rather than sending it, because the point of putting it there is
 that it can be edited first.
+
+**Centred, and centred properly.** The column is centred horizontally by the flex
+box and vertically by `margin:auto 0` rather than `justify-content:center`, which
+clips the top of anything taller than the pane instead of scrolling it.
 
 Sending from a project page opens a thread in the project and puts the message in
 it, which is the one thing the submit handler has to know: every other surface

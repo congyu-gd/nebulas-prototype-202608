@@ -76,12 +76,15 @@ surface — the project's name, the description written for it, who can see it, 
 its assistant, its knowledge (documents and tables), its workflow with the script
 it runs and a `Run now`, then its threads and results. Every row is a door: the
 assistant opens its record, a base opens in Knowledge, a result opens in the
-results column. On the right, the composer itself — borrowed, so attach, the
-assistant picker, model routing and `⌘↵` work as they do anywhere — with four
-questions worth asking this project in particular. Typing there opens a thread
-inside the project, binds the project's assistant, and names the thread from what
-you asked. The results column steps aside while you are on a project page and
-comes back when you leave.
+results column. On the right, centred, three modes: **Work** is the composer
+itself — borrowed, so attach, the assistant picker, model routing and `⌘↵` work as
+they do anywhere — with four questions worth asking this project in particular;
+**Data** points the same box at the tables it reads, naming them
+(`Profile q3_ledger…`); **Auto program** drops the box for the program itself —
+what to produce, how often, `Run now`, `Turn it off`. Typing in either box opens a
+thread inside the project, binds the project's assistant, and names the thread
+from what you asked. The results column steps aside while you are on a project
+page and comes back when you leave.
 
 In **Chat → Assistants**, clicking an assistant opens its whole record in an
 overlay — model and temperature, capabilities with example questions, the systems

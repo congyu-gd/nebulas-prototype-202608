@@ -365,8 +365,14 @@ const SECTIONS = {
       return threadView(body, find(D.THREADS, v));
     },
     /* A project page borrows the composer into itself rather than having it
-       pinned below (see projectView), but it still needs it un-hidden. */
-    composer(){ const v = state.item.chat; return v !== 'assistants' && v !== 'schedule'; }
+       pinned below (see projectView), but it still needs it un-hidden — except
+       in Auto program mode, which has no question to type. */
+    composer(){
+      const v = state.item.chat;
+      if (v === 'assistants' || v === 'schedule') return false;
+      if (kindOf(v) === 'p') return projMode !== 'Auto program';
+      return true;
+    }
   },
 
   /* -------------------------------------------------------- knowledge
@@ -2353,6 +2359,19 @@ function rowActs(buttons){
   return r;
 }
 
+/* ============================================== the three ways to use a project
+   A project is asked for three different kinds of thing, and each wants a
+   different first offer: prose and analysis (Work), the tables it reads (Data),
+   and something that runs without being asked (Auto program). The same three
+   modes the empty thread's hero has, for the same reason — a mode is a way of
+   saying what you are here for before you have written anything.
+
+   Work and Data are the box with different suggestions. Auto program is not a
+   question at all, so it replaces the box with the program itself. */
+const PROJ_MODES = ['Work','Data','Auto program'];
+let projMode = 'Work';
+let projModeFor = null;            /* the mode belongs to the project you opened */
+
 /* ---------------------------------------------------- what to ask a project
    Four questions this project in particular could be asked, in the order they
    are worth offering: what it already produces on a schedule, then what its
@@ -2371,6 +2390,22 @@ function projectPrompts(p){
     'Draft a short update on this for the team.');
   return out.slice(0, 4);
 }
+/* The same four, for the tables rather than the prose: each one names a source
+   this project actually reads, because "profile a table" is a tutorial and
+   "profile q3_ledger" is a question. */
+function dataPrompts(p){
+  const src = p.sources || [];
+  const out = [];
+  if (src[0]) out.push('Profile ' + src[0] + ' — columns, ranges, what is missing.');
+  if (src[0]) out.push('Chart the trend in ' + src[0] + ' over the last four quarters.');
+  if (src[1]) out.push('Join ' + src[0] + ' with ' + src[1] + ' and show what does not match.');
+  if (!src.length) out.push(
+    'Attach a source to this project and I can profile it.',
+    'What data would answer the questions in this project?');
+  out.push('Find the anomalies in this project\'s data worth explaining.');
+  return out.slice(0, 4);
+}
+
 /* A suggestion goes in the box rather than being sent. The point of putting it
    there is that it can be edited first — the same rule the assistant overlay's
    examples follow. */
@@ -2386,6 +2421,96 @@ function askChip(text){
     i.focus();
   };
   return b;
+}
+
+/* --------------------------------------------------------- the auto program
+   Not a question, so not the box: what the project should produce, how often,
+   and the two buttons that matter — one to keep it, one to see it now. The same
+   three cadences the dialog offers, because a project that needs a fourth needs
+   a scheduled task, and Chat → Schedule holds those.
+
+   The draft belongs to the project being looked at, so switching projects does
+   not carry a half-written program across. */
+let progDraft = null, progFor = null;
+function progOf(p){
+  if (progFor !== p.id || !progDraft){
+    progFor = p.id;
+    progDraft = p.run ? { every:p.run.every, ask:p.run.ask || '' }
+                      : { every:'Every week', ask:'' };
+  }
+  return progDraft;
+}
+function projectProgram(into, p){
+  const d = progOf(p);
+  const live = !!p.run;
+
+  into.append(el('div','askchips__lead',
+    live ? 'This project runs on its own. Change what it produces, or when.'
+         : 'Give the project something to produce and a cadence, and it will run ' +
+           'without being asked.'));
+
+  const ask = el('textarea','textarea textarea--prose');
+  ask.rows = 4;
+  ask.value = d.ask;
+  ask.placeholder = 'Summarise what changed this week and list what needs a decision.';
+  ask.oninput = () => { d.ask = ask.value; };
+  into.append(field('What it should produce, each run', ask));
+
+  const when = el('div','field__help', runLine(d));
+  when.style.marginTop = 'var(--s-2)';
+  const cad = segCtl(CADENCE, d.every, v => { d.every = v; when.textContent = runLine(d); });
+  const cadWrap = el('div');
+  cadWrap.append(cad, when);
+  into.append(field('How often', cadWrap));
+
+  const save = el('button','btn btn--primary btn--sm',
+    '<span style="display:flex">' + ic('check',13) + '</span>' +
+    (live ? 'Save the program' : 'Create the program'));
+  save.type = 'button';
+  save.onclick = () => {
+    const prevSched = p.run && p.run.sched;
+    p.run = { every:d.every, ask:d.ask.trim(), sched:prevSched || null };
+    syncProjectRun(p, prevSched);
+    if (p.descAuto) p.desc = autoDesc(p);
+    p.when = 'now';
+    render();
+    toast((live ? 'Program saved — next run ' : 'Program created — first run ') + NEXT_OF[d.every]);
+  };
+  const acts = [save];
+  if (live){
+    const now = el('button','btn btn--secondary btn--sm',
+      '<span style="display:flex">' + ic('play',13) + '</span>Run now');
+    now.type = 'button';
+    now.onclick = () => runProject(p);
+    /* Turning it off is undoable, so it does not need a dialog — the same rule
+       the results column and the project bin follow. */
+    const off = el('button','btn btn--ghost btn--sm','Turn it off');
+    off.type = 'button';
+    off.onclick = () => {
+      const was = p.run;
+      const sid = was && was.sched;
+      const si = sid ? D.SCHEDULE.map(s => s.id).indexOf(sid) : -1;
+      const srow = si > -1 ? D.SCHEDULE[si] : null;
+      p.run = null;
+      syncProjectRun(p, sid);
+      if (p.descAuto) p.desc = autoDesc(p);
+      render();
+      toast(p.name + ' no longer runs on its own', {
+        label:'Undo', icon:'clock',
+        run:() => {
+          p.run = was;
+          if (srow && D.SCHEDULE.indexOf(srow) < 0) D.SCHEDULE.splice(si, 0, srow);
+          if (p.descAuto) p.desc = autoDesc(p);
+          render();
+          toast('Program restored');
+        }
+      });
+    };
+    acts.push(now, off);
+  }
+  into.append(rowActs(acts));
+  if (live) into.append(helpNote('Each run files a result in the results column, ' +
+                                 'timestamped. It is listed in Chat → Schedule too.'));
 }
 
 /* ------------------------------------------------------------ one project
@@ -2406,6 +2531,9 @@ function projectView(body, p){
   const threads = D.THREADS.filter(t => t.project === p.id);
   const reads = (p.kbs || []).concat(p.sources || []);
   const mine = allResults().filter(a => a.from === p.name);
+  /* A mode says what you are here for, and that is a fact about the project you
+     opened rather than a preference — so opening another one starts at Work. */
+  if (projModeFor !== p.id){ projMode = 'Work'; projModeFor = p.id; }
 
   const wrap = el('div','projwrap');
   const panel = el('aside','projpanel');
@@ -2541,26 +2669,40 @@ function projectView(body, p){
     panel.append(res);
   }
 
-  /* ------------------------------------------------------------- the ask
-     The real composer, borrowed, so what it can do here is what it can do
-     anywhere: attach a file, bind an assistant, route a model, ⌘↵. Sending
-     opens a thread in this project and puts the message in it — see the submit
-     handler in boot. */
-  const askSec = el('section','section');
-  askSec.append(sectionHead('Ask',
-    infoTip('Anything you send here opens a thread inside this project.')));
-  const box = el('div','pane__ask');
-  box.append(inlineComposer('Ask anything in ' + p.name));
-  askSec.append(box);
+  /* ------------------------------------------------------- the right side
+     Centred, because it is one column of one thing rather than a page of
+     several: the mode, and whatever that mode is for. The modes are the
+     project's three uses, and the tabs are the only heading it needs.
 
-  /* The suggestions belong to the box, so they sit inside its section rather
-     than under a heading of their own. */
-  askSec.append(el('div','askchips__lead','Or start from one of these'));
+     Work and Data are the real composer, borrowed, so what it can do here is
+     what it can do anywhere: attach a file, bind an assistant, route a model,
+     ⌘↵. Sending opens a thread in this project and puts the message in it — see
+     the submit handler in boot. */
+  const inner = el('div','projmain__inner');
+  main.append(inner);
+
+  const modes = segCtl(PROJ_MODES, projMode, m => { projMode = m; render(); });
+  modes.style.margin = '0 auto var(--s-5)';
+  inner.append(modes);
+
+  if (projMode === 'Auto program'){
+    projectProgram(inner, p);
+    return;
+  }
+
+  const data = projMode === 'Data';
+  const box = el('div','pane__ask');
+  box.append(inlineComposer(data ? 'Ask about the data in ' + p.name
+                                 : 'Ask anything in ' + p.name));
+  inner.append(box);
+
+  inner.append(el('div','askchips__lead',
+    data ? 'Or start from one of these — they name this project\'s own sources'
+         : 'Or start from one of these'));
   const chips = el('div','askchips');
-  projectPrompts(p).forEach(q => chips.append(askChip(q)));
-  askSec.append(chips);
-  if (p.assistant) askSec.append(helpNote(p.assistant + ' answers here unless a thread picks another.'));
-  main.append(askSec);
+  (data ? dataPrompts(p) : projectPrompts(p)).forEach(q => chips.append(askChip(q)));
+  inner.append(chips);
+  if (p.assistant) inner.append(helpNote(p.assistant + ' answers here unless a thread picks another.'));
 }
 
 /* ====================================================== knowledge detail
