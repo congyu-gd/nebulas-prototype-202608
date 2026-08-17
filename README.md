@@ -7,7 +7,7 @@ dependencies, no network calls — open a file in a browser and it runs.
 |---|---|
 | [index.html](index.html) | The workspace: rail · sidebar · conversation · results column · app panel · app rail |
 | ↳ **start here** | Open a new chat and click a starter — each one runs a worked case ending in something you can fill in, answer or sort, and whatever it settles on is filed in the results column on the right, which can hand it back as a file (csv · md · txt · json · pdf, offered from what the content can take), as a shared link behind an access choice, or delete it with an undo |
-| [nebulas-cloud.html](nebulas-cloud.html) | Cloud setting — twelve-module enterprise deployment, gated by a tenant-onboarding dialog |
+| [nebulas-cloud.html](nebulas-cloud.html) | Cloud setting — twelve-module enterprise deployment, gated by a tenant-onboarding dialog, plus two usage perspectives that grade it against its own settings |
 | [v1-single-file.html](v1-single-file.html) | The earlier conversation-only prototype, kept for reference |
 
 ```
@@ -15,11 +15,12 @@ css/tokens.css       every colour, size and duration. The source of truth.
 css/base.css         reset, document defaults, .prose (model output)
 css/components.css   reusable parts. None know where they sit on screen.
 css/layout.css       the workspace shell and its overlays
-css/install.css      the cloud page shell: menu · configuration
+css/install.css      the cloud page shell: menu · configuration · usage views
 js/data.js           fixtures for every workspace surface
 js/app.js            routing, section renderers, the results store, the app panel
 js/install-data.js   the twelve deployment modules, as configuration
-js/install.js        the cloud page's dialog, menu and configuration surface
+js/usage-data.js     the two usage perspectives, as seeded measurements
+js/install.js        the cloud page's dialog, menu, configuration and views
 ```
 
 Plain `<script src>` rather than modules, so `file://` works with no server.
@@ -111,6 +112,27 @@ with the builder itself as the last column — filtered on ownership
 connecting a system is an administrative act; Build only grants one. Everything
 references everything else by id, so a solution cannot claim a part that does
 not exist.
+
+The **cloud page** is twelve deployment modules in four menu groups, and the
+first one — **Platform Usage Monitoring** — is a different kind of page. It
+leads the menu, and a fresh visit lands there, because a deployment is
+configured once and read every day after.
+**Cloud Usage** reports requests, tokens, GPU hours, spend, availability and
+p95, then ten cards under them: spend against the budget's own alert
+thresholds, consumption by the dimensions module 07 actually meters, per-model
+cost and failover counts, GPU utilisation against the pool module 03 defined,
+quota pressure, error classes, chargeback by tag with untagged spend called out,
+and the optimisations module 12 chose to surface. **Employee Usage** reports
+seats against activation: who is active, by department, doing what, which seats
+are dormant or held by leavers and what reclaiming them is worth. Every limit a
+number is judged against is read from the modules, so changing the budget
+re-grades the bar and deselecting a provider empties its row. Both show example
+figures from the first visit, with `Example data` in the header until a tenant
+exists. Both are read-only
+— no Configured badge, no Save, and they stay out of `0 / 12 modules`. Employee
+Usage is aggregate by default: individual rows sit behind a button, revealing
+them is not remembered, and the page reports counts and categories rather than
+anything anyone typed.
 
 Responses in the workspace are simulated from a fixed script. Nothing leaves
 the page.

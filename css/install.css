@@ -184,6 +184,154 @@
 .range-row{ display:flex; align-items:center; gap:var(--s-3) }
 .range-row .range{ flex:1 }
 
+/* ========================================================== usage views
+   A report, not a form. It reuses the card, the table, the badge and the
+   segmented control, and adds only what a measurement needs: a headline
+   number, a shape, a bar against a limit, a ranked list.
+
+   Numbers are grey. The accent still means "you can act", so a chart may not
+   borrow it — and the only colour on these pages is a status colour on a value
+   that has crossed a limit somebody configured. */
+.cfg__inner--wide{ max-width:880px }
+
+/* The window and the scope stay put while the report scrolls under them. */
+.usebar{
+  position:sticky; top:0; z-index:2;
+  display:flex; align-items:center; gap:var(--s-3); flex-wrap:wrap;
+  margin:0 0 var(--s-5);
+  padding:var(--s-3) 0;
+  background:var(--bg);
+  border-bottom:var(--border) solid var(--line);
+}
+.usebar .seg button{ padding:4px var(--s-3); font-size:var(--t-12) }
+.usebar__scope{ width:auto; height:var(--ctl-sm); font-size:var(--t-12) }
+.usebar__as{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
+/* ------------------------------------------------------------------ headline
+   Six numbers, above the cards: the page answers itself before it explains. */
+.kpis{
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:var(--s-3);
+  margin-bottom:var(--s-4);
+}
+.kpi{
+  display:flex; flex-direction:column; gap:2px;
+  padding:var(--s-3) var(--s-4);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-lg);
+  background:var(--bg);
+}
+.kpi__l{ font-size:var(--t-11); color:var(--text-3) }
+.kpi__v{ font-size:var(--t-22); letter-spacing:var(--ls-tight); line-height:var(--lh-tight) }
+.kpi__v--ok  { color:var(--ok) }
+.kpi__v--warn{ color:var(--warn) }
+.kpi__v--err { color:var(--err) }
+.kpi__sub{ font-size:var(--t-11); color:var(--text-4) }
+.kpi__foot{ display:flex; align-items:center; gap:var(--s-3); margin-top:var(--s-2) }
+.delta{ font-family:var(--mono); font-size:var(--t-11); flex:none }
+.delta--up  { color:var(--ok) }
+.delta--down{ color:var(--err) }
+.delta--flat{ color:var(--text-4) }
+.spark{ flex:1; min-width:0; height:18px; color:var(--text-4) }
+
+/* ------------------------------------------------------------------- columns
+   One bar per hour, day or week. No y-axis: the target line is the only
+   reference a reader needs, and it is labelled. */
+.colwrap{ position:relative }
+.cols{ display:flex; align-items:flex-end; gap:2px; height:104px }
+.cols__b{
+  flex:1; min-width:2px;
+  background:var(--raised-2);
+  border-radius:2px 2px 0 0;
+  transition:background var(--fast) var(--ease);
+}
+.cols__b:hover{ background:var(--line-strong) }
+.cols__t{ position:absolute; left:0; right:0; border-top:1px dashed var(--line-strong) }
+.cols__t i{
+  position:absolute; right:0; bottom:2px;
+  font-family:var(--mono); font-size:var(--t-11); font-style:normal; color:var(--text-4);
+}
+.colsx{
+  display:flex; justify-content:space-between;
+  margin-top:var(--s-2);
+  font-family:var(--mono); font-size:var(--t-11); color:var(--text-4);
+}
+
+/* ---------------------------------------------------------- against a limit */
+.thresh{
+  position:relative;
+  height:8px; margin-top:var(--s-3);
+  border-radius:var(--r-full);
+  background:var(--raised-2);
+}
+.thresh__f{ height:100%; border-radius:var(--r-full) }
+.thresh__f--ok  { background:var(--ok) }
+.thresh__f--warn{ background:var(--warn) }
+.thresh__f--err { background:var(--err) }
+.thresh__m{ position:absolute; top:-4px; bottom:-4px; width:1px; background:var(--line-strong) }
+.thresh__m b{
+  position:absolute; left:2px; top:-14px;
+  font-family:var(--mono); font-size:var(--t-11); font-weight:var(--w-normal); color:var(--text-4);
+}
+.thresh__m--end b{ left:auto; right:2px }
+.threshrow{
+  display:flex; justify-content:space-between;
+  margin-top:var(--s-3);
+  font-size:var(--t-12); color:var(--text-2);
+}
+
+/* ----------------------------------------------------------------- bar list */
+.barlist{ display:flex; flex-direction:column; gap:var(--s-3) }
+.bl__top{ display:flex; align-items:baseline; gap:var(--s-3); margin-bottom:var(--s-1) }
+.bl__nm{
+  flex:1; min-width:0;
+  font-size:var(--t-12); color:var(--text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.bl__v{ flex:none; font-family:var(--mono); font-size:var(--t-12); color:var(--text-2) }
+.bl__track{
+  display:block; height:6px;
+  border-radius:var(--r-full);
+  background:var(--raised-2);
+  overflow:hidden;
+}
+.bl__fill{ display:block; height:100%; background:var(--line-strong); border-radius:var(--r-full) }
+.bl__fill--err{ background:var(--err) }
+.bl__meta{ display:block; margin-top:var(--s-1); font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
+/* -------------------------------------------------------- tables and facts */
+.usecard{ margin-bottom:var(--s-4) }
+/* A wide table scrolls inside its own card rather than widening the page. */
+.tscroll{ overflow-x:auto; margin:0 calc(-1 * var(--s-4)); padding:0 var(--s-4) }
+.facts__l{ color:var(--text-2) }
+.facts__c{ color:var(--text-4); font-size:var(--t-11) }
+.facts td{ vertical-align:baseline }
+
+/* The sentence under a chart: what the number means, and which module set the
+   limit it is measured against. It is prose, so it takes the reading measure. */
+.usenote{
+  margin:var(--s-4) 0 0;
+  padding-top:var(--s-3);
+  border-top:var(--border) solid var(--line);
+  font-size:var(--t-12); line-height:var(--lh-ui); color:var(--text-3);
+  max-width:76ch;
+}
+.usenote b{ font-weight:var(--w-medium); color:var(--text-2) }
+.notelist{
+  margin:0; padding:0; list-style:none;
+  display:flex; flex-direction:column; gap:var(--s-3);
+  font-size:var(--t-12); line-height:var(--lh-ui); color:var(--text-3);
+  max-width:76ch;
+}
+.notelist b{ font-weight:var(--w-medium); color:var(--text-2) }
+
+@media (max-width:1100px){
+  .kpis{ grid-template-columns:repeat(2,minmax(0,1fr)) }
+}
+@media (max-width:640px){
+  .kpis{ grid-template-columns:minmax(0,1fr) }
+}
+
 /* ================================================== initialisation dialog
    A layer, because until the tenant exists there is nothing for the eleven
    configuration pages to attach to. Sits higher on the screen than the

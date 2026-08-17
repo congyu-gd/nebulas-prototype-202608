@@ -5,6 +5,9 @@
    1:1 to the PRD bullets, so the checklist and the form are the same object —
    nothing has to be kept in sync by hand.
 
+   `phase` groups the modules in the menu: foundation · platform · operations.
+   Initialisation has none — it is the gate, pinned above them.
+
    Field types: select · input · seg · switch · multi · range
    `half:true` puts two fields on one row. `v` is the default value.
    ========================================================================= */
@@ -58,7 +61,7 @@ const MODULES = [
   ]
 },
 {
-  id:'network', n:'02', label:'Network & Security', icon:'globe',
+  id:'network', n:'02', phase:'foundation', label:'Network & Security', icon:'globe',
   page:'Network & Security Configuration',
   desc:'The perimeter: topology, names, certificates and the identities allowed to change any of it.',
   groups:[
@@ -102,7 +105,7 @@ const MODULES = [
   ]
 },
 {
-  id:'compute', n:'03', label:'Compute Resources', icon:'cube',
+  id:'compute', n:'03', phase:'foundation', label:'Compute Resources', icon:'cube',
   page:'Infrastructure',
   desc:'Where workloads run, how they grow, and what is allowed to be pulled into the cluster.',
   groups:[
@@ -139,7 +142,7 @@ const MODULES = [
   ]
 },
 {
-  id:'data', n:'04', label:'Data Layer', icon:'data',
+  id:'data', n:'04', phase:'foundation', label:'Data Layer', icon:'data',
   page:'Data Services',
   desc:'Business state, cache, vectors and objects — plus the backup posture they are all judged by.',
   groups:[
@@ -186,7 +189,7 @@ const MODULES = [
   ]
 },
 {
-  id:'ai', n:'05', label:'AI Capabilities', icon:'spark',
+  id:'ai', n:'05', phase:'platform', label:'AI Capabilities', icon:'spark',
   page:'Model Management',
   desc:'Model sources, the gateway everything calls through, and the retrieval pipeline behind answers.',
   groups:[
@@ -232,7 +235,7 @@ const MODULES = [
   ]
 },
 {
-  id:'app', n:'06', label:'Application Services', icon:'layers',
+  id:'app', n:'06', phase:'platform', label:'Application Services', icon:'layers',
   page:'Application Configuration',
   desc:'The gateway, the services behind it, and the asynchronous machinery between them.',
   groups:[
@@ -267,7 +270,7 @@ const MODULES = [
   ]
 },
 {
-  id:'identity', n:'07', label:'Identity & Multi-tenancy', icon:'user',
+  id:'identity', n:'07', phase:'platform', label:'Identity & Multi-tenancy', icon:'user',
   page:'Organization & Permissions',
   desc:'Who gets in, what they may touch, how tenants stay apart and how usage becomes an invoice.',
   groups:[
@@ -309,7 +312,7 @@ const MODULES = [
   ]
 },
 {
-  id:'observe', n:'08', label:'Observability', icon:'chart',
+  id:'observe', n:'08', phase:'operations', label:'Observability', icon:'chart',
   page:'Monitoring & Alerts',
   desc:'Metrics, logs and traces that cover model calls too — plus what tenants get to see of it.',
   groups:[
@@ -348,7 +351,7 @@ const MODULES = [
   ]
 },
 {
-  id:'compliance', n:'09', label:'Compliance & Audit', icon:'shield',
+  id:'compliance', n:'09', phase:'operations', label:'Compliance & Audit', icon:'shield',
   page:'Security & Compliance',
   desc:'Evidence that the platform behaved: audit trails, encryption, frameworks and content controls.',
   groups:[
@@ -388,7 +391,7 @@ const MODULES = [
   ]
 },
 {
-  id:'cicd', n:'10', label:'CI/CD Pipeline', icon:'branch',
+  id:'cicd', n:'10', phase:'operations', label:'CI/CD Pipeline', icon:'branch',
   page:'Deployment Management',
   desc:'How code reaches the cluster, and how it comes back out again when it misbehaves.',
   groups:[
@@ -423,7 +426,7 @@ const MODULES = [
   ]
 },
 {
-  id:'dr', n:'11', label:'Backup & Disaster Recovery', icon:'clock',
+  id:'dr', n:'11', phase:'operations', label:'Backup & Disaster Recovery', icon:'clock',
   page:'Backup & Recovery',
   desc:'The targets, the mechanics that meet them, and the rehearsal that proves they are real.',
   groups:[
@@ -465,7 +468,7 @@ const MODULES = [
   ]
 },
 {
-  id:'cost', n:'12', label:'Cost Management', icon:'coin',
+  id:'cost', n:'12', phase:'operations', label:'Cost Management', icon:'coin',
   page:'Cost Center',
   desc:'Visibility, budgets and the limits that keep one tenant from spending everyone’s money.',
   groups:[

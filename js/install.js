@@ -26,6 +26,8 @@ const P = {
   coin:'<circle cx="12" cy="12" r="9"/><path d="M14.6 9.2A2.6 2.6 0 0 0 12 7.8c-1.4 0-2.6.9-2.6 2s1.2 2 2.6 2 2.6.9 2.6 2-1.2 2-2.6 2a2.6 2.6 0 0 1-2.6-1.4M12 6.2v11.6"/>',
   check:'<path d="m5 13 4 4L19 7"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M12 4.2V3M12 21v-1.2M4.2 12H3M21 12h-1.2M6.5 6.5l-.9-.9M18.4 18.4l-.9-.9M17.5 6.5l.9-.9M5.6 18.4l.9-.9"/>',
+  gauge:'<path d="M3.6 18a8.4 8.4 0 1 1 16.8 0"/><path d="m12 18 4.2-5.4"/><circle cx="12" cy="18" r="1.3"/>',
+  people:'<circle cx="9.2" cy="8.8" r="3"/><path d="M3.5 19a5.9 5.9 0 0 1 11.4 0"/><path d="M16.4 6.2a2.9 2.9 0 0 1 0 5.6M17.6 19a6 6 0 0 0-1.5-3.3"/>',
   x:'<path d="M6 6l12 12M18 6 6 18"/>'
 };
 function ic(name, size){
@@ -42,12 +44,40 @@ const KEY   = 'nebulas.install.v1';
 const INIT  = MODULES[0];
 const PAGES = MODULES.slice(1);
 
+/* The two monitoring perspectives, from usage-data.js. They are views, not
+   modules: nothing on them is saved, none of them can be "configured", and
+   they never count toward the twelve. A page is a view when it has cards. */
+const ALL    = PAGES.concat(VIEWS);
+const isView = m => !!(m && m.cards);
+const pageOf = id => ALL.find(m => m.id === id);
+
+/* The menu's groups. Modules carry `phase`; the views carry their own.
+
+   Monitoring comes first, ahead of the install it measures. The three
+   configuration phases are still in dependency order among themselves, but a
+   deployment is configured once and read every day after — so the pages you
+   return to sit at the top, and the twelve steps sit under them. */
+const PHASES = [
+  { k:'usage',      l:'Platform Usage Monitoring' },
+  { k:'foundation', l:'Foundation' },
+  { k:'platform',   l:'Platform' },
+  { k:'operations', l:'Operations' }
+];
+
 /* What the pinned menu row calls the initialisation dialog. The PRD's own
    name for the admin page ("Tenant Onboarding") stays on the sub-line either
    way, so this label is free to be whatever reads best. */
 const INIT_LABEL = 'Deployment setup';
 
-const state = { id:PAGES[0].id, values:{}, done:{}, density:'comfortable' };
+/* `range` and `scope` are the two questions a usage page is always answering,
+   so they belong to the session rather than to a page — switching perspective
+   keeps the window you were looking at. `ids` deliberately does not persist:
+   revealing who did what is an act, not a preference. */
+const state = {
+  /* Lands on the first page in the menu, which is now Cloud Usage. */
+  id:VIEWS[0].id, values:{}, done:{}, density:'comfortable',
+  range:'30d', scope:'Whole tenant', ids:false
+};
 
 const el  = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -56,6 +86,7 @@ function save(){
   try{
     localStorage.setItem(KEY, JSON.stringify({
       id:state.id, values:state.values, done:state.done,
+      range:state.range, scope:state.scope,
       theme:document.documentElement.dataset.theme, density:state.density
     }));
   }catch(e){ /* private mode — the page still works, it just forgets */ }
@@ -67,7 +98,9 @@ function load(){
     const s = JSON.parse(raw);
     if(s.values) state.values = s.values;
     if(s.done)   state.done = s.done;
-    if(s.id && PAGES.some(m => m.id === s.id)) state.id = s.id;
+    if(s.range && URANGES.some(r => r.k === s.range)) state.range = s.range;
+    if(s.scope)  state.scope = s.scope;
+    if(s.id && ALL.some(m => m.id === s.id)) state.id = s.id;
     if(s.theme)  document.documentElement.dataset.theme = s.theme;
     if(s.density) setDensity(s.density, true);
   }catch(e){ /* corrupt entry — start clean rather than fail to render */ }
@@ -84,6 +117,91 @@ function setValue(k, v){ state.values[k] = v; save(); }
 const tenantName = () => String(value(INIT, 1, 0, INIT.groups[1].f[0]) || '').trim();
 const provider   = () => value(INIT, 0, 0, INIT.groups[0].f[0]);
 const region     = () => value(INIT, 3, 0, INIT.groups[3].f[0]);
+
+/* ------------------------------------------------- configuration, by name
+   The usage views judge their numbers against what was configured, and they
+   have to survive a field moving. So they read by module id, group title and
+   field label rather than by index — a lookup that says what it wants. */
+function cval(mid, gt, fl, dflt){
+  const m = mod(mid);
+  if(!m) return dflt;
+  const gi = m.groups.findIndex(g => g.t === gt);
+  if(gi < 0) return dflt;
+  const fi = m.groups[gi].f.findIndex(f => f.l === fl);
+  if(fi < 0) return dflt;
+  const v = value(m, gi, fi, m.groups[gi].f[fi]);
+  return v == null || v === '' ? dflt : v;
+}
+/* Configured values are text a person typed — "250 GB", "60000", "3 – 12",
+   "2 × L40S". The first number is the one meant; stripping every non-digit
+   instead would read that last one as 240 GPUs. Thousands separators go first,
+   so "25,000" survives. */
+const cnum = (s, dflt) => {
+  const m = String(s).replace(/,/g, '').match(/\d+(?:\.\d+)?/);
+  const n = m ? parseFloat(m[0]) : NaN;
+  return isFinite(n) && n > 0 ? n : dflt;
+};
+
+function readCfg(){
+  const gpuPool = cval('compute','Node pools','GPU inference pool','None');
+  return {
+    /* module 12 — money and limits */
+    budget:cnum(cval('cost','Budgets & anomalies','Monthly budget','25000'), 25000),
+    thresholds:String(cval('cost','Budgets & anomalies','Alert thresholds','50% / 80% / 100%'))
+      .split('/').map(x => cnum(x, 0)).filter(Boolean),
+    anomaly:!!cval('cost','Budgets & anomalies','Anomaly detection',true),
+    anomalySens:cval('cost','Budgets & anomalies','Anomaly sensitivity','Medium'),
+    granularity:cval('cost','Cost visibility','Granularity','Daily per tag'),
+    tags:cval('cost','Tagging & chargeback','Required tags',[]),
+    chargeback:cval('cost','Tagging & chargeback','Chargeback model','Showback only'),
+    blockUntagged:!!cval('cost','Tagging & chargeback','Block resources missing required tags',true),
+    tpm:cnum(cval('cost','Tenant quotas','Tokens per minute','60000'), 60000),
+    callsDay:cnum(cval('cost','Tenant quotas','API calls per day','250000'), 250000),
+    storageCap:cnum(cval('cost','Tenant quotas','Storage per tenant','250 GB'), 250),
+    onExhaust:cval('cost','Tenant quotas','On quota exhaustion','Throttle'),
+    recs:cval('cost','Optimisation','Recommendations to surface',[]),
+    review:cval('cost','Optimisation','Review cadence','Monthly'),
+    autoStopIdle:!!cval('cost','Optimisation','Auto-stop idle GPU nodes',true),
+    /* module 08 — objectives and what is kept */
+    slo:cval('observe','Alerts','Availability SLO','99.9%'),
+    p95:cval('observe','Alerts','p95 latency objective','2.5s'),
+    mRetention:cval('observe','Metrics','Retention','90 days'),
+    lRetention:cval('observe','Log aggregation','Retention','30 days'),
+    piiMask:!!cval('observe','Log aggregation','PII masking at ingest',true),
+    tenantDash:!!cval('observe','Tenant-facing observability','Expose per-tenant usage dashboard',true),
+    /* module 07 — who, and what is metered */
+    metered:cval('identity','Billing dimensions','Metered on',[]),
+    period:cval('identity','Billing dimensions','Billing period','Monthly'),
+    hardStop:!!cval('identity','Billing dimensions','Hard stop at quota',false),
+    model:cval('identity','Permission model','Model','RBAC'),
+    hierarchy:cval('identity','Permission model','Hierarchy','Org → Dept → User'),
+    idp:cval('identity','Enterprise SSO','Identity provider','Azure AD'),
+    scim:!!cval('identity','Enterprise SSO','SCIM directory sync',true),
+    offboarding:cval('identity','Member lifecycle','Offboarding','Immediate revoke'),
+    transfer:!!cval('identity','Member lifecycle','Transfer owned resources on departure',true),
+    mfa:!!cval('init','Initial administrators','Require MFA before first login',true),
+    /* module 05 — what answers cost */
+    commercial:cval('ai','LLM source','Commercial providers',[]),
+    selfHosted:cval('ai','LLM source','Self-hosted open models',[]),
+    gateway:cval('ai','LLM gateway','Gateway','LiteLLM'),
+    rateLimit:cval('ai','LLM gateway','Default rate limit','120000 tokens/min'),
+    logPrompts:!!cval('ai','LLM gateway','Log prompts and completions',false),
+    routing:cval('ai','Routing & fallback','Routing strategy','Cost-aware by task'),
+    onFail:cval('ai','Routing & fallback','On provider failure','Fail over to secondary'),
+    topk:cval('ai','RAG pipeline','Retrieve top-k','20'),
+    chunk:cval('ai','RAG pipeline','Chunk size / overlap','800 / 120'),
+    rerank:!!cval('ai','RAG pipeline','Rerank before generation',true),
+    cite:!!cval('ai','RAG pipeline','Require citations in answers',true),
+    /* modules 03 · 04 · 06 · 09 — what it runs on */
+    gpuPool:gpuPool,
+    gpuCount:cnum(gpuPool, 0) || (gpuPool === 'None' ? 0 : 1),
+    nodeBand:cval('compute','Node pools','General pool — size','3 – 12'),
+    spot:!!cval('compute','Spot capacity','Use Spot for elastic workloads',true),
+    vector:cval('data','Vector database','Engine','Qdrant'),
+    broker:cval('app','Message queue','Broker','Kafka'),
+    dlp:!!cval('compliance','Data loss & prompt safety','DLP on uploads and outputs',true)
+  };
+}
 
 /* A bare "%" hugs its number; a worded unit takes a space. */
 function fmt(v, unit){
@@ -210,9 +328,11 @@ function closeWizard(){
 
 /* ===================================================================== menu */
 function renderMenu(){
-  const rows = PAGES.map(m => {
+  const row = m => {
     const cur  = m.id === state.id;
-    const done = !!state.done[m.id];
+    /* A view is never "configured", so it carries no state mark — the absence
+       is the signal that it is a place to look rather than a step to finish. */
+    const done = !isView(m) && !!state.done[m.id];
     return '<button class="row mrow" data-go="' + m.id + '" aria-current="' + cur + '">' +
              '<span class="row__icon">' + ic(m.icon, 15) + '</span>' +
              '<span class="row__main">' +
@@ -221,7 +341,7 @@ function renderMenu(){
              '</span>' +
              (done ? '<span class="mrow__state">' + ic('check', 14) + '</span>' : '') +
            '</button>';
-  });
+  };
 
   /* Initialisation is pinned above the phases and opens the dialog rather
      than a page — it is the one row that isn't a destination. */
@@ -240,11 +360,16 @@ function renderMenu(){
       '</button>' +
     '</div>';
 
-  /* Three phases. The order is the dependency order, not a preference. */
-  el('menuBody').innerHTML = pinned +
-    '<div class="menu__group"><span class="t-eyebrow">Foundation</span></div>' + rows.slice(0,3).join('') +
-    '<div class="menu__group"><span class="t-eyebrow">Platform</span></div>'   + rows.slice(3,6).join('') +
-    '<div class="menu__group"><span class="t-eyebrow">Operations</span></div>' + rows.slice(6).join('');
+  /* Four groups. The first three are the dependency order of the install, not
+     a preference; the fourth is what the install produced once it runs, which
+     is why it sits after them rather than among them. Grouping reads `phase`
+     off each page, so adding one is a data change and not a slice index. */
+  el('menuBody').innerHTML = pinned + PHASES.map(p => {
+    const rows = ALL.filter(m => m.phase === p.k);
+    if(!rows.length) return '';
+    return '<div class="menu__group"><span class="t-eyebrow">' + esc(p.l) + '</span></div>' +
+           rows.map(row).join('');
+  }).join('');
 }
 
 /* The page name is fixed, so the sub-line under it names the tenant instead —
@@ -257,13 +382,23 @@ function renderIdentity(){
     : 'Not initialised';
 }
 
-/* =========================================================== configuration */
+/* =========================================================== configuration
+   One entry point for both kinds of page. A module is a form with a footer that
+   moves you along; a view is a report with no footer at all. */
 function renderConfig(){
-  const m = mod(state.id);
+  const m = pageOf(state.id);
+  if(!m) return;
+  if(isView(m)) renderView(m);
+  else renderModule(m);
+}
+
+function renderModule(m){
   const i = PAGES.indexOf(m);
   const done = !!state.done[m.id];
 
   el('cfgTitle').textContent = m.label;
+  el('cfgHint').textContent = 'Choices are kept in this browser only.';
+  el('prevBtn').hidden = el('nextBtn').hidden = false;
 
   const st = el('cfgState');
   st.className   = 'badge' + (done ? ' badge--ok' : '');
@@ -297,8 +432,207 @@ function renderConfig(){
   el('skipBtn').hidden = done || i === PAGES.length - 1;
 }
 
+/* =================================================================== views
+   Seven card kinds cover both perspectives: kpi · thresh · cols · bars ·
+   table · facts · note. Card content is composed in usage-data.js from
+   fixtures and configured values — no field on either page is user input, so
+   the small amount of markup inside a cell (a unit, an aside) is written
+   rather than escaped. Labels that come from a text field still go through
+   esc, because a tenant name is typed. */
+
+/* A delta is coloured by whether it is good news, not by its sign: latency
+   falling and adoption rising are both green. */
+function deltaHTML(d){
+  const up = d.v >= 0;
+  const cls = Math.abs(d.v) < .005 ? 'flat' : (up === !!d.good ? 'up' : 'down');
+  return '<span class="delta delta--' + cls + '">' +
+           (up ? '+' : '−') + Math.abs(d.v * 100).toFixed(1) + '%</span>';
+}
+
+/* A sparkline is shape only — no axis, no scale, nothing to read off it. It is
+   there to say "steady", "climbing" or "spiky" in the width of a word. */
+function sparkHTML(s){
+  if(!s || s.length < 2) return '';
+  const lo = Math.min.apply(null, s), hi = Math.max.apply(null, s), sp = (hi - lo) || 1;
+  const pts = s.map((v, i) =>
+    (i / (s.length - 1) * 60).toFixed(1) + ',' + (16.5 - (v - lo) / sp * 14).toFixed(1)).join(' ');
+  return '<svg class="spark" viewBox="0 0 60 18" preserveAspectRatio="none" aria-hidden="true">' +
+           '<polyline points="' + pts + '" fill="none" stroke="currentColor" ' +
+           'stroke-width="1.2" stroke-linejoin="round"/></svg>';
+}
+
+function kpiHTML(t){
+  return '<div class="kpi">' +
+           '<span class="kpi__l">' + esc(t.l) + '</span>' +
+           '<span class="kpi__v' + (t.tone ? ' kpi__v--' + t.tone : '') + '">' + esc(t.v) + '</span>' +
+           '<span class="kpi__sub">' + esc(t.sub || '') + '</span>' +
+           '<span class="kpi__foot">' + (t.d ? deltaHTML(t.d) : '') + sparkHTML(t.spark) + '</span>' +
+         '</div>';
+}
+
+function colsHTML(c){
+  const hi = Math.max.apply(null, c.series.concat(c.target ? [c.target.v] : [])) || 1;
+  const bars = c.series.map((v, i) =>
+    '<span class="cols__b" style="height:' + (v / hi * 100).toFixed(1) + '%"' +
+    ' title="' + esc((c.labels && c.labels[i]) || '') + ' · ' + v.toFixed(1) + esc(c.unit || '') + '"></span>'
+  ).join('');
+  const target = c.target
+    ? '<span class="cols__t" style="bottom:' + (c.target.v / hi * 100).toFixed(1) + '%">' +
+        '<i>' + esc(c.target.l) + '</i></span>'
+    : '';
+  const l = c.labels || [];
+  const axis = l.length
+    ? '<div class="colsx"><span>' + esc(l[0]) + '</span>' +
+      '<span>' + esc(l[Math.floor(l.length / 2)]) + '</span>' +
+      '<span>' + esc(l[l.length - 1]) + '</span></div>'
+    : '';
+  return '<div class="colwrap"><div class="cols">' + bars + '</div>' + target + '</div>' + axis;
+}
+
+/* The one place status colour is allowed: a number against a limit that was
+   configured, where crossing it is the fact being reported. */
+function threshHTML(c){
+  const p = c.max ? c.v / c.max * 100 : 0;
+  const tone = p >= 100 ? 'err' : p >= 80 ? 'warn' : 'ok';
+  /* A mark at the far end labels itself inwards, or the label is cut off. */
+  const marks = (c.marks || []).map(m =>
+    '<i class="thresh__m' + (m.at >= .95 ? ' thresh__m--end' : '') +
+    '" style="left:' + (m.at * 100).toFixed(1) + '%"><b>' + esc(m.l) + '</b></i>').join('');
+  return '<div class="thresh">' +
+           '<span class="thresh__f thresh__f--' + tone + '" style="width:' + Math.min(100, p).toFixed(1) + '%"></span>' +
+           marks +
+         '</div>' +
+         '<div class="threshrow"><span>' + esc(c.left) + '</span><span>' + esc(c.right) + '</span></div>';
+}
+
+function barsHTML(c){
+  const hi = Math.max.apply(null, c.rows.map(r => r.v)) || 1;
+  return '<div class="barlist">' + c.rows.map(r =>
+    '<div class="bl">' +
+      '<div class="bl__top">' +
+        '<span class="bl__nm">' + esc(r.nm) + '</span>' +
+        '<span class="bl__v">' + esc(r.val) + '</span>' +
+      '</div>' +
+      '<span class="bl__track"><i class="bl__fill' + (r.tone ? ' bl__fill--' + r.tone : '') +
+        '" style="width:' + (r.v / hi * 100).toFixed(1) + '%"></i></span>' +
+      (r.meta ? '<span class="bl__meta">' + esc(r.meta) + '</span>' : '') +
+    '</div>').join('') + '</div>';
+}
+
+function tableHTML(c){
+  return '<div class="tscroll"><table class="table">' +
+    '<thead><tr>' + c.cols.map(h =>
+      '<th' + (h.num ? ' class="num"' : '') + '>' + esc(h.l) + '</th>').join('') + '</tr></thead>' +
+    '<tbody>' + c.rows.map(r =>
+      '<tr>' + r.map((cell, i) =>
+        '<td' + (c.cols[i] && c.cols[i].num ? ' class="num"' : '') + '>' + cell + '</td>').join('') +
+      '</tr>').join('') + '</tbody>' +
+  '</table></div>';
+}
+
+/* Facts are a table that needs no header: a name, a number, and the context
+   that makes the number mean something. */
+function factsHTML(c){
+  return '<div class="tscroll"><table class="table facts">' + '<tbody>' + c.rows.map(r =>
+    '<tr><td class="facts__l">' + r[0] + '</td>' +
+        '<td class="num">' + r[1] + '</td>' +
+        '<td class="facts__c">' + r[2] + '</td></tr>').join('') + '</tbody></table></div>';
+}
+
+const noteHTML = c => '<ul class="notelist">' +
+  c.lines.map(l => '<li>' + l + '</li>').join('') + '</ul>';
+
+function cardHTML(c){
+  /* The headline row is not a card — six numbers in six boxes, above the
+     cards, so the page answers its own question before it explains it. */
+  if(c.k === 'kpi') return '<div class="kpis">' + c.tiles.map(kpiHTML).join('') + '</div>';
+
+  const body = c.k === 'thresh' ? threshHTML(c)
+             : c.k === 'cols'   ? colsHTML(c)
+             : c.k === 'bars'   ? barsHTML(c)
+             : c.k === 'table'  ? tableHTML(c)
+             : c.k === 'facts'  ? factsHTML(c)
+             : c.k === 'note'   ? noteHTML(c)
+             : '';
+  const gate = c.gate
+    ? '<button class="btn btn--ghost btn--sm" data-ids="' + (state.ids ? '0' : '1') + '">' +
+        (state.ids ? 'Hide individual rows' : 'Show individual rows') + '</button>'
+    : '';
+  return '<div class="card usecard">' +
+           '<div class="card__head">' +
+             '<span class="card__title">' + esc(c.t) + '</span>' +
+             '<div class="cfg__spacer"></div>' + gate +
+           '</div>' +
+           '<div class="card__body">' + body +
+             (c.note ? '<p class="usenote">' + c.note + '</p>' : '') +
+           '</div>' +
+         '</div>';
+}
+
+/* The two questions a usage page is always answering — over what window, and
+   for whom — sit above the cards and stay there while it scrolls. */
+function usebarHTML(){
+  return '<div class="usebar">' +
+    '<div class="seg" data-t="range" role="tablist">' + URANGES.map(r =>
+      '<button type="button" role="tab" data-range="' + r.k + '" aria-selected="' +
+      (r.k === state.range) + '">' + esc(r.l) + '</button>').join('') + '</div>' +
+    '<select class="select usebar__scope" data-scope aria-label="Scope">' +
+      ['Whole tenant'].concat(UDEPTS.map(d => d.nm)).map(o =>
+        '<option' + (o === state.scope ? ' selected' : '') + '>' + esc(o) + '</option>').join('') +
+    '</select>' +
+    '<div class="cfg__spacer"></div>' +
+    '<span class="usebar__as">as of ' + esc(clock()) + '</span>' +
+    '<button class="btn btn--ghost btn--sm" data-refresh>Refresh</button>' +
+  '</div>';
+}
+const clock = () => new Date().toTimeString().slice(0, 5);
+
+function renderView(v){
+  const cfg   = readCfg();
+  const dept  = UDEPTS.find(d => d.nm === state.scope) || null;
+  const ctx = {
+    cfg:cfg, range:urange(state.range), scope:state.scope, dept:dept,
+    share:dept ? dept.w : 1,
+    ids:state.ids,
+    /* Range and scope are part of the seed, so the same window always draws
+       the same series and switching window genuinely changes the picture. */
+    seed:v.id + '|' + state.range + '|' + state.scope
+  };
+
+  el('cfgTitle').textContent = v.label;
+
+  /* A view has no configured state, so the badge says who may see it instead —
+     which is module 08's switch, and the only status it has. Until the tenant
+     exists there is nothing behind these numbers, and the badge says that
+     rather than the page withholding them. */
+  const st = el('cfgState');
+  st.className   = 'badge';
+  st.textContent = !state.done.init ? 'Example data'
+                 : cfg.tenantDash ? 'Shared with tenants' : 'Internal only';
+
+  el('cfgBody').innerHTML =
+    '<div class="cfg__inner cfg__inner--wide">' +
+      '<div class="pagehead">' +
+        '<div class="pagehead__row">' +
+          '<h2 class="t-display pagehead__title">' + esc(v.label) + '</h2>' +
+        '</div>' +
+        '<p class="pagehead__desc">' + esc(v.desc) + '</p>' +
+        '<p class="t-mono" style="margin:var(--s-3) 0 0">Admin page · ' + esc(v.page) + '</p>' +
+      '</div>' +
+      usebarHTML() +
+      v.cards(ctx).map(cardHTML).join('') +
+    '</div>';
+
+  el('cfgBody').scrollTop = 0;
+
+  /* Nothing to save and nowhere to continue to. */
+  el('prevBtn').hidden = el('nextBtn').hidden = el('skipBtn').hidden = true;
+  el('cfgHint').textContent = 'Read-only — usage is measured, not configured.';
+}
+
 /* ================================================================= progress
-   All twelve modules count — initialisation is a dialog, not an exemption. */
+   All twelve modules count — initialisation is a dialog, not an exemption.
+   The two views are not modules, so they are not in this arithmetic. */
 function renderProgress(){
   const n   = MODULES.filter(m => state.done[m.id]).length;
   const pct = Math.round(n / MODULES.length * 100);
@@ -327,7 +661,7 @@ function toast(msg){
 
 /* ============================================================== navigation */
 function go(id){
-  if(!PAGES.some(m => m.id === id)) return;
+  if(!ALL.some(m => m.id === id)) return;
   state.id = id;
   /* The module is in the hash, so a step is linkable and the back button
      walks the install rather than leaving it. */
@@ -336,9 +670,13 @@ function go(id){
   renderMenu();
   renderConfig();
 }
-function step(delta){
-  const i = PAGES.indexOf(mod(state.id)) + delta;
-  if(i >= 0 && i < PAGES.length) go(PAGES[i].id);
+/* The footer walks the eleven configuration modules — that is the install.
+   The arrow keys walk everything in the menu, including the two views, because
+   there they are a way of moving down a list you can see. */
+function step(delta, list){
+  const l = list || PAGES;
+  const i = l.indexOf(pageOf(state.id)) + delta;
+  if(i >= 0 && i < l.length) go(l[i].id);
 }
 
 /* =========================================================== field wiring
@@ -387,6 +725,27 @@ function onFieldClick(e){
   el(id).addEventListener('click', onFieldClick);
 });
 
+/* ======================================================== usage view wiring
+   The usage controls live inside the same scroll container as the fields, and
+   they are deliberately not fields: they change what is being looked at, not
+   what is configured. Nothing here writes to state.values. */
+el('cfgBody').addEventListener('click', e => {
+  const rb = e.target.closest('[data-range]');
+  if(rb){ state.range = rb.dataset.range; save(); renderConfig(); return; }
+
+  if(e.target.closest('[data-refresh]')){ renderConfig(); toast('Usage refreshed'); return; }
+
+  const g = e.target.closest('[data-ids]');
+  if(g){
+    state.ids = g.dataset.ids === '1';
+    renderConfig();
+    if(state.ids) toast('Individual rows revealed for this visit');
+  }
+});
+el('cfgBody').addEventListener('change', e => {
+  if(e.target.matches('[data-scope]')){ state.scope = e.target.value; save(); renderConfig(); }
+});
+
 /* ==================================================================== wiring */
 el('menuBody').addEventListener('click', e => {
   if(e.target.closest('[data-init]')){ openWizard(); return; }
@@ -416,7 +775,9 @@ el('wizStart').addEventListener('click', () => {
 });
 
 el('nextBtn').addEventListener('click', () => {
-  const m = mod(state.id);
+  const m = pageOf(state.id);
+  /* ⌘↵ reaches this button even while it is hidden on a usage page. */
+  if(isView(m)) return;
   const first = !state.done[m.id];
   state.done[m.id] = true;
   save();
@@ -434,7 +795,7 @@ el('skipBtn').addEventListener('click', () => step(1));
 
 el('resetBtn').addEventListener('click', () => {
   if(!confirm('Clear every choice and start the install over?')) return;
-  state.values = {}; state.done = {}; state.id = PAGES[0].id;
+  state.values = {}; state.done = {}; state.id = VIEWS[0].id;
   save();
   render();
   openWizard();
@@ -477,14 +838,14 @@ document.addEventListener('keydown', e => {
   /* Bare arrows only when focus isn't in a control that wants them. */
   const tag = (document.activeElement && document.activeElement.tagName) || '';
   if(/INPUT|SELECT|TEXTAREA/.test(tag)) return;
-  if(e.key === 'ArrowDown'){ e.preventDefault(); step(1); }
-  if(e.key === 'ArrowUp'){ e.preventDefault(); step(-1); }
+  if(e.key === 'ArrowDown'){ e.preventDefault(); step(1, ALL); }
+  if(e.key === 'ArrowUp'){ e.preventDefault(); step(-1, ALL); }
 });
 
 window.addEventListener('popstate', () => {
   const id = location.hash.slice(1);
   if(id === 'init'){ openWizard(); return; }
-  if(PAGES.some(m => m.id === id) && id !== state.id){
+  if(ALL.some(m => m.id === id) && id !== state.id){
     state.id = id; save(); renderMenu(); renderConfig();
   }
 });
@@ -493,7 +854,7 @@ window.addEventListener('popstate', () => {
 load();
 /* A hash wins over the stored position — a link should land where it points. */
 const hash = location.hash.slice(1);
-if(PAGES.some(m => m.id === hash)) state.id = hash;
+if(ALL.some(m => m.id === hash)) state.id = hash;
 el('stTheme').textContent = document.documentElement.dataset.theme === 'dark' ? 'Dark' : 'Light';
 render();
 

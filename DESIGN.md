@@ -19,9 +19,10 @@ index.html           shell markup; everything inside is rendered by app.js
 v1-single-file.html  the earlier single-file conversation-only prototype
 
 nebulas-cloud.html   deployment setup — an independent page on the same tokens
-css/install.css      its shell only: menu · configuration
+css/install.css      its shell only: menu · configuration · usage views
 js/install-data.js   the twelve deployment modules, as configuration
-js/install.js        the initialisation dialog, menu and configuration surface
+js/usage-data.js     the two usage perspectives, as seeded measurements
+js/install.js        the initialisation dialog, menu, configuration and views
 ```
 
 `nebulas-cloud.html` shares `tokens.css`, `base.css` and `components.css` with
@@ -1105,6 +1106,78 @@ reach open space.
 `⌘]` app panel · `⌘J` theme · `/` focus composer · `Esc` dismiss. The palette
 merges threads, apps, projects, assistants, knowledge, sources, results,
 solutions and commands into one ranked list.
+
+## The cloud page has two kinds of page
+
+Eleven of its pages answer *what should exist*. Two answer *what happened*, and
+the difference is load-bearing: a configuration page has a state (`Configured`),
+a footer that moves you to the next one, and a place in `0 / 12 modules`. A
+usage page has none of those. It has a window and a scope instead, and its
+footer says `Read-only — usage is measured, not configured`. Making them look
+alike would promise a Save button that cannot exist.
+
+The menu carries four groups now, and **Platform Usage Monitoring** is the
+first of them — ahead of Foundation, Platform and Operations. A deployment is
+configured once and read every day afterwards, so the pages you come back to
+are at the top and the twelve steps are underneath, still in dependency order
+among themselves. The page a fresh visit lands on is Cloud Usage for the same
+reason. Grouping reads a `phase` field off each page rather than slicing the
+array by index, which is what it used to do and what broke every time a module
+was added.
+
+Both views show **example data from the first visit**, before any tenant
+exists — this is a prototype, and a reader who opens a dashboard should see what
+it reports rather than an empty state describing what it would report. The
+header badge carries the caveat instead: `Example data` until the tenant is
+created, then `Shared with tenants` or `Internal only` from module 08's switch.
+
+### A dashboard that invents its own limits says nothing
+
+Every threshold on both pages is read from a module: the budget and its alert
+thresholds from 12, the availability SLO and the p95 objective from 08, the
+quotas from 12, the metered dimensions from 07, the models and the routing
+strategy from 05, the GPU pool from 03. Change the monthly budget and the spend
+bar re-grades itself; deselect a provider and it leaves the model table. The
+lookup is by module id, group title and field label — not by index — so a field
+can move without silently reporting the wrong number.
+
+Two consequences worth keeping:
+
+- **Cards report their own misconfiguration.** Untagged spend is `$0` when
+  module 12 blocks untagged resources and a real number when it does not.
+  Failover counts are the only evidence that module 05's fallback choice works.
+  A dimension that is consumed but not metered is named as unbillable.
+- **Windows have to agree.** Spend follows the range picker, but the budget in
+  module 12 is monthly, so the budget card stays on the month and says so.
+  Comparing a quarter's spend to a monthly budget would have read 300%.
+
+Figures come from a seeded PRNG keyed on view, range and scope — not
+`Math.random`, so the same page draws the same numbers on every render, and a
+series that has a real ceiling is clamped to it. A utilisation chart that
+reports 130% is a chart nobody trusts again.
+
+### Employee usage is aggregate until you ask
+
+An adoption page is one bad decision away from being a surveillance tool, so the
+defaults do the arguing: departments and totals are the view, individual rows
+are hidden behind a button, and revealing them is not remembered — it is an act
+for a purpose, not a preference. The page reports counts and categories and
+never contents, which is also all it *could* report, since module 05 leaves
+prompt logging off. What is collected, how long module 08 keeps it, and who can
+see it are a card on the page rather than a policy elsewhere. The fixture people
+are fictional for the same reason.
+
+### The chart vocabulary
+
+Seven card kinds cover both pages: `kpi · thresh · cols · bars · table · facts ·
+note`. All of it is inline SVG and CSS — no chart library, same as everything
+else here.
+
+Charts are grey. The accent still means "you can act", so a bar may not borrow
+it, and a value takes colour only when it has crossed a limit somebody
+configured — which is the one case where status colour is the fact being
+reported. A tile that went green for "as expected" would make the exceptions
+harder to find, which is why the green came back out again after the first pass.
 
 ## Scope of the prototype
 
