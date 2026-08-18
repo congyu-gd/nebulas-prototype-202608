@@ -447,20 +447,20 @@ function kpiHTML(t){
 function colsHTML(c){
   const hi = Math.max.apply(null, c.series.concat(c.target ? [c.target.v] : [])) || 1;
   const bars = c.series.map((v, i) =>
-    '<span class="cols__b" style="height:' + (v / hi * 100).toFixed(1) + '%"' +
+    '<span class="cols__bar" style="height:' + (v / hi * 100).toFixed(1) + '%"' +
     ' title="' + esc((c.labels && c.labels[i]) || '') + ' · ' + v.toFixed(1) + esc(c.unit || '') + '"></span>'
   ).join('');
   const target = c.target
-    ? '<span class="cols__t" style="bottom:' + (c.target.v / hi * 100).toFixed(1) + '%">' +
+    ? '<span class="cols__target" style="bottom:' + (c.target.v / hi * 100).toFixed(1) + '%">' +
         '<i>' + esc(c.target.l) + '</i></span>'
     : '';
   const l = c.labels || [];
   const axis = l.length
-    ? '<div class="colsx"><span>' + esc(l[0]) + '</span>' +
+    ? '<div class="cols__axis"><span>' + esc(l[0]) + '</span>' +
       '<span>' + esc(l[Math.floor(l.length / 2)]) + '</span>' +
       '<span>' + esc(l[l.length - 1]) + '</span></div>'
     : '';
-  return '<div class="colwrap"><div class="cols">' + bars + '</div>' + target + '</div>' + axis;
+  return '<div class="cols"><div class="cols__plot">' + bars + '</div>' + target + axis + '</div>';
 }
 
 /* The one place status colour is allowed: a number against a limit that was
@@ -470,13 +470,13 @@ function threshHTML(c){
   const tone = p >= 100 ? 'err' : p >= 80 ? 'warn' : 'ok';
   /* A mark at the far end labels itself inwards, or the label is cut off. */
   const marks = (c.marks || []).map(m =>
-    '<i class="thresh__m' + (m.at >= .95 ? ' thresh__m--end' : '') +
+    '<i class="thresh__mark' + (m.at >= .95 ? ' thresh__mark--end' : '') +
     '" style="left:' + (m.at * 100).toFixed(1) + '%"><b>' + esc(m.l) + '</b></i>').join('');
   return '<div class="thresh">' +
-           '<span class="thresh__f thresh__f--' + tone + '" style="width:' + Math.min(100, p).toFixed(1) + '%"></span>' +
+           '<span class="thresh__fill thresh__fill--' + tone + '" style="width:' + Math.min(100, p).toFixed(1) + '%"></span>' +
            marks +
          '</div>' +
-         '<div class="threshrow"><span>' + esc(c.left) + '</span><span>' + esc(c.right) + '</span></div>';
+         '<div class="thresh__legend"><span>' + esc(c.left) + '</span><span>' + esc(c.right) + '</span></div>';
 }
 
 function barsHTML(c){
@@ -494,7 +494,7 @@ function barsHTML(c){
 }
 
 function tableHTML(c){
-  return '<div class="tscroll"><table class="table">' +
+  return '<div class="scroll-x scroll-x--bleed"><table class="table">' +
     '<thead><tr>' + c.cols.map(h =>
       '<th' + (h.num ? ' class="num"' : '') + '>' + esc(h.l) + '</th>').join('') + '</tr></thead>' +
     '<tbody>' + c.rows.map(r =>
@@ -505,12 +505,15 @@ function tableHTML(c){
 }
 
 /* Facts are a table that needs no header: a name, a number, and the context
-   that makes the number mean something. */
+   that makes the number mean something. Position identifies the cells, so the
+   shared .table--facts modifier styles them and they carry no classes. */
 function factsHTML(c){
-  return '<div class="tscroll"><table class="table facts">' + '<tbody>' + c.rows.map(r =>
-    '<tr><td class="facts__l">' + r[0] + '</td>' +
-        '<td class="num">' + r[1] + '</td>' +
-        '<td class="facts__c">' + r[2] + '</td></tr>').join('') + '</tbody></table></div>';
+  return '<div class="scroll-x scroll-x--bleed"><table class="table table--facts"><tbody>' +
+    c.rows.map(r =>
+      '<tr><td>' + r[0] + '</td>' +
+          '<td class="num">' + r[1] + '</td>' +
+          '<td>' + r[2] + '</td></tr>').join('') +
+    '</tbody></table></div>';
 }
 
 const noteHTML = c => '<ul class="notelist">' +

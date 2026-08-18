@@ -1006,7 +1006,7 @@ const LIVE_KIND = {
         '<span class="barlist__k">' + esc(k) + '</span>' +
         '<span class="meter' + (neg ? ' meter--down' : '') + '">' +
           '<i style="width:' + Math.round(Math.abs(v) / max * 100) + '%"></i></span>' +
-        '<span class="barlist__v' + (neg ? ' delta-dn' : '') + '">' +
+        '<span class="barlist__v' + (neg ? ' delta--down' : '') + '">' +
           esc((neg ? '' : '+') + v.toFixed(dec)) + '</span>');
       list.append(row);
     });
@@ -1326,7 +1326,7 @@ function dashCard(db){
         '<span class="dash__tile"><span class="stat__k">' + esc(k) + '</span>' +
         '<span class="dash__v">' + esc(v) + '</span></span>').join('') +
     '</div>' +
-    '<span class="sparkbars dash__spark" style="margin-top:var(--s-3)">' +
+    '<span class="spark spark--bars dash__spark" style="margin-top:var(--s-3)">' +
       db.bars.map(v => '<i style="height:' + v + '%"></i>').join('') +
     '</span>' +
     '<div class="dash__foot">' +
@@ -3072,7 +3072,7 @@ const KB_PANELS = {
           '<span class="row__title" style="font-family:var(--mono)">' + esc(s.n) + '</span>' +
           '<span class="row__sub">' + esc(s.cadence) + ' · ' + esc(s.span) + '</span>' +
         '</span>' +
-        '<span class="sparkbars" style="width:120px;flex:none">' +
+        '<span class="spark spark--bars" style="width:120px;flex:none">' +
           s.bars.map(v => '<i style="height:' + v + '%"></i>').join('') +
         '</span>';
       b.append(row);
@@ -3461,7 +3461,7 @@ function connectorView(body, c){
    the app tiles follow: colour as identity, not as emphasis. */
 const RADII  = { Square:'var(--r-xs)', Soft:'var(--r-lg)', Round:'var(--r-2xl)' };
 const accentVar = name => (D.DESIGN_ACCENTS.filter(x => x[0] === name)[0] || ['','var(--accent)'])[1];
-const deltaCls  = v => /^-/.test(String(v)) ? 'delta-dn' : 'delta-up';
+const deltaCls  = v => /^-/.test(String(v)) ? 'delta--down' : 'delta--up';
 const commaList = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
 
 function designCanvas(d){
@@ -3492,7 +3492,7 @@ function widgetNode(d){
     b.innerHTML =
       '<div class="wgt__kpirow">' +
         '<span class="wgt__kpi">' + esc(c.value) + '</span>' +
-        (c.delta ? '<span class="wgt__delta ' + deltaCls(c.delta) + '">' + esc(c.delta) + '</span>' : '') +
+        (c.delta ? '<span class="delta delta--lg ' + deltaCls(c.delta) + '">' + esc(c.delta) + '</span>' : '') +
       '</div>' +
       (c.cap ? '<div class="wgt__cap">' + esc(c.cap) + '</div>' : '');
 
@@ -3500,9 +3500,9 @@ function widgetNode(d){
     b.innerHTML =
       '<div class="wgt__kpirow" style="margin-bottom:var(--s-3)">' +
         '<span class="wgt__kpi">' + esc(c.value) + '</span>' +
-        (c.delta ? '<span class="wgt__delta ' + deltaCls(c.delta) + '">' + esc(c.delta) + '</span>' : '') +
+        (c.delta ? '<span class="delta delta--lg ' + deltaCls(c.delta) + '">' + esc(c.delta) + '</span>' : '') +
       '</div>' +
-      '<div class="sparkbars wgt__spark">' +
+      '<div class="spark spark--bars spark--tall wgt__spark">' +
         (d.bars || []).map(v => '<i style="height:' + v + '%"></i>').join('') +
       '</div>' +
       (c.cap ? '<div class="wgt__cap">' + esc(c.cap) + '</div>' : '');
@@ -4582,7 +4582,7 @@ function resBarsNode(a){
       '<span class="barlist__k">' + esc(k) + '</span>' +
       '<span class="meter' + (neg ? ' meter--down' : '') + '">' +
         '<i style="width:' + Math.round(Math.abs(v) / max * 100) + '%"></i></span>' +
-      '<span class="barlist__v' + (neg ? ' delta-dn' : '') + '">' +
+      '<span class="barlist__v' + (neg ? ' delta--down' : '') + '">' +
         esc((neg ? '' : '+') + v.toFixed(dec)) + '</span>'));
   });
   return wrap;
