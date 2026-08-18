@@ -120,6 +120,16 @@
 }
 button.chip:hover{ border-color:var(--line-strong); color:var(--text) }
 .chip > span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+/* Pressed is a real state of a chip: a multi-select member that has been
+   chosen. It takes the accent, because choosing is acting. The tick has no
+   width until then, so nothing shifts when it appears. */
+.chip[aria-pressed="true"]{
+  border-color:var(--accent-line);
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+.chip__tick{ display:flex; opacity:0; width:0; transition:opacity var(--fast) var(--ease) }
+.chip[aria-pressed="true"] .chip__tick{ opacity:1; width:auto }
 .chip--removable{ padding-right:var(--s-1) }
 /* Sits on --surface rather than in it: prompt starters read as things to pick
    up, not as fields already filled in. */
@@ -153,6 +163,15 @@ button.chip--plain:hover{ background:var(--raised) }
   border-color:var(--accent-line);
   box-shadow:0 0 0 3px var(--accent-soft);
 }
+/* A field you cannot type in has to say so. Buttons already did; these did not,
+   and a disabled input that looks live is a control that appears to be ignoring
+   you. The surface steps back rather than the text fading, because greyed text
+   in a white box reads as a placeholder. */
+.input:disabled,.select:disabled,.textarea:disabled{
+  background:var(--raised);
+  color:var(--text-3);
+  cursor:not-allowed;
+}
 /* Instructions are prose the model reads, so the control that holds them is
    sized for prose: monospace, a fixed line height, and no resize handle
    fighting the layout. */
@@ -168,6 +187,8 @@ button.chip--plain:hover{ background:var(--raised) }
   transition:border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
 }
 /* A note is prose, not instructions the model reads, so it drops the mono. */
+/* A value a machine will read back: an address, a CIDR, a token budget. */
+.input--mono{ font-family:var(--mono) }
 .textarea--prose{ font-family:var(--font); font-size:var(--t-13); line-height:1.6 }
 .select{
   padding-right:26px;
@@ -1575,7 +1596,10 @@ button.chip--plain:hover{ background:var(--raised) }
   border-radius:var(--r-full);
   background:var(--raised-2);
 }
-.thresh__fill{ height:100%; border-radius:var(--r-full) }
+/* display:block, because it is a span and height:100% on an inline box does
+   nothing — the fill drew as an empty track from the day it was written until
+   the styleguide put it next to .meter, which does say block. */
+.thresh__fill{ display:block; height:100%; border-radius:var(--r-full) }
 .thresh__fill--ok  { background:var(--ok) }
 .thresh__fill--warn{ background:var(--warn) }
 .thresh__fill--err { background:var(--err) }

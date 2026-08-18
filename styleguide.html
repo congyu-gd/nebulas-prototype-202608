@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nebulas — Design system</title>
+<!-- Three stylesheets, on purpose. The specimens must be styled by
+     components.css alone: anything that needed layout.css or install.css to
+     look right is not a component, and on this page it will look wrong. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/styleguide.css">
+</head>
+<body>
+
+<div class="sg">
+  <header class="sg__top">
+    <div class="sg__id">
+      <span class="sg__name">Nebulas · Quiet Precision</span>
+      <span class="sg__count" id="sgCount"></span>
+    </div>
+    <!-- The page's chrome is the system's own segmented control, on the same two
+         attributes the prototypes use — so switching here tests what switching
+         there tests. -->
+    <div class="seg" id="sgTheme" role="tablist" aria-label="Theme">
+      <button type="button" data-v="light" aria-selected="true">Light</button>
+      <button type="button" data-v="dark" aria-selected="false">Dark</button>
+    </div>
+    <div class="seg" id="sgDensity" role="tablist" aria-label="Density">
+      <button type="button" data-v="compact" aria-selected="false">Compact</button>
+      <button type="button" data-v="comfortable" aria-selected="true">Comfortable</button>
+      <button type="button" data-v="roomy" aria-selected="false">Roomy</button>
+    </div>
+  </header>
+
+  <nav class="sg__nav" id="sgNav" aria-label="Sections"></nav>
+
+  <main class="sg__body" id="sgBody"></main>
+</div>
+
+<script src="js/icons.js"></script>
+<script src="js/styleguide.js"></script>
+</body>
+</html>

@@ -29,9 +29,22 @@ import json
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TOKENS = 'css/tokens.css'
-SHEETS = ['css/base.css', 'css/components.css', 'css/layout.css', 'css/install.css']
+SHEETS = ['css/base.css', 'css/components.css', 'css/layout.css', 'css/install.css',
+          'css/styleguide.css']
 SCRIPTS = ['js/app.js', 'js/install.js']
 BASELINE = 'tools/px-baseline.json'
+
+# The styleguide renders the system, so it is held to two more rules: it must
+# show every token, and it may only name classes that exist in the layers it
+# loads. The second is what stops a rename leaving a specimen behind — and what
+# proves a specimen is a component rather than a page's furniture.
+GUIDE = 'js/styleguide.js'
+SHARED = ['css/base.css', 'css/components.css']
+
+# Tokens that exist to be read by name at runtime rather than shown: the four
+# registered shell widths are set on .app and animate, so the styleguide lists
+# them as values and never resolves them.
+TOKEN_EXEMPT = set()
 
 # A page shell may name a layout block; components.css names components. Rule 2
 # compares every stylesheet against every other, so these are the pairs where a
@@ -157,15 +170,66 @@ def check_px(problems, ratchet):
 
     with open(path, encoding='utf-8') as fh:
         base = json.load(fh)
-    if total > base['total']:
-        worse = [(rel, counts[rel] - base['files'].get(rel, 0)) for rel in SHEETS
-                 if counts[rel] > base['files'].get(rel, 0)]
+
+    # Compared across the files the baseline knows, in total — because moving a
+    # rule from a page's stylesheet into components.css moves its values with it,
+    # and a move is not a regression. A file the baseline has never seen brings
+    # its own values and is reported rather than failed.
+    known = base.get('files', {})
+    seen_total = sum(counts[rel] for rel in SHEETS if rel in known)
+    if seen_total > base['total']:
+        drift = sorted(((counts[rel] - known[rel], rel) for rel in SHEETS if rel in known),
+                       reverse=True)
         problems.append(
-            'raw px went up: %d → %d (%s). Name the value in %s, or lower the '
-            'baseline elsewhere first.' % (
-                base['total'], total,
-                ', '.join('%s +%d' % (r, d) for r, d in worse), TOKENS))
+            'raw px went up: %d → %d across the files on record (%s). Name the '
+            'value in %s, or take one out first.' % (
+                base['total'], seen_total,
+                ', '.join('%s %+d' % (rel, d) for d, rel in drift if d), TOKENS))
+    new_files = [rel for rel in SHEETS if rel not in known]
+    if new_files:
+        print('note: %s new to the baseline (%s) — re-ratchet to record it.'
+              % (', '.join(new_files), ' · '.join('%d px' % counts[r] for r in new_files)))
     return total
+
+
+# ------------------------------------------------------------------ rule 5
+def check_guide_tokens(problems):
+    declared = set()
+    for m in re.finditer(r'(--[a-z0-9-]+)\s*:', strip_comments(read(TOKENS))):
+        declared.add(m.group(1))
+    guide = read(GUIDE)
+    missing = sorted(t for t in declared - TOKEN_EXEMPT if t not in guide)
+    for t in missing:
+        problems.append(
+            '%s  declared in %s and not shown in %s — the styleguide is the '
+            'system stated, so a token it omits is a token nobody can look up'
+            % (t, TOKENS, GUIDE))
+    return len(declared)
+
+
+# ------------------------------------------------------------------ rule 6
+def check_guide_classes(problems):
+    exists = set()
+    for rel in SHARED:
+        body = strip_comments(read(rel))
+        for m in re.finditer(r'\.([A-Za-z0-9_-]+)', body):
+            exists.add(m.group(1))
+    guide = strip_comments(read(GUIDE))
+    named = set()
+    # `cls:'.badge--ok'` is what the specimen claims to be; class="…" is what it
+    # renders. Both have to be real.
+    for m in re.finditer(r"cls:'([^']+)'", guide):
+        for part in m.group(1).replace('/', ' ').split():
+            named.add(part.lstrip('.'))
+    for m in re.finditer(r'class="([a-zA-Z0-9_ -]+)"', guide):
+        for part in m.group(1).split():
+            named.add(part)
+    # the styleguide's own furniture is allowed to be its own
+    named = {c for c in named if not c.startswith('sg')}
+    for c in sorted(named - exists):
+        problems.append(
+            '.%s  shown in %s and defined in neither %s — either it is not a '
+            'component or the specimen is stale' % (c, GUIDE, ' nor '.join(SHARED)))
 
 
 # ---------------------------------------------------------------------- main
@@ -176,14 +240,18 @@ def main():
     check_colour(problems)
     check_names(problems)
     check_glyphs(problems)
+    tokens = check_guide_tokens(problems)
+    check_guide_classes(problems)
     total = check_px(problems, ratchet)
 
     if ratchet:
         return 0
 
-    print('css: %d files · %d raw px outside tokens.css' % (len(SHEETS), total))
+    print('css: %d files · %d tokens · %d raw px outside tokens.css'
+          % (len(SHEETS), tokens, total))
     if not problems:
-        print('clean — colour, names and glyphs all have one owner.')
+        print('clean — colour, names and glyphs have one owner, and the styleguide '
+              'covers every token.')
         return 0
 
     print('\n%d problem%s:\n' % (len(problems), '' if len(problems) == 1 else 's'))

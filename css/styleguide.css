@@ -1,0 +1,108 @@
+/* ============================================================================
+   styleguide — this page's shell only, and deliberately almost nothing.
+
+   The specimens must be styled by components.css alone. Anything this file did
+   to make one look right would be a lie about the system, so what is here is
+   the page around them: a header, a column, and the frame each specimen sits
+   in. No specimen selector appears below.
+   ========================================================================= */
+
+.sg{
+  display:flex; flex-direction:column;
+  min-height:100vh;
+  background:var(--bg);
+}
+
+/* Stays put, because the theme and density controls are the point of scrolling
+   past something twice. */
+.sg__top{
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; gap:var(--s-4); flex-wrap:wrap;
+  padding:var(--s-3) var(--s-6);
+  background:var(--bg);
+  border-bottom:var(--border) solid var(--line);
+}
+.sg__id{ display:flex; align-items:baseline; gap:var(--s-3); margin-right:auto }
+.sg__name{ font-size:var(--t-15); font-weight:var(--w-medium); letter-spacing:var(--ls-snug) }
+.sg__count{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
+.sg__nav{
+  display:flex; gap:var(--s-1); flex-wrap:wrap;
+  padding:var(--s-2) var(--s-6);
+  border-bottom:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.sg__nav a{
+  padding:2px var(--s-2);
+  border-radius:var(--r-sm);
+  font-size:var(--t-11); color:var(--text-3);
+}
+.sg__nav a:hover{ background:var(--raised); color:var(--text) }
+
+.sg__body{ flex:1; padding:var(--s-8) var(--s-6) var(--s-16); max-width:1080px; width:100% }
+
+.sg__sec{ margin-bottom:var(--s-16); scroll-margin-top:var(--s-16) }
+.sg__sech{
+  display:flex; align-items:baseline; gap:var(--s-3);
+  padding-bottom:var(--s-2); margin-bottom:var(--s-4);
+  border-bottom:var(--border) solid var(--line);
+}
+.sg__blurb{ margin:0 0 var(--s-6); font-size:var(--t-13); color:var(--text-3); max-width:72ch }
+
+/* One specimen: what it is called, then the thing itself. The label is above
+   rather than beside, so a wide specimen is not squeezed by its own name. */
+.sg__grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:var(--s-5) }
+.sg__item{ min-width:0 }
+.sg__item--wide{ grid-column:1 / -1 }
+.sg__label{
+  display:flex; align-items:baseline; gap:var(--s-2);
+  margin-bottom:var(--s-2);
+}
+.sg__cls{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-2) }
+.sg__what{ font-size:var(--t-11); color:var(--text-4) }
+/* The stage is a hairline box on the page's own surface, so a component that
+   draws no background of its own is still visible, and one that does can be
+   seen not to match. */
+.sg__demo{
+  display:flex; align-items:flex-start; flex-wrap:wrap; gap:var(--s-3);
+  padding:var(--s-4);
+  border:var(--border) dashed var(--line);
+  border-radius:var(--r-md);
+  min-height:var(--ctl-lg);
+}
+.sg__demo--block{ display:block }
+.sg__demo--dark{ background:var(--surface) }
+.sg__note{ margin:var(--s-2) 0 0; font-size:var(--t-11); color:var(--text-4); max-width:64ch }
+
+/* ------------------------------------------------------------------- tokens */
+.sg__tokens{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:var(--s-3) }
+.sg__tok{ display:flex; align-items:center; gap:var(--s-3); min-width:0 }
+.sg__swatch{
+  flex:none;
+  width:var(--ctl-lg); height:var(--ctl-lg);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-md);
+}
+.sg__tokid{ min-width:0 }
+.sg__tokname{
+  display:block;
+  font-family:var(--mono); font-size:var(--t-11); color:var(--text-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sg__tokval{ display:block; font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+
+/* A space token as a bar, because a number in a list says less than a length. */
+.sg__bar{ height:var(--ctl-xs); background:var(--accent-soft); border-radius:var(--r-xs) }
+
+/* The five states that were never built. Marked as gaps rather than drawn, so
+   the system names what it lacks instead of implying it. */
+.sg__gap{
+  display:flex; align-items:flex-start; gap:var(--s-3);
+  padding:var(--s-4);
+  border:var(--border) dashed var(--line-strong);
+  border-radius:var(--r-md);
+  background:repeating-linear-gradient(135deg,
+    transparent 0 6px, var(--raised) 6px 7px);
+}
+.sg__gapt{ font-size:var(--t-12); color:var(--text-2) }
+.sg__gapb{ margin:2px 0 0; font-size:var(--t-11); color:var(--text-4) }

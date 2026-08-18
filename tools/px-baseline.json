@@ -1,9 +1,10 @@
 {
   "files": {
     "css/base.css": 6,
-    "css/components.css": 114,
-    "css/install.css": 30,
-    "css/layout.css": 30
+    "css/components.css": 133,
+    "css/install.css": 14,
+    "css/layout.css": 26,
+    "css/styleguide.css": 8
   },
-  "total": 180
+  "total": 187
 }

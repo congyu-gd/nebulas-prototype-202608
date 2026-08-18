@@ -148,7 +148,6 @@
 .fields > .field--switch{ align-self:start }
 .fields > .field--switch .switch{ padding:0; min-height:var(--ctl-md) }
 
-.input--mono{ font-family:var(--mono) }
 /* A prefixed input: the symbol is chrome, so it sits inside the border. */
 .input-pre{
   display:flex; align-items:center;
@@ -166,16 +165,9 @@
 .input-pre .input{ border:0; box-shadow:none; padding-left:0 }
 .input-pre .input:focus{ box-shadow:none }
 
-/* Multi-select reuses the chip. Pressed takes the accent — the one place a
-   choice in this page says "you acted". */
+/* .chips is this page's row of them; the chip's pressed state and its tick are
+   the component's own (components.css). */
 .chips{ display:flex; flex-wrap:wrap; gap:var(--s-1) }
-.chip[aria-pressed="true"]{
-  border-color:var(--accent-line);
-  background:var(--accent-soft);
-  color:var(--accent);
-}
-.chip__tick{ display:flex; opacity:0; width:0; transition:opacity var(--fast) var(--ease) }
-.chip[aria-pressed="true"] .chip__tick{ opacity:1; width:auto }
 
 /* Segmented control at field width rather than hugging its labels. */
 .field .seg{ display:inline-flex }

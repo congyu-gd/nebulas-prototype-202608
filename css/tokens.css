@@ -100,7 +100,12 @@
   --s-4:calc(var(--u) * 4 * var(--density));
   --s-5:calc(var(--u) * 5 * var(--density));
   --s-6:calc(var(--u) * 6 * var(--density));
+  /* 7 and 9 were missing, and a var(--s-7) resolves to nothing rather than to an
+     error — which cost this project two silent layout bugs. The scale is
+     complete now, so asking for a step is never a trap. */
+  --s-7:calc(var(--u) * 7 * var(--density));
   --s-8:calc(var(--u) * 8 * var(--density));
+  --s-9:calc(var(--u) * 9 * var(--density));
   --s-10:calc(var(--u) * 10 * var(--density));
   --s-12:calc(var(--u) * 12 * var(--density));
   --s-16:calc(var(--u) * 16 * var(--density));
