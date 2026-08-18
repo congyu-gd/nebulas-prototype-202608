@@ -490,6 +490,12 @@ const OWNERS = { as3:'Ana', as6:'Ravi', as7:'Ana', as8:'Ravi', as9:'Marc',
                  as10:'Marc', as11:'Ana', as12:'Ana', as13:'Ravi', as15:'Marc' };
 ASSISTANTS.forEach(a => { a.owner = MINE.indexOf(a.id) > -1 ? 'me' : (OWNERS[a.id] || 'Ravi'); });
 
+/* Recommended: the workspace's shortlist for people who have not built their
+   own yet — broadly useful, none of them mine, each owned by the team that
+   keeps it healthy. A flag rather than a list page, so the card can say so. */
+const RECOMMENDED = ['as3','as6','as8','as15'];
+ASSISTANTS.forEach(a => { a.rec = RECOMMENDED.indexOf(a.id) > -1; });
+
 ASSISTANTS[0].conn = ['cn1','cn2'];
 ASSISTANTS[0].inst =
   'Answer from the finance warehouse. Strip non-recurring lines before attributing growth, ' +
@@ -609,22 +615,179 @@ ASSISTANTS.forEach((a, i) => {
   a.upd = ASST_AGES[i % ASST_AGES.length];
 });
 
-/* --------------------------------------------------------------- schedule */
+/* --------------------------------------------------------------- schedule
+   Two kinds of row in one table, because they answer the same question — what
+   runs without anyone asking. A *task* is one piece of work on a cron. A *job*
+   is the workflow of its schedule: named steps that run in order each time it
+   fires, so the steps carry no cron of their own — `steps` is what the row
+   expands into, each step reporting how it went last time.
+
+   `history` is the run log, newest first. `out` is the one-line label; `md` is
+   the product itself — the post as written, the digest as sent — because a run
+   log answers "what did it make", and for work that generates content the
+   answer is the content. A failed run has no `md`: nothing was made, and
+   showing a stub would say otherwise. `art` points into the results store when
+   the product is still there to open in full; a run whose product landed in a
+   channel or a corpus has nothing to open, so the entry says where the work
+   went instead. A job's run carries the per-step outcome as [duration, state],
+   aligned by index with the workflow's steps. `manual:true` marks a run
+   someone asked for rather than one the cron fired.
+
+   `thread` is the chat the run writes into, when it writes into one — a door,
+   not a label. A row that feeds a corpus or a channel has no thread, and its
+   Chat cell says where the work goes instead of pretending there is a
+   conversation to open. */
 const SCHEDULE = [
   { id:'sc1', name:'Weekly revenue digest', cron:'Mon 07:00', next:'in 2 d', state:'ok',
-    target:'#leadership', assistant:'Board writer', last:'1:12' },
+    target:'#leadership', thread:'t1', assistant:'Board writer', last:'1:12',
+    steps:[
+      { name:'Refresh revenue tables', target:'Finance corpus',  assistant:'—',            last:'0:22', state:'ok' },
+      { name:'Draft the digest',       target:'thread',          assistant:'Board writer', last:'0:41', state:'ok' },
+      { name:'Post to #leadership',    target:'#leadership',     assistant:'—',            last:'0:09', state:'ok' }
+    ],
+    history:[
+      { when:'Mon Aug 10 · 07:00', dur:'1:12', state:'ok',  out:'Digest · week 33 → #leadership',
+        md:'**ARR $41.3M**, +2.1% w/w — enterprise carried it, mid-market flat.\n' +
+           '- Pipeline coverage 3.1× against the Q3 target, up from 2.8×\n' +
+           '- Two renewals above $200k signed early; one $340k renewal slipped to September\n' +
+           '- Watch: churn in the 50–200 seat band ticked up a second week',
+        steps:[['0:22','ok'],['0:41','ok'],['0:09','ok']] },
+      { when:'Mon Aug 3 · 07:00',  dur:'1:26', state:'ok',  out:'Digest · week 32 → #leadership',
+        md:'**ARR $40.4M**, +0.8% w/w — a quiet week, on plan.\n' +
+           '- Pipeline coverage 2.8×; nothing above $150k moved stage\n' +
+           '- Renewals on track; no logo risk flagged by the watchlist',
+        steps:[['0:31','ok'],['0:46','ok'],['0:09','ok']] },
+      { when:'Mon Jul 27 · 07:00', dur:'0:24', state:'err', out:'Stopped at step 1 — q3_close_lines was mid-load',
+        steps:[['0:24','err'],['—','idle'],['—','idle']] },
+      { when:'Mon Jul 20 · 07:00', dur:'1:18', state:'ok',  out:'Digest · week 30 → #leadership',
+        md:'**ARR $40.1M**, +1.4% w/w — the strongest July week since 2024.\n' +
+           '- Enterprise net-new $310k, led by the Meridian expansion\n' +
+           '- Pipeline coverage 2.9×; two competitive takeouts entered legal',
+        steps:[['0:26','ok'],['0:43','ok'],['0:09','ok']] }
+    ] },
   { id:'sc2', name:'Ingest new drive documents', cron:'every 15 min', next:'in 4 min', state:'run',
-    target:'Finance corpus', assistant:'—', last:'1:58' },
+    target:'Finance corpus', assistant:'—', last:'1:58',
+    history:[
+      { when:'Today · 17:19', dur:'—',    state:'run', out:'Indexing renewals-playbook.docx' },
+      { when:'Today · 17:04', dur:'1:58', state:'ok',  out:'2 documents → Finance corpus' },
+      { when:'Today · 16:49', dur:'0:12', state:'ok',  out:'Nothing new to index' },
+      { when:'Today · 16:34', dur:'0:11', state:'ok',  out:'Nothing new to index' }
+    ] },
   { id:'sc3', name:'Churn watchlist refresh', cron:'daily 06:00', next:'in 16 h', state:'ok',
-    target:'Churn program', assistant:'Revenue analyst', last:'2:41' },
+    target:'Churn program', thread:'t3', assistant:'Revenue analyst', last:'2:41',
+    history:[
+      { when:'Today · 06:00',     dur:'2:41', state:'ok', out:'Watchlist · 214 accounts (+6) → Churn program' },
+      { when:'Yesterday · 06:00', dur:'2:33', state:'ok', out:'Watchlist · 208 accounts (−2) → Churn program' },
+      { when:'Tue Aug 11 · 06:00', dur:'2:56', state:'ok', out:'Watchlist · 210 accounts (+11) → Churn program' }
+    ] },
   { id:'sc4', name:'Ticket backlog sweep', cron:'hourly', next:'in 22 min', state:'ok',
-    target:'Support triage', assistant:'Support triage', last:'0:38' },
+    target:'Support triage', assistant:'Support triage', last:'0:38',
+    history:[
+      { when:'Today · 17:00', dur:'0:38', state:'ok', out:'12 tickets triaged, 2 escalated' },
+      { when:'Today · 16:00', dur:'0:41', state:'ok', out:'9 tickets triaged' },
+      { when:'Today · 15:00', dur:'0:29', state:'ok', out:'4 tickets triaged' }
+    ] },
   { id:'sc5', name:'Corpus re-embed', cron:'manual', next:'—', state:'err',
-    target:'Finance corpus', assistant:'—', last:'0:04' },
+    target:'Finance corpus', assistant:'—', last:'0:04',
+    history:[
+      { when:'Tue Aug 11 · 14:02', dur:'0:04', state:'err', manual:true,
+        out:'Failed — embedding quota exhausted before the first batch' },
+      { when:'Thu Jul 30 · 11:20', dur:'48:12', state:'ok', manual:true,
+        out:'12,408 documents re-embedded on nebula-embed-3' }
+    ] },
+  { id:'sc8', name:'Morning LinkedIn post', cron:'daily 08:30', next:'in 15 h', state:'ok',
+    target:'Social publishing', thread:'t7', assistant:'Social editor', last:'0:19',
+    /* The product IS the post. LinkedIn ships disconnected (cn12), so every run
+       writes the post and keeps it — the label says so, and the draft is read
+       here in full because that is what a person checks a morning post for. */
+    history:[
+      { when:'Today · 08:30', dur:'0:19', state:'ok',
+        out:'Post written — LinkedIn is not connected, kept in the queue',
+        /* The post's visual, as an inline SVG drawn from the page's own tokens —
+           no file, no network, and it follows the theme like everything else. */
+        img:'<svg viewBox="0 0 600 315" role="img" aria-label="Unplanned downtime, hours per month: 41 before the retrofit, 28 after">' +
+            '<rect width="600" height="315" fill="var(--raised)"/>' +
+            '<text x="40" y="66" font-size="24" font-weight="600" fill="var(--text)">Unplanned downtime, h / month</text>' +
+            '<text x="40" y="94" font-size="15" fill="var(--text-3)">Meridian plant \u00b7 six-week retrofit \u00b7 zero new hardware</text>' +
+            '<rect x="40" y="140" width="400" height="44" rx="6" fill="var(--line-strong)"/>' +
+            '<text x="456" y="169" font-size="15" fill="var(--text-3)">before \u00b7 41 h</text>' +
+            '<rect x="40" y="204" width="276" height="44" rx="6" fill="var(--accent)"/>' +
+            '<text x="332" y="233" font-size="15" fill="var(--text-3)">after \u00b7 28 h (\u221231%)</text>' +
+            '</svg>',
+        md:'Most factory-automation pitches start with a new line. The Meridian retrofit ' +
+           'started with a 1987 press brake and a question: what if the machines you already ' +
+           'own could tell you what they need?\n' +
+           'Six weeks later: 31% less unplanned downtime, zero new hardware on the floor.\n' +
+           'The full case study is in the comments. **If your oldest machine could talk, ' +
+           'what would you ask it?**' },
+      { when:'Yesterday · 08:30', dur:'0:23', state:'ok',
+        out:'Post written — LinkedIn is not connected, kept in the queue',
+        img:'<svg viewBox="0 0 600 315" role="img" aria-label="Reel against carousel: the reel reached 3.4 times further, the carousel was saved twice as often">' +
+            '<rect width="600" height="315" fill="var(--raised)"/>' +
+            '<text x="40" y="66" font-size="24" font-weight="600" fill="var(--text)">Same story, two formats</text>' +
+            '<text x="40" y="128" font-size="14" fill="var(--text-3)">reach</text>' +
+            '<rect x="130" y="110" width="380" height="26" rx="5" fill="var(--accent)"/>' +
+            '<text x="518" y="129" font-size="13" fill="var(--text-3)">reel 3.4\u00d7</text>' +
+            '<rect x="130" y="144" width="112" height="26" rx="5" fill="var(--line-strong)"/>' +
+            '<text x="250" y="163" font-size="13" fill="var(--text-3)">carousel</text>' +
+            '<text x="40" y="234" font-size="14" fill="var(--text-3)">saves</text>' +
+            '<rect x="130" y="216" width="150" height="26" rx="5" fill="var(--line-strong)"/>' +
+            '<text x="288" y="235" font-size="13" fill="var(--text-3)">reel</text>' +
+            '<rect x="130" y="250" width="300" height="26" rx="5" fill="var(--accent)"/>' +
+            '<text x="438" y="269" font-size="13" fill="var(--text-3)">carousel 2\u00d7</text>' +
+            '</svg>',
+        md:'We A/B tested a 40-second reel against a 10-slide carousel with the same story.\n' +
+           'The reel won on reach 3.4× — but the carousel drove **2× the saves**.\n' +
+           'Reach is rented attention; saves are permission to come back. Which one your ' +
+           'post needs depends on which of those you are short of.' },
+      { when:'Tue Aug 11 · 08:30', dur:'0:21', state:'ok',
+        out:'Post written — LinkedIn is not connected, kept in the queue',
+        img:'<svg viewBox="0 0 600 315" role="img" aria-label="Posting window moved from 09:00 to 08:30">' +
+            '<rect width="600" height="315" fill="var(--raised)"/>' +
+            '<text x="40" y="66" font-size="24" font-weight="600" fill="var(--text)">Read with the first coffee</text>' +
+            '<text x="40" y="94" font-size="15" fill="var(--text-3)">four weeks of opens, by half hour</text>' +
+            '<rect x="40" y="150" width="520" height="10" rx="5" fill="var(--line)"/>' +
+            '<rect x="180" y="150" width="120" height="10" rx="5" fill="var(--accent-soft)"/>' +
+            '<circle cx="212" cy="155" r="12" fill="var(--accent)"/>' +
+            '<text x="196" y="196" font-size="14" font-weight="600" fill="var(--text)">08:30</text>' +
+            '<circle cx="264" cy="155" r="8" fill="var(--line-strong)"/>' +
+            '<text x="250" y="126" font-size="13" fill="var(--text-4)">09:00, the old slot</text>' +
+            '<text x="40" y="264" font-size="14" fill="var(--text-3)">07:00</text>' +
+            '<text x="516" y="264" font-size="14" fill="var(--text-3)">12:00</text>' +
+            '</svg>',
+        md:'September calendar note: we are moving our posting window from 09:00 to 08:30.\n' +
+           'Four weeks of data says our audience reads with the first coffee, not the second. ' +
+           'Small change, free reach.\n' +
+           '*What time slot works for your audience — and when did you last test it?*' }
+    ] },
   { id:'sc6', name:'Forecast bridge rebuild', cron:'Fri 18:00', next:'in 5 d', state:'idle',
-    target:'Q3 close', assistant:'Revenue analyst', last:'—' },
+    target:'Q3 close', thread:'t1', assistant:'Revenue analyst', last:'—',
+    history:[] },
   { id:'sc7', name:'Channel performance report', cron:'Mon 08:00', next:'in 3 d', state:'ok',
-    target:'Social publishing', assistant:'Social editor', last:'1:04' }
+    target:'Social publishing', thread:'t7', assistant:'Social editor', last:'1:04',
+    steps:[
+      { name:'Pull channel metrics',           target:'fb · ig · li',      assistant:'—',             last:'0:31', state:'ok' },
+      { name:'Compose the weekly report',      target:'thread',            assistant:'Social editor', last:'0:26', state:'ok' },
+      { name:'File the result',                target:'Social publishing', assistant:'—',             last:'0:07', state:'ok' }
+    ],
+    history:[
+      /* Run on request twenty minutes ago — the result it filed is a7. */
+      { when:'Today · 17:12',      dur:'1:04', state:'ok', manual:true,
+        out:'Channel performance · week 33', art:'a7',
+        md:'- Instagram led again: reach 246.1k, engagement 5.1%, +1,204 follows\n' +
+           '- Facebook reach 182.4k, engagement 3.4% — the reel outran every carousel\n' +
+           '- LinkedIn *not measured* — the channel is not connected',
+        steps:[['0:31','ok'],['0:26','ok'],['0:07','ok']] },
+      { when:'Mon Aug 10 · 08:00', dur:'1:09', state:'ok', out:'Channel performance · week 32',
+        md:'- Instagram reach 228.7k, engagement 4.8%; Facebook reach 176.0k, engagement 3.1%\n' +
+           '- Best post: the retrofit before/after reel — 44.2k reach in 48 h\n' +
+           '- LinkedIn *not measured* — the channel is not connected',
+        steps:[['0:34','ok'],['0:28','ok'],['0:07','ok']] },
+      { when:'Mon Aug 3 · 08:00',  dur:'1:41', state:'ok', out:'Channel performance · week 31 — LinkedIn not measured',
+        md:'- Instagram reach 201.3k, engagement 4.2%; Facebook reach 168.4k, engagement 3.0%\n' +
+           '- Carousel formats fell for the third week — moved the calendar toward reels',
+        steps:[['1:02','ok'],['0:32','ok'],['0:07','ok']] }
+    ] }
 ];
 
 /* -------------------------------------------------------- knowledge bases */

@@ -90,6 +90,9 @@ const SECTIONS = [
     { cls:'.btn--ghost', html:'<button class="btn btn--ghost">Cancel</button>' +
       '<button class="btn btn--ghost btn--sm">Skip for now</button>' },
     { cls:'.btn--danger', html:'<button class="btn btn--danger">Delete project</button>' },
+    { cls:'.linkbtn', what:'a cell that goes somewhere', html:
+      '<span style="font-size:var(--t-12)">Writes into <button class="linkbtn">September social calendar</button></span>',
+      note:'A button that reads as a link, for table cells and prose where a full button would shout.' },
     { cls:'.iconbtn', what:'three sizes', html:
       '<button class="iconbtn">' + ic('gear', 16) + '</button>' +
       '<button class="iconbtn iconbtn--sm">' + ic('gear', 14) + '</button>' +
@@ -200,7 +203,47 @@ const SECTIONS = [
       '<span class="checklist__nm">Connector granted</span><span class="checklist__val">missing</span></div></div>' },
     { cls:'.detrow', wide:true, block:true, html:
       '<button class="detrow"><span class="detrow__ico">' + ic13('agent') + '</span>' +
-      '<span class="detrow__nm">Revenue analyst</span><span class="detrow__meta">Revenue · Nebula Pro</span></button>' }
+      '<span class="detrow__nm">Revenue analyst</span><span class="detrow__meta">Revenue · Nebula Pro</span></button>' },
+    { cls:'.table__twist / .table__step', what:'grouped rows', wide:true, block:true, html:
+      '<table class="table table--rows"><thead><tr><th>Task</th><th>Runs</th><th>Status</th></tr></thead><tbody>' +
+      '<tr><td style="color:var(--text)"><span style="display:inline-flex;align-items:center;gap:var(--s-2)">' +
+      '<button type="button" class="table__twist" aria-expanded="true">' + ic('chevR', 12) + '</button>' +
+      'Weekly revenue digest <span class="badge badge--mono">job · 2 steps</span></span></td>' +
+      '<td style="font-family:var(--mono)">Mon 07:00</td><td>ok</td></tr>' +
+      '<tr class="table__step"><td>Refresh revenue tables</td><td style="font-family:var(--mono)">step 1</td><td>ok</td></tr>' +
+      '<tr class="table__step"><td>Draft the digest</td><td style="font-family:var(--mono)">step 2</td><td>ok</td></tr>' +
+      '</tbody></table>',
+      note:'A row that contains rows. The twist folds; the contained rows indent and speak more quietly. Which rows appear is the caller’s decision.' },
+    { cls:'.timeline', what:'a run log', wide:true, block:true, html:
+      '<ul class="timeline">' +
+      '<li class="timeline__item"><span class="timeline__rail"><span class="dot dot--ok"></span></span>' +
+      '<div class="timeline__main"><div class="timeline__head">' +
+      '<span class="timeline__when">Mon Aug 10 · 07:00</span><span class="timeline__meta">1:12</span></div>' +
+      '<div class="timeline__out">Digest · week 33 → #leadership</div>' +
+      '<div class="timeline__product">' +
+      '<figure class="timeline__img"><svg viewBox="0 0 600 160" role="img" aria-label="A generated visual, drawn from the tokens">' +
+      '<rect width="600" height="160" fill="var(--raised)"/>' +
+      '<rect x="32" y="40" width="380" height="30" rx="5" fill="var(--line-strong)"/>' +
+      '<rect x="32" y="86" width="260" height="30" rx="5" fill="var(--accent)"/>' +
+      '</svg></figure>' +
+      '<p><strong>ARR $41.3M</strong>, +2.1% w/w — enterprise carried it.</p>' +
+      '<ul><li>Pipeline coverage 3.1× against the Q3 target</li></ul></div>' +
+      '<div class="timeline__acts"><button type="button" class="iconbtn iconbtn--sm" title="Copy the text">' +
+      ic('copy', 13) + '</button></div>' +
+      '<div class="timeline__steps">' +
+      '<span class="timeline__step"><span class="dot dot--ok"></span>Refresh revenue tables<span class="timeline__meta">0:22</span></span>' +
+      '<span class="timeline__step"><span class="dot dot--ok"></span>Draft the digest<span class="timeline__meta">0:41</span></span>' +
+      '</div></div></li>' +
+      '<li class="timeline__item"><span class="timeline__rail"><span class="dot dot--err"></span></span>' +
+      '<div class="timeline__main"><div class="timeline__head">' +
+      '<span class="timeline__when">Mon Jul 27 · 07:00</span><span class="timeline__meta">0:24</span></div>' +
+      '<div class="timeline__out">Stopped at step 1 — q3_close_lines was mid-load</div></div></li>' +
+      '<li class="timeline__item"><span class="timeline__rail"><span class="dot"></span></span>' +
+      '<div class="timeline__main"><div class="timeline__head">' +
+      '<span class="timeline__when">Mon Jul 20 · 07:00</span><span class="timeline__meta">—</span></div>' +
+      '<div class="timeline__out">Skipped — nothing new since the last run</div></div></li>' +
+      '</ul>',
+      note:'Newest first, one dot per entry coloured by how the run ended, a rail joining them because the entries are one history. The product itself is quoted in the entry — a run log answers "what did it make", and for generated content the answer is the content. A failed run quotes nothing, because nothing was made.' }
   ]
 },
 {

@@ -543,6 +543,35 @@ button.chip--plain:hover{ background:var(--raised) }
 .table th.pick,.table td.pick{ width:34px; padding-right:0 }
 .table tbody tr[aria-selected="true"]{ background:var(--accent-soft) }
 
+/* A cell that goes somewhere. A button that reads as a link, for table cells
+   and lines of prose where a full button would shout — the accent already
+   means "you can act", so the colour is the whole affordance. */
+.linkbtn{
+  display:inline; padding:0;
+  font:inherit; text-align:left;
+  color:var(--accent);
+}
+.linkbtn:hover{ text-decoration:underline }
+
+/* ----------------------------------------------------------- grouped rows
+   A row that contains rows — a job above its steps. The twist says a row can
+   open and which way it currently is; the contained rows indent one step and
+   speak more quietly, since they are detail of the row above rather than peers
+   of it. Which rows appear is the caller's decision; this is only what open
+   looks like. */
+.table__twist{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:var(--ctl-xs); height:var(--ctl-xs);
+  margin:calc(-1 * var(--s-1)) 0;         /* taller than the line, not the row */
+  border-radius:var(--r-sm);
+  color:var(--text-4);
+}
+.table__twist:hover{ background:var(--raised); color:var(--text-2) }
+.table__twist svg{ transition:rotate var(--fast) var(--ease) }
+.table__twist[aria-expanded="true"] svg{ rotate:90deg }
+.table__step td{ color:var(--text-3) }
+.table__step td:first-child{ padding-left:var(--s-8) }
+
 /* Horizontal overflow container — wide tables scroll, the page never does. */
 /* A wide thing scrolls inside its own box rather than widening the page. */
 .scroll-x{ overflow-x:auto; max-width:100% }
@@ -792,6 +821,68 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .deflist dt{ color:var(--text-4); white-space:nowrap }
 .deflist dd{ margin:0; color:var(--text-2); min-width:0 }
+
+/* ============================================================== timeline
+   A run log read downward, newest first: one dot per entry coloured by how the
+   run ended, and a rail joining them because the entries are one history rather
+   than independent facts. The product is the loudest line — a run log answers
+   "what did it make", not "did the cron fire" — and a job's entry can carry its
+   per-step outcomes underneath. Laid out with flex rather than absolute
+   offsets, so the rail takes whatever height the entry has. */
+.timeline{ margin:0; padding:0; list-style:none }
+.timeline__item{ display:flex; gap:var(--s-3) }
+.timeline__rail{
+  flex:none; display:flex; flex-direction:column; align-items:center;
+  width:var(--dot);
+  padding-top:var(--s-2);
+}
+.timeline__rail::after{
+  content:""; flex:1; width:1px;
+  margin-top:var(--s-2);
+  background:var(--line);
+}
+.timeline__item:last-child .timeline__rail::after{ display:none }
+.timeline__main{ flex:1; min-width:0; padding-bottom:var(--s-5) }
+.timeline__item:last-child .timeline__main{ padding-bottom:0 }
+.timeline__head{ display:flex; align-items:baseline; gap:var(--s-3); flex-wrap:wrap }
+.timeline__when{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4); white-space:nowrap }
+.timeline__meta{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+.timeline__out{ margin-top:var(--s-1); font-size:var(--t-12); color:var(--text) }
+/* The product itself, quoted: the post as written, the digest as sent. A run
+   log answers "what did it make", and for generated content the answer is the
+   content — so it sits in the entry, in a quiet box that says "this is the
+   thing", not another line of chrome about the thing. */
+.timeline__product{
+  margin-top:var(--s-2);
+  padding:var(--s-3);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-md);
+  background:var(--surface);
+  font-size:var(--t-12); line-height:var(--lh-ui); color:var(--text-2);
+}
+.timeline__product p{ margin:0 0 var(--s-2) }
+.timeline__product ul{ margin:0 0 var(--s-2); padding-left:var(--s-5) }
+.timeline__product li{ margin-bottom:var(--s-1) }
+.timeline__product > :last-child{ margin-bottom:0 }
+.timeline__product strong{ font-weight:var(--w-semi); color:var(--text) }
+.timeline__product em{ font-style:normal; color:var(--text-3) }
+/* The post's visual, above its text — an inline SVG drawn from the tokens, so
+   it follows theme and density like everything else. The viewBox keeps the
+   ratio; the width is whatever the entry has. */
+.timeline__img{ margin:0 0 var(--s-3) }
+.timeline__img svg{
+  width:100%; height:auto;
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-sm);
+}
+/* Acting on the product, under it — quiet, because the product is the point. */
+.timeline__acts{ display:flex; gap:var(--s-1); margin-top:var(--s-2) }
+.timeline__steps{ display:flex; flex-direction:column; gap:var(--s-1); margin-top:var(--s-2) }
+.timeline__step{
+  display:flex; align-items:center; gap:var(--s-2);
+  font-size:var(--t-11); color:var(--text-3);
+}
+.timeline__step .timeline__meta{ margin-left:auto }
 
 /* ========================================================== empty states */
 .empty{
@@ -1649,3 +1740,7 @@ button.chip--plain:hover{ background:var(--raised) }
 /* auto-fit reflows on its own, so it needs no breakpoints — but it has to beat
    the ones the three-across grid has, hence the doubled class. */
 .kpis--auto.kpis--auto{ grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) }
+/* --row: one line, however many tiles there are — for a dialog or a panel where
+   the stats are a header, not the content, and wrapping would push the content
+   they introduce below the fold. Pair with .kpi__v--sm so the tiles stay flat. */
+.kpis--row.kpis--row{ grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr) }

@@ -432,7 +432,10 @@
   padding:var(--s-3);
   border:var(--border) solid var(--line);
   border-radius:var(--r-lg);
-  background:var(--surface);
+  /* The page's own ground (white in light), not a sunken surface: this column
+     is the personal shelf beside the catalogue, and it reads as yours by
+     sitting on the same ground the cards do. */
+  background:var(--bg);
 }
 .asst__sidehead{
   display:flex; align-items:center; gap:var(--s-2);

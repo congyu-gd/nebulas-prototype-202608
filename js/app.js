@@ -53,13 +53,20 @@ function inline(s){
 }
 
 function highlight(code){
+  /* One pass with alternation, not three in sequence: a later rule run over the
+     output of an earlier one matches inside the markup it inserted — the keyword
+     `class` is in every <span class="…">, so every comment line came out
+     mangled. A single replace consumes each match, so nothing is re-entered.
+     Comment first: a keyword inside a comment is still a comment. */
   return esc(code).split('\n').map(line => {
     if (line.indexOf('-') === 0) return '<span class="del">' + line + '</span>';
     if (line.indexOf('+') === 0) return '<span class="add">' + line + '</span>';
-    return line
-      .replace(/(#.*)$/, '<span class="c">$1</span>')
-      .replace(/\b(import|from|def|return|await|async|try|except|raise|class|self|print|not|in|is|for|if|else|None|True|False)\b/g, '<span class="k">$1</span>')
-      .replace(/(&quot;[^&]*&quot;)/g, '<span class="s">$1</span>');
+    return line.replace(
+      /(#.*)$|(&quot;[^&]*&quot;)|\b(import|from|def|return|await|async|try|except|raise|class|self|print|not|in|is|for|if|else|None|True|False)\b/g,
+      (m, c, s, k) =>
+        c ? '<span class="c">' + c + '</span>' :
+        s ? '<span class="s">' + s + '</span>' :
+            '<span class="k">' + k + '</span>');
   }).join('\n');
 }
 
@@ -263,7 +270,10 @@ const SECTIONS = {
     head(){
       const v = state.item.chat;
       if (v === 'assistants') return { title:'Assistants', sub:D.ASSISTANTS.length + ' defined' };
-      if (v === 'schedule')   return { title:'Schedule', sub:D.SCHEDULE.length + ' tasks' };
+      if (v === 'schedule'){
+        const jn = D.SCHEDULE.filter(s => s.steps && s.steps.length).length;
+        return { title:'Schedule', sub:jn + ' jobs · ' + (D.SCHEDULE.length - jn) + ' tasks' };
+      }
       if (kindOf(v) === 'p'){
         const p = find(D.PROJECTS, idOf(v));
         return { title:p.name,
@@ -1463,10 +1473,10 @@ function openAssistant(a){
   const ep = $('#asstEndpoint'), rec = $('#asstRecord');
   ep.textContent = a.endpointId;
   ep.title = 'Endpoint id — what an API call addresses. Click to copy.';
-  ep.onclick = () => copyText(a.endpointId);
+  ep.onclick = () => copyText(a.endpointId, 'Endpoint id');
   rec.textContent = 'ID: ' + a.recordId;
   rec.title = 'Record id — what a support ticket quotes. Click to copy.';
-  rec.onclick = () => copyText(a.recordId);
+  rec.onclick = () => copyText(a.recordId, 'Record id');
 
   /* The examples, up here as well as inside their capabilities: from the list
      you are choosing an assistant BY the question you have. */
@@ -1702,11 +1712,19 @@ function useExample(a, text){
 const favourites = () => D.ASSISTANTS.filter(a => a.fav);
 
 function asstTabs(){
-  const counts = { All:D.ASSISTANTS.length, Favourites:favourites().length };
+  const counts = {
+    All:D.ASSISTANTS.length,
+    'My assistants':D.ASSISTANTS.filter(a => a.owner === 'me').length,
+    Recommended:D.ASSISTANTS.filter(a => a.rec).length,
+    Favourites:favourites().length
+  };
   D.ASSISTANT_TEAMS.forEach(t => counts[t] = D.ASSISTANTS.filter(a => a.team === t).length);
-  const order = ['All','Favourites'].concat(D.ASSISTANT_TEAMS);
+  /* Whose it is, then what the workspace suggests, then what you starred —
+     the personal classifications lead, the org chart follows. */
+  const order = ['All','My assistants','Recommended','Favourites'].concat(D.ASSISTANT_TEAMS);
 
   const bar = el('div','tabs');
+  bar.style.flexWrap = 'wrap';
   bar.setAttribute('role','tablist');
   order.forEach(t => {
     const b = el('button','tab',
@@ -1723,8 +1741,10 @@ function asstTabs(){
 }
 
 function asstCard(a){
-  /* The card is the way in to the record. Its own two controls stop the click
-     from getting here — see stopPropagation on each. */
+  /* The card is deliberately quiet: state, name, star, what it does, whose
+     team it is. Everything else — skills, knowledge, threads, the way into
+     Build — lives in the record the card opens; repeating it here made every
+     card the same size as the overlay it stood for. */
   const c = el('article','card card--click');
   c.onclick = () => openAssistant(a);
   c.innerHTML =
@@ -1732,24 +1752,16 @@ function asstCard(a){
       '<span class="dot ' + (STATE_DOT[a.state] || '') + '"></span>' +
       '<span class="card__title">' + esc(a.name) + '</span>' +
       '<span style="flex:1"></span>' +
-      '<span class="t-mono">' + esc(a.threads) + ' threads</span>' +
     '</div>';
-  /* Chat chooses an assistant; Build defines it. The card carries the way
-     across so the two are one object with two verbs, not two lists. */
-  const edit = el('button','iconbtn iconbtn--sm', ic('build',14));
-  edit.type = 'button';
-  edit.title = 'Edit in Build';
-  edit.onclick = e => { e.stopPropagation(); select('build', key('as', a.id)); };
-  c.firstChild.append(edit);
 
   const star = el('button','iconbtn iconbtn--sm star', ic(a.fav ? 'starOn' : 'star', 14));
   star.type = 'button';
   star.setAttribute('aria-pressed', String(a.fav));
-  star.title = a.fav ? 'Remove from favourites' : 'Add to favourites — appears in the composer';
+  star.title = a.fav ? 'Remove from favourites' : 'Add to favourites — it appears in the input box';
   star.onclick = e => {
     e.stopPropagation();
     a.fav = !a.fav;
-    toast(a.fav ? a.name + ' added to favourites' : a.name + ' removed from favourites');
+    toast(a.fav ? a.name + ' added to favourites — it is now in the input box' : a.name + ' removed from favourites');
     render();
     renderComposer();
   };
@@ -1758,13 +1770,9 @@ function asstCard(a){
   const b = el('div','card__body');
   b.innerHTML =
     '<div class="t-meta" style="margin-bottom:var(--s-3)">' + esc(a.desc) + '</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:var(--s-1);margin-bottom:var(--s-3)">' +
-      a.skills.map(s => '<span class="chip">' + esc(s) + '</span>').join('') +
-    '</div>' +
     '<div style="display:flex;align-items:center;gap:var(--s-2)">' +
       '<span class="badge badge--mono">' + esc(a.team) + '</span>' +
-      '<span style="flex:1"></span>' +
-      '<span class="t-mono">' + esc(a.kb || 'no knowledge base') + '</span>' +
+      (a.rec ? '<span class="badge badge--info">Recommended</span>' : '') +
     '</div>';
   c.append(b);
   return c;
@@ -1782,6 +1790,8 @@ function assistantsView(body){
 
   const tab = state.asst.tab;
   const shown = tab === 'All' ? D.ASSISTANTS
+              : tab === 'My assistants' ? D.ASSISTANTS.filter(a => a.owner === 'me')
+              : tab === 'Recommended' ? D.ASSISTANTS.filter(a => a.rec)
               : tab === 'Favourites' ? favourites()
               : D.ASSISTANTS.filter(a => a.team === tab);
 
@@ -1802,10 +1812,10 @@ function assistantsView(body){
   const favs = favourites();
   side.innerHTML =
     '<div class="asst__sidehead">' +
-      '<span class="t-eyebrow">In the composer</span>' +
+      '<span class="t-eyebrow">My favourites</span>' +
       '<span class="t-mono">' + favs.length + '</span>' +
     '</div>' +
-    '<p class="asst__note">Favourites appear in the composer’s assistant picker, so you can bind one to a message without leaving the thread.</p>';
+    '<p class="asst__note">These appear in the input box — the assistant picker under the message you are writing — ready to answer your next message.</p>';
 
   if (!favs.length){
     const none = el('p','asst__note');
@@ -1836,24 +1846,297 @@ function assistantsView(body){
   body.append(pad);
 }
 
+/* Two kinds of row, two tables: a task is one piece of work on a cron, a job
+   is the workflow of its schedule — steps that run in order each time it
+   fires. Jobs lead, and their table is the tree: the twist folds the steps out
+   underneath. Which jobs are open survives a re-render but not a reload — an
+   unfolded row is a reading posture, not a setting.
+
+   The Chat column is a door: a row that writes into a conversation names it and
+   clicking goes there. A row that feeds a corpus or a channel has no chat, so
+   the cell says where the work goes instead of pretending there is one. */
+const SCHED_LABEL = { run:'running', ok:'ok', idle:'idle', err:'failed', off:'stopped' };
+const schedOpen = {};
+const isJob = s => !!(s.steps && s.steps.length);
+const schedProduced = s =>
+  s.history && s.history.length ? s.history[0].out : 'nothing yet';
+
+function schedStatusCell(state){
+  return '<td><span style="display:inline-flex;align-items:center;gap:6px">' +
+    '<span class="dot ' + (STATE_DOT[state] || '') + '"></span>' +
+    (SCHED_LABEL[state] || state) + '</span></td>';
+}
+function schedChatCell(s){
+  const t = s.thread ? byId(D.THREADS, s.thread) : null;
+  return t
+    ? '<td><button type="button" class="linkbtn" data-chat="' + esc(t.id) + '" ' +
+      'title="Open this chat">' + esc(t.title) + '</button></td>'
+    : '<td style="color:var(--text-3)">' + esc(s.target) + '</td>';
+}
+
+/* One table, given its rows. The two tables share everything but their first
+   header and whether a row can fold, so the differences are arguments rather
+   than a second implementation. */
+function schedTable(pad, title, list, tree){
+  if (!list.length) return;
+  const rows = [];
+  list.forEach(s => {
+    const open = tree && !!schedOpen[s.id];
+    /* The name never wraps — a table that breaks its subject over three lines
+       to spare a scrollbar has its priorities backwards. The Produced column
+       is the one that wraps; the table sits in a .scroll-x for the rest. */
+    rows.push('<tr data-sched="' + s.id + '" style="cursor:pointer" title="Run history">' +
+      '<td style="color:var(--text);white-space:nowrap">' +
+        (tree
+          ? '<span style="display:inline-flex;align-items:center;gap:var(--s-2)">' +
+            '<button type="button" class="table__twist" data-twist="' + s.id + '" ' +
+              'aria-expanded="' + open + '" aria-label="' +
+              (open ? 'Collapse' : 'Expand') + ' ' + esc(s.name) + '">' + ic('chevR', 12) + '</button>' +
+            esc(s.name) +
+            '<span class="badge badge--mono">' + s.steps.length + ' steps</span></span>'
+          : esc(s.name)) + '</td>' +
+      '<td style="font-family:var(--mono)">' + esc(s.cron) + '</td>' +
+      '<td>' + esc(s.next) + '</td>' +
+      schedChatCell(s) +
+      '<td style="color:var(--text-3)">' + esc(schedProduced(s)) + '</td>' +
+      '<td class="num">' + esc(s.last) + '</td>' +
+      schedStatusCell(s.state) + '</tr>');
+    if (open) s.steps.forEach((st, i) => {
+      rows.push('<tr class="table__step" data-sched="' + s.id + '" style="cursor:pointer">' +
+        '<td style="white-space:nowrap">' + esc(st.name) + '</td>' +
+        '<td style="font-family:var(--mono)">step ' + (i + 1) + '</td>' +
+        '<td>—</td>' +
+        '<td style="color:var(--text-3)">' + esc(st.target) + '</td>' +
+        '<td></td>' +
+        '<td class="num">' + esc(st.last) + '</td>' +
+        schedStatusCell(st.state) + '</tr>');
+    });
+  });
+
+  const sec = el('section','section');
+  sec.append(sectionHead(title, '<span class="t-mono">' + list.length + '</span>'));
+  const t = el('table','table table--rows');
+  t.innerHTML =
+    '<thead><tr><th>' + esc(tree ? 'Job' : 'Task') + '</th><th>Runs</th><th>Next</th>' +
+    '<th>Chat</th><th>Produced</th><th class="num">Last</th><th>Status</th></tr></thead>' +
+    '<tbody>' + rows.join('') + '</tbody>';
+  /* One listener for all three gestures, most specific first: the chat cell
+     goes to the conversation, the twist folds, everywhere else opens the run
+     history — a step row opens its job's, since a step has no runs of its own. */
+  t.addEventListener('click', e => {
+    const ch = e.target.closest('[data-chat]');
+    if (ch){ select('chat', ch.dataset.chat); return; }
+    const tw = e.target.closest('[data-twist]');
+    if (tw){ schedOpen[tw.dataset.twist] = tw.getAttribute('aria-expanded') !== 'true'; render(); return; }
+    const tr = e.target.closest('tr[data-sched]');
+    if (tr) openSched(byId(D.SCHEDULE, tr.dataset.sched));
+  });
+  const sx = el('div','scroll-x');
+  sx.append(t);
+  sec.append(sx);
+  pad.append(sec);
+}
+
 function scheduleView(body){
   const pad = el('div','pane__pad');
   pad.append(pageHead('Schedule',
-    'Work that runs without anyone asking. Everything here writes into a thread, ' +
-    'a knowledge base or a channel — never straight to a person.'));
-  const label = { run:'running', ok:'ok', idle:'idle', err:'failed' };
-  pad.append(tableSection('Tasks',
-    ['Task','Runs','Next','Target','Last','Status'],
-    D.SCHEDULE.map(s => [
-      '<td style="color:var(--text)">' + esc(s.name) + '</td>',
-      '<td style="font-family:var(--mono)">' + esc(s.cron) + '</td>',
-      '<td>' + esc(s.next) + '</td>',
-      '<td>' + esc(s.target) + '</td>',
-      '<td class="num">' + esc(s.last) + '</td>',
-      '<td><span style="display:inline-flex;align-items:center;gap:6px">' +
-        '<span class="dot ' + (STATE_DOT[s.state] || '') + '"></span>' + label[s.state] + '</span></td>'
-    ])));
+    'Work that runs without anyone asking. Everything here writes into a chat, ' +
+    'a knowledge base or a channel — never straight to a person. Any row opens ' +
+    'its run history.'));
+  schedTable(pad, 'Jobs', D.SCHEDULE.filter(isJob), true);
+  schedTable(pad, 'Tasks', D.SCHEDULE.filter(s => !isJob(s)), false);
   body.append(pad);
+}
+
+/* ------------------------------------------------------------- run history
+   The overlay is the row's whole story: every run on a timeline, newest first,
+   what each produced, and a door to the result — read here, inside the
+   overlay, so the results column stays where the reader left it. A run that
+   wrote into a channel or a corpus has nothing to open, so the entry says
+   where the work went — which is the honest version of a link. The footer
+   holds the two things you can do to the row itself: stop it, or delete it. */
+let schedOn = null;                /* the row being read */
+let schedArt = null;               /* a result being read inside the overlay */
+
+function openSched(s){
+  if (!s) return;
+  schedOn = s;
+  schedArt = null;
+  renderSched();
+  $('#schedScrim').dataset.open = 'true';
+}
+function closeSched(){
+  $('#schedScrim').dataset.open = 'false';
+  schedOn = null; schedArt = null;
+}
+
+function renderSched(){
+  const s = schedOn;
+  if (!s) return;
+  const h = s.history || [];
+  $('#schedIco').innerHTML = ic(isJob(s) ? 'branch' : 'clock', 16);
+  $('#schedTitle').textContent = s.name;
+  $('#schedSub').textContent =
+    (isJob(s) ? 'job · ' + s.steps.length + ' steps · ' : 'task · ') +
+    s.cron + (s.next === '—' ? '' : ' · next ' + s.next);
+
+  const b = $('#schedBody');
+  b.innerHTML = '';
+  if (schedArt) schedArtBody(b);
+  else schedRunsBody(b, s, h);
+  schedFoot(s);
+}
+
+function schedRunsBody(b, s, h){
+  if (!h.length){
+    b.append(emptyState('clock','No runs yet',
+      'This row has never fired. Its first run will appear here, with what it produced.'));
+    return;
+  }
+  const ok = h.filter(r => r.state === 'ok').length;
+  const done = h.filter(r => r.state !== 'run').length;
+  const labels = ['Runs kept','Succeeded','Last duration','Next run'];
+  const g = statGrid([
+    ['Runs kept', String(h.length)],
+    ['Succeeded', done ? ok + ' of ' + done : '—'],
+    ['Last duration', s.last],
+    ['Next run', s.next]
+  ], labels);
+  /* One line: in a dialog the stats are a header, not the content, and four
+     large tiles wrapping 3+1 pushed the timeline below the fold. */
+  g.className = 'kpis kpis--row';
+  g.style.marginBottom = 'var(--s-5)';
+  b.append(g);
+
+  const ul = el('ul','timeline');
+  h.forEach((r, ix) => {
+    const li = el('li','timeline__item');
+    const openable = r.art && D.ARTIFACT_BY_ID(r.art);
+    li.innerHTML =
+      '<span class="timeline__rail"><span class="dot ' + (STATE_DOT[r.state] || '') + '"></span></span>' +
+      '<div class="timeline__main">' +
+        '<div class="timeline__head">' +
+          '<span class="timeline__when">' + esc(r.when) + '</span>' +
+          '<span class="timeline__meta">' + esc(r.dur) +
+            (r.manual ? ' · on request' : '') + '</span>' +
+          (openable ? '<button type="button" class="btn btn--sm btn--ghost" data-art="' +
+            esc(r.art) + '" style="margin-left:auto">Open result</button>' : '') +
+        '</div>' +
+        '<div class="timeline__out">' + esc(r.out) + '</div>' +
+        /* The generated thing itself — the post as written, with its image. A
+           failed run has none, because nothing was made. The image is trusted
+           fixture SVG, drawn from the page's own tokens. */
+        (r.md || r.img ? '<div class="timeline__product">' +
+          (r.img ? '<figure class="timeline__img">' + r.img + '</figure>' : '') +
+          (r.md ? md(r.md) : '') + '</div>' : '') +
+        /* Under the product, acting on it: copy takes the text as writable
+           into the platform's own composer — markdown marks stripped. */
+        (r.md ? '<div class="timeline__acts">' +
+          '<button type="button" class="iconbtn iconbtn--sm" data-copy="' + ix + '" ' +
+          'title="Copy the text" aria-label="Copy the text">' + ic('copy', 13) + '</button></div>' : '') +
+        (r.steps && s.steps ? '<div class="timeline__steps">' + r.steps.map((st, i) =>
+          '<span class="timeline__step">' +
+            '<span class="dot ' + (STATE_DOT[st[1]] || '') + '"></span>' +
+            esc(s.steps[i] ? s.steps[i].name : 'step ' + (i + 1)) +
+            '<span class="timeline__meta">' + esc(st[0]) + '</span></span>').join('') +
+          '</div>' : '') +
+      '</div>';
+    ul.append(li);
+  });
+  /* The result opens here, in place of the timeline — the overlay is where the
+     reader already is, and the results column keeps whatever state it had. */
+  ul.addEventListener('click', e => {
+    const cp = e.target.closest('[data-copy]');
+    if (cp){
+      const r = h[+cp.dataset.copy];
+      copyText(r.md.replace(/\*\*?/g, ''), 'Post text');
+      return;
+    }
+    const btn = e.target.closest('[data-art]');
+    if (!btn) return;
+    schedArt = btn.dataset.art;
+    renderSched();
+  });
+  b.append(ul);
+}
+
+/* A result, read inside the overlay: the way back first, then the record's own
+   panes stacked under their names — the same renderers the results column uses,
+   because a result does not change shape with the room it is read in. */
+function schedArtBody(b){
+  const a = D.ARTIFACT_BY_ID(schedArt);
+  if (!a){ schedArt = null; renderSched(); return; }
+  const back = el('button','btn btn--ghost btn--sm',
+    '<span style="display:flex">' + ic('chevL',13) + '</span>Back to runs');
+  back.type = 'button';
+  back.onclick = () => { schedArt = null; renderSched(); };
+  const head = el('div', null);
+  head.style.cssText = 'display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-4)';
+  head.append(back);
+  head.append(el('span','t-meta', esc(a.title) + ' · ' + esc(a.size)));
+  b.append(head);
+  artPanes(a).forEach(p => {
+    const sec = el('section','section');
+    sec.append(sectionHead(p.label));
+    sec.append(p.render());
+    b.append(sec);
+  });
+}
+
+/* Stop is reversible in both senses — Resume undoes it, and nothing is lost
+   while stopped — so it acts at once. Delete is destructive, so the toast
+   carries the way back instead of a dialog asking twice. Deleting a project's
+   program row turns the program off too: the row and the project's `run` are
+   one fact, and killing one half would leave the other lying. */
+function schedFoot(s){
+  const foot = $('#schedFoot');
+  foot.innerHTML = '';
+  foot.hidden = !!schedArt;
+  if (schedArt) return;
+
+  const del = el('button','btn btn--danger','Delete');
+  del.type = 'button';
+  del.onclick = () => {
+    const i = D.SCHEDULE.indexOf(s);
+    if (i < 0) return;
+    const p = D.PROJECTS.filter(x => x.run && x.run.sched === s.id)[0];
+    const run = p ? p.run : null;
+    D.SCHEDULE.splice(i, 1);
+    if (p){ p.run = null; if (p.descAuto){ p.desc = autoDesc(p); } }
+    closeSched();
+    render();
+    toast('Deleted ' + s.name + (p ? ' — ' + p.name + ' no longer runs on its own' : ''), {
+      label:'Undo', icon:'trash',
+      run:() => {
+        D.SCHEDULE.splice(Math.min(i, D.SCHEDULE.length), 0, s);
+        if (p){ p.run = run; if (p.descAuto){ p.desc = autoDesc(p); } }
+        render();
+        toast('Restored ' + s.name);
+      }
+    });
+  };
+
+  const stopped = s.state === 'off';
+  const stop = el('button','btn btn--secondary', stopped
+    ? '<span style="display:flex">' + ic('play',13) + '</span>Resume'
+    : '<span style="display:flex">' + ic('x',13) + '</span>Stop');
+  stop.type = 'button';
+  stop.onclick = () => {
+    if (stopped){
+      const r = s.resume || { state:'idle', next:'—' };
+      s.state = r.state; s.next = r.next;
+      delete s.resume;
+      toast('Resumed ' + s.name + (s.next === '—' ? '' : ' — next run ' + s.next));
+    } else {
+      s.resume = { state:s.state, next:s.next };
+      s.state = 'off'; s.next = '—';
+      toast('Stopped ' + s.name + ' — its history is kept');
+    }
+    render();
+    renderSched();
+  };
+
+  foot.append(del, el('div','dialog__spacer'), stop);
 }
 
 /* ================================================== making a project
@@ -2249,7 +2532,7 @@ function runProject(p){
   const now = Date.now();
   const reads = (p.kbs || []).concat(p.sources || []);
   const n = allResults().filter(a => a.from === p.name).length + 1;
-  const md = [
+  const report = [
     p.run && p.run.ask ? '**' + p.run.ask + '**' : '**Scheduled run of ' + p.name + '.**',
     '',
     'Ran ' + stampFull(now) + (p.run ? ' · ' + p.run.every.toLowerCase() : ' · on request') + '.',
@@ -2262,14 +2545,21 @@ function runProject(p){
     'would leave the assistant\'s output in this pane.'
   ].join('\n');
   fileResult({ id:'r-' + p.id + '-' + n, title:p.name + ' run ' + n, from:p.name,
-    shape:'doc', size:plural(4, 'line'), md:md });
+    shape:'doc', size:plural(4, 'line'), md:report });
   /* The result opened the results column, so the project is no longer borrowing
      it: leaving should not take back a column the reader has just been given. */
   state.projLoan = false;
   state.artBefore = null;
   p.when = 'now';
   const row = p.run && p.run.sched ? D.SCHEDULE.filter(s => s.id === p.run.sched)[0] : null;
-  if (row){ row.state = 'ok'; row.last = '0:12'; }
+  if (row){
+    row.state = 'ok'; row.last = '0:12';
+    /* The run history is the same fact: a manual run is a run, its product is
+       what it wrote, and the result it filed is the one its entry opens. */
+    (row.history || (row.history = [])).unshift({
+      when:'Just now', dur:'0:12', state:'ok', manual:true,
+      out:p.name + ' run ' + n, art:'r-' + p.id + '-' + n, md:report });
+  }
   render();
 }
 
@@ -4388,9 +4678,9 @@ function shareLine(s){
          (s.expires === 'Never' ? ' · no expiry' : ' · expires in ' + s.expires);
 }
 
-function copyText(text){
-  const ok = () => toast('Link copied');
-  const fail = () => toast('Could not copy — the link is selected, use ⌘C');
+function copyText(text, what){
+  const ok = () => toast((what || 'Link') + ' copied');
+  const fail = () => toast('Could not copy — the text is selected, use ⌘C');
   const legacy = () => {
     /* file:// is not a secure context in every browser, so the clipboard API
        may not exist at all. This path is the reason the input is real. */
@@ -5772,7 +6062,11 @@ const BREAK = { list:1120, art:1400 };
    the toggle can open an empty column, which is where the empty state is. */
 function isOpen(kind){
   if (state.pref[kind] !== null) return state.pref[kind];
-  if (kind === 'art' && !D.ARTIFACTS.length) return false;
+  /* The results column starts closed. It is a store, and a store earns its
+     width when something new is filed — fileResult and a settling widget both
+     open it explicitly — not on arrival. The reader's own choice (⌘. or the
+     topbar toggle) always wins over this default. */
+  if (kind === 'art') return false;
   return window.innerWidth >= BREAK[kind];
 }
 function applyPanels(){
@@ -5903,6 +6197,10 @@ function boot(){
   $('#postClose').onclick = closePost;
   $('#postScrim').addEventListener('mousedown', e => { if (e.target === $('#postScrim')) closePost(); });
 
+  /* run history */
+  $('#schedClose').onclick = closeSched;
+  $('#schedScrim').addEventListener('mousedown', e => { if (e.target === $('#schedScrim')) closeSched(); });
+
   /* status bar */
   $('#stThemeBtn').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   $('#stDensityBtn').onclick = () => {
@@ -5933,6 +6231,8 @@ function boot(){
     } else if (e.key === 'Escape' && $('#postScrim').dataset.open === 'true'){
       /* Opened from the project page, so it is above everything on it. */
       closePost();
+    } else if (e.key === 'Escape' && $('#schedScrim').dataset.open === 'true'){
+      closeSched();
     } else if (e.key === 'Escape' && $('#projScrim').dataset.open === 'true'){
       closeProject();
     } else if (e.key === 'Escape' && $('#scrim').dataset.open === 'true'){

@@ -67,8 +67,10 @@ The **results column** on the right is one store for everything the workspace ha
 produced, whichever thread produced it — a day-grouped list with the time and the
 type on every row, a detail one click away, and each result downloadable as the
 format it already is or shareable as a link whose audience you choose first
-(only you · the workspace · anyone with the link). It opens itself when a result
-appears and stays shut while there are none.
+(only you · the workspace · anyone with the link). It starts closed and opens
+itself the moment something new is filed — a store earns its width when it
+receives, not on arrival — and `⌘.` or the topbar toggle is always the reader's
+own choice over that default.
 
 A **project** is made with one answer: type a name and press Create. Everything
 else in the dialog is optional and changeable afterwards — an icon from nine
@@ -113,6 +115,30 @@ out, and `Rewrite it in the box` to hand the draft to the composer. Work mode
 writes, Data mode asks the three insight tables what happened, and the Monday
 program files the weekly channel report — which says `not measured` for the
 channel that is not connected rather than showing it as zero.
+
+**Chat → Schedule** is everything that runs without being asked, in two tables.
+**Jobs** lead: a job is the workflow of its schedule — named steps that run in
+order each time it fires — and its table is a tree, the twist folding the steps
+out underneath. **Tasks** are one piece of work on a cron. Both say what the
+last run **produced**, not just whether it ran, and both carry a **Chat**
+column that is a door: a row that writes into a conversation names it and
+clicking goes there, while a row that feeds a corpus or a channel says so
+instead of pretending there is a chat to open. Any row opens its run history: a
+timeline of runs, newest first, and each entry quotes **the product itself** —
+the morning LinkedIn post as written, with its image, the digest as sent, the
+report's headlines — because a run log answers "what did it make", and for
+generated content the answer is the content. The images are inline SVGs drawn
+from the design tokens, so they follow theme and density and nothing is
+fetched; a copy icon under each post takes the text, markdown marks stripped,
+ready for the platform's own composer. A failed run quotes nothing, since
+nothing was made. Per-step outcomes for a job sit under the quote, and an `Open result`
+door reads the full record right there in the overlay, so the results column
+keeps whatever state it had. The
+overlay's footer holds the two things you can do to the row itself: `Stop`
+(reversible, `Resume` gives back the cron it had) and `Delete` (undoable from
+the toast; deleting a project's program row turns the program off too, since
+the two are one fact). A project's `Run now` appears in the history as well,
+marked *on request*.
 
 In **Chat → Assistants**, clicking an assistant opens its whole record in an
 overlay — model and temperature, capabilities with example questions, the systems
