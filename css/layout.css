@@ -222,13 +222,7 @@
 .topbar__spacer{ flex:1 }
 
 /* Page header used by non-thread views — where the display type lives. */
-.pagehead{ margin-bottom:var(--s-6) }
-.pagehead__title{ margin:0 0 var(--s-2) }
-.pagehead__desc{ font-size:var(--t-13); color:var(--text-3); max-width:64ch; margin:0 }
-.pagehead__row{ display:flex; align-items:flex-end; gap:var(--s-4); margin-bottom:var(--s-2) }
-/* The page's own numbers, as a line rather than a row of cards: four cards for
-   four small known values is a dashboard where a sentence would do. */
-.pagehead__meta{ margin-top:var(--s-2); font-size:var(--t-11); color:var(--text-4) }
+/* .pagehead is a component (components.css): both pages open with one. */
 /* An action that acts on the block above it belongs under that block, not in a
    bar at the top of the page competing with the title. */
 .rowacts{ display:flex; flex-wrap:wrap; gap:var(--s-2); margin-top:var(--s-3) }
@@ -340,29 +334,14 @@
    fills. */
 .pane__ask .composer__hint{ max-width:var(--ask-max); text-align:left }
 
-.section{ margin-bottom:var(--s-8) }
-.section__head{
-  display:flex; align-items:center; gap:var(--s-2);
-  margin-bottom:var(--s-3);
-}
+/* .section is a component (components.css). */
 .grid-cards{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
   gap:var(--s-3);
 }
-.stat-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:var(--s-3);
-}
-.stat{
-  padding:var(--s-3);
-  border:var(--border) solid var(--line);
-  border-radius:var(--r-lg);
-  background:var(--surface);
-}
-.stat__k{ font-size:var(--t-11); color:var(--text-4); margin-bottom:var(--s-1) }
-.stat__v{ font-size:var(--t-22); font-weight:var(--w-semi); letter-spacing:var(--ls-tight); line-height:1.1 }
+/* The row of numbers a page opens with is .kpis / .kpi (components.css). It
+   was a third implementation of the same tile, called .stat-grid. */
 
 /* =============================================================== empty thread
    A new chat has nothing to show, and an empty state that only says so wastes

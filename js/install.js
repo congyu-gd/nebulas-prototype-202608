@@ -322,7 +322,7 @@ function renderMenu(){
   const started = !!state.done.init;
   const pinned =
     '<div class="menu__pinned">' +
-      '<button class="row mrow mrow--init" data-init="1" aria-current="false">' +
+      '<button class="row mrow" data-init="1" aria-current="false">' +
         '<span class="row__icon' + (started ? '' : ' row__icon--act') + '">' +
           ic(started ? 'gear' : 'flag', 15) + '</span>' +
         '<span class="row__main">' +

@@ -1517,7 +1517,10 @@ button.chip--plain:hover{ background:var(--raised) }
   padding:var(--s-3) var(--s-4);
   border:var(--border) solid var(--line);
   border-radius:var(--r-lg);
-  background:var(--bg);
+  /* A step up from the page it sits on. The two implementations disagreed —
+     the cloud page's tiles were --bg on a --bg page, which is a border holding
+     nothing — and this is the older, better answer. */
+  background:var(--surface);
 }
 .kpi__l{ font-size:var(--t-11); color:var(--text-3) }
 .kpi__v{ font-size:var(--t-22); letter-spacing:var(--ls-tight); line-height:var(--lh-tight) }
@@ -1526,6 +1529,7 @@ button.chip--plain:hover{ background:var(--raised) }
 .kpi__v--ok  { color:var(--ok) }
 .kpi__v--warn{ color:var(--warn) }
 .kpi__v--err { color:var(--err) }
+.kpi__v--sm{ font-size:var(--t-15) }
 .kpi__sub{ font-size:var(--t-11); color:var(--text-4) }
 .kpi__foot{ display:flex; align-items:center; gap:var(--s-3); margin-top:var(--s-2) }
 .kpi__foot .delta{ flex:none }
@@ -1587,3 +1591,31 @@ button.chip--plain:hover{ background:var(--raised) }
   margin-top:var(--s-3);
   font-size:var(--t-12); color:var(--text-2);
 }
+
+/* ============================================================= page opening
+   How a page introduces itself: a title, the sentence under it, and whatever
+   sits on the title's baseline. Both prototypes open a page this way — the
+   cloud page has been using this block all along while it lived in the
+   workspace's stylesheet, which it does not load, so its headers were being
+   held up by .t-display and the browser's defaults. */
+.pagehead{ margin-bottom:var(--s-6) }
+.pagehead__title{ margin:0 0 var(--s-2) }
+.pagehead__desc{ font-size:var(--t-13); color:var(--text-3); max-width:64ch; margin:0 }
+.pagehead__row{ display:flex; align-items:flex-end; gap:var(--s-4); margin-bottom:var(--s-2) }
+/* The page's own numbers as a line rather than a row of cards: four cards for
+   four small known values is a dashboard where a sentence would do. */
+.pagehead__meta{ margin-top:var(--s-2); font-size:var(--t-11); color:var(--text-4) }
+
+/* A labelled block of a page. Generic enough that both the workspace's panels
+   and its pages use it, so it is not shell furniture. */
+.section{ margin-bottom:var(--s-8) }
+.section__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  margin-bottom:var(--s-3);
+}
+
+/* --kpis--auto: as many tiles as fit rather than three across. The workspace's
+   stat rows are four short readings, not six headline numbers. */
+/* auto-fit reflows on its own, so it needs no breakpoints — but it has to beat
+   the ones the three-across grid has, hence the doubled class. */
+.kpis--auto.kpis--auto{ grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) }

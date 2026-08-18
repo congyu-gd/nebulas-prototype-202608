@@ -552,11 +552,13 @@ function emptyState(icon, title, bodyText){
   return e;
 }
 function statGrid(pairs, small){
-  const g = el('div','stat-grid');
+  /* The same tile the usage views use, in its --auto row: as many as fit. */
+  const g = el('div','kpis kpis--auto');
   pairs.forEach(([k, v]) => {
-    const s = el('div','stat',
-      '<div class="stat__k">' + esc(k) + '</div><div class="stat__v">' + esc(v) + '</div>');
-    if (small && small.indexOf(k) > -1) $('.stat__v', s).style.fontSize = 'var(--t-15)';
+    const s = el('div','kpi',
+      '<span class="kpi__l">' + esc(k) + '</span>' +
+      '<span class="kpi__v' + (small && small.indexOf(k) > -1 ? ' kpi__v--sm' : '') + '">' +
+      esc(v) + '</span>');
     g.append(s);
   });
   return g;
@@ -1323,7 +1325,7 @@ function dashCard(db){
   b.innerHTML =
     '<div class="dash__tiles">' +
       db.tiles.map(([k, v]) =>
-        '<span class="dash__tile"><span class="stat__k">' + esc(k) + '</span>' +
+        '<span class="dash__tile"><span class="kpi__l">' + esc(k) + '</span>' +
         '<span class="dash__v">' + esc(v) + '</span></span>').join('') +
     '</div>' +
     '<span class="spark spark--bars dash__spark" style="margin-top:var(--s-3)">' +
