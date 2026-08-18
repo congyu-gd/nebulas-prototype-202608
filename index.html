@@ -293,6 +293,29 @@
   </div>
 </div>
 
+<!-- ===================================================== a post, before it goes
+     A queued post is the one thing on a publishing project that is edited
+     rather than asked for, so it gets the dialog the project settings get —
+     the text, the channel it is written for, when it leaves, and the one
+     button that lets it. Its own overlay rather than a second use of the
+     project dialog: two dialogs sharing a shell share its state too. -->
+<div class="scrim" id="postScrim" data-open="false">
+  <div class="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="postTitle">
+    <header class="dialog__head">
+      <span class="dialog__ico" id="postIco" aria-hidden="true"></span>
+      <span class="dialog__id">
+        <span class="dialog__title" id="postTitle">Post</span>
+        <span class="dialog__sub" id="postSub"></span>
+      </span>
+      <button class="iconbtn iconbtn--sm" id="postClose" title="Close (esc)" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="dialog__body" id="postBody"></div>
+    <footer class="dialog__foot" id="postFoot"></footer>
+  </div>
+</div>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="js/data.js"></script>

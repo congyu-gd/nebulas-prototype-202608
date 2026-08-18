@@ -490,7 +490,7 @@ hidden rather than deleted. First open: 609px and five hints. Second: 334px and
 none.
 
 **Icons, not colours.** A glyph that names a kind of work is the cheapest way to
-say what a project is for, and eight of them are a vocabulary. A colour picker
+say what a project is for, and nine of them are a vocabulary. A colour picker
 would be a second accent and a craft project.
 
 **Three cadences: every day, every week, every month.** A fourth would be a cron
@@ -602,6 +602,50 @@ project view lists what it has produced, so the loop closes where it started.
 they return to History and the toast says how many. Undoable for six seconds,
 which is why there is no confirmation dialog — the same rule the results column
 follows.
+
+### A project that publishes
+
+*Social publishing* is the worked example of a project that writes outward as well
+as reading inward: posts for Facebook, Instagram and LinkedIn, and the weekly read
+on what any of it did. Two optional fields carry it, and a project without them is
+exactly what it was before.
+
+**A channel names a credential; it does not hold one.** `channels` points at the
+`CONNECTORS` row that holds the endpoint, the auth and the scope, because
+connecting a system is administrative and Cloud → Connections is where that lives.
+The project reports the state of the connection rather than owning it: one fact in
+one place, the rule the schedule row already follows. Clicking a channel opens its
+connector page; the state travels back the other way, so connecting from the
+project updates Connections and connecting in Connections updates the project.
+
+**The connect action is where the problem is noticed.** LinkedIn ships
+disconnected, and the person who sees that is looking at the project, not at the
+admin surface — so `Connect LinkedIn` is offered in the panel and again inside the
+post that cannot go out, rather than a sentence telling somebody to go elsewhere.
+Undoable for six seconds, like everything else that changes state.
+
+**A queue, because writing and sending are different acts.** A post is drafted,
+reviewed and only then scheduled, and the gap between those is where a review
+happens — so `queue` holds each post with its channel, its time and one of
+*draft · needs review · scheduled*. Opening one is the only thing on this page
+that is neither a question nor a setting, which is why it gets a dialog: the text,
+the channel it was written for, when it leaves, and the button that lets it. The
+character count is that channel's limit rather than a generic one, because a post
+written for one channel is the only one that can be counted honestly. `Rewrite it
+in the box` hands the draft to the composer, so editing by asking and editing by
+typing are the same door.
+
+**A channel that is not connected reports nothing, not zero.** The weekly result
+says `not measured` for LinkedIn and `li_page_analytics` is marked stale, because a
+zero would read as "nothing worked" rather than "nothing was measured" — the same
+distinction the cloud page's usage views make.
+
+**The modes divide the same way the work does.** Work is writing (draft this
+week's three posts, adapt one channel's post for another), Data is the three
+insight tables (compare reach and engagement, which post beat its channel average,
+why one source is stale), and Auto program is the Monday report. The suggestions
+name this project's own channels and tables, because "draft a post" is a tutorial
+and "draft this week's three posts" is the job.
 
 ## Assistants: filter the list, shortlist the ones you use
 

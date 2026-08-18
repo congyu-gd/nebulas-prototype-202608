@@ -59,7 +59,7 @@ format it already is or shareable as a link whose audience you choose first
 appears and stays shut while there are none.
 
 A **project** is made with one answer: type a name and press Create. Everything
-else in the dialog is optional and changeable afterwards — an icon from eight
+else in the dialog is optional and changeable afterwards — an icon from nine
 naming kinds of work, personal or shared with the workspace, and two folded rows
 for the knowledge it reads and the assistant that answers in it, each naming what
 is chosen so you only open what you want to change. Nobody writes the
@@ -86,6 +86,19 @@ what to produce, how often, `Run now`, `Turn it off`. Typing in either box opens
 thread inside the project, binds the project's assistant, and names the thread
 from what you asked. The results column steps aside while you are on a project
 page and comes back when you leave.
+
+One project is a worked example of publishing rather than only reading:
+**Social publishing** posts to Facebook, Instagram and LinkedIn and reports on
+what any of it did. Its **channels** name the connectors that hold the
+credentials — so connecting is done once and both the project and Cloud →
+Connections read the same state, and the channel that ships disconnected offers
+`Connect` in the panel and again inside the post that cannot leave. Its **queue**
+holds what is written but not out, each post *draft · needs review · scheduled*;
+opening one gives you the text, that channel's own character limit, when it goes
+out, and `Rewrite it in the box` to hand the draft to the composer. Work mode
+writes, Data mode asks the three insight tables what happened, and the Monday
+program files the weekly channel report — which says `not measured` for the
+channel that is not connected rather than showing it as zero.
 
 In **Chat → Assistants**, clicking an assistant opens its whole record in an
 overlay — model and temperature, capabilities with example questions, the systems

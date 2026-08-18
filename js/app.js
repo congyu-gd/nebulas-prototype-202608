@@ -137,7 +137,14 @@ const P = {
   idcard:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.1"/><path d="M5.8 16.2a3.6 3.6 0 0 1 6.4 0M15 10h3.5M15 13.5h3.5"/>',
   receipt:'<path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21Z"/><path d="M9 8h6M9 11.5h6M9 15h3"/>',
   news:'<path d="M4 6h11a1 1 0 0 1 1 1v11H6a2 2 0 0 1-2-2Z"/><path d="M16 9h3a1 1 0 0 1 1 1v6a2 2 0 0 1-2 2h-2"/><path d="M7 9h5M7 12h5M7 15h3"/>',
-  note:'<path d="M5 5.5A1.5 1.5 0 0 1 6.5 4h7L19 9.5v9A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5Z"/><path d="M13 4v6h6"/><path d="M8.5 13.5h6M8.5 16.5h4"/>'
+  note:'<path d="M5 5.5A1.5 1.5 0 0 1 6.5 4h7L19 9.5v9A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5Z"/><path d="M13 4v6h6"/><path d="M8.5 13.5h6M8.5 16.5h4"/>',
+
+  /* publishing channels. Drawn on the same 24 grid at the same stroke weight as
+     everything else — a channel is identified here, not advertised, so these are
+     marks in the interface's own hand rather than three imported logos. */
+  facebook:'<rect x="4" y="4" width="16" height="16" rx="3.4"/><path d="M15 8.4h-1.6a2 2 0 0 0-2 2V20"/><path d="M9.6 13h4.6"/>',
+  instagram:'<rect x="4" y="4" width="16" height="16" rx="4.6"/><circle cx="12" cy="12" r="3.4"/><path d="M16.6 7.6h.01"/>',
+  linkedin:'<rect x="4" y="4" width="16" height="16" rx="3.4"/><path d="M8.2 10.6V16"/><path d="M8.2 8.1h.01"/><path d="M11.6 16v-3.2a2.2 2.2 0 0 1 4.2 0V16"/>'
 };
 function ic(name, size){
   const s = size || 16;
@@ -1945,12 +1952,12 @@ function scheduleView(body){
    One screen rather than a wizard. A wizard implies the answers arrive in an
    order that matters; here only the name is required, and none of the rest is
    a decision you are stuck with. */
-const PROJ_ICONS = ['folder','chart','code','users','spark','calendar','doc','dollar'];
+const PROJ_ICONS = ['folder','chart','code','users','spark','calendar','doc','dollar','share'];
 /* The glyph names a kind of work, which is the cheapest way to say what a
-   project is for — a row of eight is a vocabulary, a colour picker is a craft
+   project is for — a row of nine is a vocabulary, a colour picker is a craft
    project. */
 const ICON_NAME = { folder:'General', chart:'Analysis', code:'Engineering', users:'Team',
-  spark:'Ideas', calendar:'Planning', doc:'Writing', dollar:'Money' };
+  spark:'Ideas', calendar:'Planning', doc:'Writing', dollar:'Money', share:'Publishing' };
 /* Two audiences, so two buttons rather than two radio rows with a paragraph
    each: the consequence goes in one line under whichever is chosen. */
 const PROJ_VIS = ['Personal','Shared'];
@@ -2359,6 +2366,208 @@ function rowActs(buttons){
   return r;
 }
 
+/* ================================================================== channels
+   A project that publishes needs somewhere to publish to, and that "somewhere"
+   is a credential — which already has a home in Cloud → Connections. So a
+   channel here holds no secret and no endpoint: it names the platform, the
+   handle it posts as, and the connector row that does hold those. The project
+   reports the connection; it does not own it. One fact in one place, the same
+   rule the schedule row follows.
+
+   Connecting is offered in both places for the same reason `Run now` is on the
+   project page: the person who notices a channel is off is looking at the
+   project, not at the admin surface. */
+const CH_ICON = { fb:'facebook', ig:'instagram', li:'linkedin' };
+const chConn  = c => byId(D.CONNECTORS, c.cn);
+const chLive  = c => { const x = chConn(c); return !!x && x.state !== 'off'; };
+const chIcon  = c => '<span class="row__icon">' + ic(CH_ICON[c.id] || 'globe', 14) + '</span>';
+
+/* Connecting a channel is the connector's own state change, so it is written
+   once here and read everywhere — including by Cloud → Connections, which is
+   looking at the same object. */
+function connectChannel(c, then){
+  const x = chConn(c);
+  if (!x) return;
+  x.state = 'ok';
+  x.last = 'just now';
+  x.calls = '0 / 7d';
+  if (x.endpoint === '—') x.endpoint = 'graph.' + c.nm.toLowerCase().replace(/\s+/g,'') + '.com/v1';
+  if (x.scope === '—') x.scope = '1 account · publish, read insights';
+  render();
+  toast(c.nm + ' connected as ' + c.handle, { label:'Undo', icon:'plug', run:() => {
+    x.state = 'off'; x.last = '—'; x.calls = '—';
+    render();
+    toast(c.nm + ' disconnected');
+  }});
+  if (then) then();
+}
+
+/* What is written but not out yet. A queue is the honest shape for publishing:
+   the writing and the sending are different acts, and the gap between them is
+   where a review happens. */
+const Q_STATE = { 'draft':'', 'needs review':'warn', 'scheduled':'ok', 'published':'ok' };
+const POST_WHEN = ['Today 17:00','Tue 09:00','Tue 17:30','Wed 12:00','Thu 08:30','Next Mon 09:00'];
+
+function projectChannels(panel, p){
+  const sec = el('section','section');
+  sec.append(sectionHead('Channels',
+    infoTip('Where this project posts. The credential and its scope live in Cloud → Connections; ' +
+            'this row reports the state of it.')));
+  p.channels.forEach(c => {
+    const x = chConn(c);
+    const live = chLive(c);
+    sec.append(listRow({
+      lead:chIcon(c),
+      title:c.nm,
+      sub:live ? c.handle + ' · ' + c.posts : 'not connected — nothing leaves',
+      meta:live ? '' : 'off',
+      onClick:() => x ? select('cloud', key('cn', x.id)) : openProject(p)
+    }));
+    /* The one channel that cannot publish gets the action rather than a
+       sentence telling somebody else to go and do it. */
+    if (!live){
+      const go = el('button','btn btn--secondary btn--sm',
+        '<span style="display:flex">' + ic('plug',13) + '</span>Connect ' + esc(c.nm));
+      go.type = 'button';
+      go.onclick = () => connectChannel(c);
+      sec.append(rowActs([go]));
+    }
+  });
+  panel.append(sec);
+}
+
+function projectQueue(panel, p){
+  const sec = el('section','section');
+  const waiting = p.queue.filter(q => q.state !== 'published').length;
+  sec.append(sectionHead('Queue', waiting
+    ? '<span class="t-mono" style="color:var(--text-4)">' + waiting + '</span>' : ''));
+  if (!p.queue.length){
+    sec.append(helpNote('Nothing written yet. Ask for a post and it arrives here before it ' +
+                        'goes anywhere.'));
+  } else {
+    p.queue.forEach(q => {
+      const c = p.channels.filter(x => x.id === q.ch)[0] || { nm:q.ch, id:q.ch };
+      sec.append(listRow({
+        lead:chIcon(c),
+        title:q.title,
+        sub:c.nm + ' · ' + q.when,
+        meta:q.state === 'scheduled' ? 'queued' : q.state,
+        onClick:() => openPost(p, q)
+      }));
+    });
+  }
+  panel.append(sec);
+}
+
+/* ------------------------------------------------------- a post, before it goes
+   Editing a draft is the one thing on this page that is neither a question nor a
+   setting, so it gets a dialog: the text as written, which channel it is written
+   for, when it leaves, and the button that lets it.
+
+   The primary action depends on the state and on the channel — a post on a
+   channel that is not connected cannot be scheduled, so it offers the connection
+   instead of a button that would quietly do nothing. */
+let postOn = null, postFor = null, postDraft = null;
+
+function openPost(p, q){
+  postFor = p; postOn = q;
+  postDraft = { text:q.text, when:q.when };
+  $('#postIco').innerHTML = ic(CH_ICON[q.ch] || 'globe', 15);
+  renderPost();
+  $('#postScrim').dataset.open = 'true';
+}
+function closePost(){
+  $('#postScrim').dataset.open = 'false';
+  postOn = null; postFor = null; postDraft = null;
+}
+
+function renderPost(){
+  const p = postFor, q = postOn, d = postDraft;
+  if (!p || !q) return;
+  const body = $('#postBody'), foot = $('#postFoot');
+  body.innerHTML = ''; foot.innerHTML = '';
+  const c = p.channels.filter(x => x.id === q.ch)[0] || { nm:q.ch, id:q.ch, handle:'—' };
+  const live = chLive(c);
+
+  $('#postTitle').textContent = q.title;
+  $('#postSub').textContent = c.nm + ' · ' + c.handle + ' · ' + q.state;
+
+  if (!live) body.append(banner('warn',
+    '<strong>' + esc(c.nm) + ' is not connected.</strong> This post can be written and kept ' +
+    'here, but nothing leaves until the connection is made.'));
+
+  const ta = el('textarea','textarea textarea--prose');
+  ta.rows = 8;
+  ta.value = d.text;
+  ta.oninput = () => { d.text = ta.value; count.textContent = limitLine(c, ta.value); };
+  body.append(field('The post', ta));
+  /* Written for one channel, so the count is that channel's limit and not a
+     generic one. */
+  const count = el('p','field__help', limitLine(c, d.text));
+  count.style.marginTop = 'calc(-1 * var(--s-2))';
+  body.append(count);
+
+  body.append(field('When it goes out',
+    selectCtl(POST_WHEN, d.when, v => { d.when = v; }),
+    live ? 'Queued locally. Nothing is posted by this prototype.'
+         : 'Kept in the queue with this time on it.'));
+
+  const remove = el('button','btn btn--danger','Remove');
+  remove.type = 'button';
+  remove.onclick = () => {
+    const i = p.queue.indexOf(q);
+    p.queue.splice(i, 1);
+    closePost();
+    render();
+    toast('Removed ' + q.title, { label:'Undo', icon:'retry', run:() => {
+      p.queue.splice(i, 0, q);
+      render();
+      toast('Back in the queue');
+    }});
+  };
+  const cancel = el('button','btn btn--ghost','Cancel');
+  cancel.type = 'button';
+  cancel.onclick = closePost;
+
+  const ask = el('button','btn btn--secondary','Rewrite it in the box');
+  ask.type = 'button';
+  ask.title = 'Puts the draft in the composer, where it can be changed by asking';
+  ask.onclick = () => {
+    closePost();
+    if (kindOf(state.item.chat) !== 'p' || idOf(state.item.chat) !== p.id) select('chat', key('p', p.id));
+    askChip('Rewrite this ' + c.nm + ' post — keep the numbers, lose the adjectives:\n\n' + d.text).click();
+  };
+
+  const primary = el('button','btn btn--primary',
+    live ? '<span style="display:flex">' + ic('check',13) + '</span>' +
+             (q.state === 'scheduled' ? 'Save changes' : 'Approve and queue')
+         : '<span style="display:flex">' + ic('plug',13) + '</span>Connect ' + esc(c.nm));
+  primary.type = 'button';
+  primary.onclick = () => {
+    if (!live){ connectChannel(c, renderPost); return; }
+    q.text = d.text;
+    q.when = d.when;
+    const first = q.state !== 'scheduled';
+    q.state = 'scheduled';
+    closePost();
+    render();
+    toast(first ? 'Queued for ' + c.nm + ' · ' + q.when : 'Saved · ' + c.nm + ' ' + q.when);
+  };
+
+  foot.append(remove, el('div','dialog__spacer'), cancel, ask, primary);
+}
+
+/* Each channel takes a different length, and a post written for one of them is
+   the only one that can be counted honestly. */
+const CH_LIMIT = { fb:63206, ig:2200, li:3000 };
+function limitLine(c, text){
+  const n = (text || '').length, lim = CH_LIMIT[c.id];
+  if (!lim) return n + ' characters';
+  const left = lim - n;
+  return n + ' of ' + lim.toLocaleString('en-US') + ' characters' +
+         (left < 0 ? ' — ' + Math.abs(left) + ' over' : '');
+}
+
 /* ============================================== the three ways to use a project
    A project is asked for three different kinds of thing, and each wants a
    different first offer: prose and analysis (Work), the tables it reads (Data),
@@ -2379,6 +2588,20 @@ let projModeFor = null;            /* the mode belongs to the project you opened
    examples are the assistant's own, the ones its record offers. */
 function projectPrompts(p){
   const out = [];
+  /* A project that publishes is asked for writing before it is asked for
+     analysis, and the offer names its own channels — "draft a post" is a
+     tutorial, "draft this week's three posts" is the job. */
+  if (p.channels && p.channels.length){
+    const names = p.channels.map(c => c.nm);
+    out.push('Draft this week\'s ' + p.channels.length + ' posts — one for ' +
+             names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] + ' — from the retrofit case study.');
+    out.push('Rewrite the ' + names[names.length - 1] + ' post for ' + names[1] +
+             ': shorter, one hook, no link.');
+    const off = p.channels.filter(c => !chLive(c))[0];
+    if (off) out.push('What is waiting on ' + off.nm + ', and what happens to it when the channel connects?');
+    else out.push('Which of the queued posts is weakest, and what would you change?');
+    return out.slice(0, 4);
+  }
   if (p.run && p.run.ask) out.push(p.run.ask);
   const a = p.assistant ? D.ASSISTANTS.filter(x => x.name === p.assistant)[0] : null;
   if (a) asstPrompts(a).slice(0, 3).forEach(q => out.push(q));
@@ -2396,6 +2619,22 @@ function projectPrompts(p){
 function dataPrompts(p){
   const src = p.sources || [];
   const out = [];
+  /* On a publishing project the tables are performance, so the questions are the
+     ones a channel report is for: what happened, what beat its own average, and
+     which of these numbers cannot be trusted. */
+  if (p.channels && p.channels.length){
+    out.push('Compare reach and engagement rate across ' +
+             p.channels.map(c => c.nm.toLowerCase()).join(', ') + ' over the last four weeks.');
+    if (src[0]) out.push('Which post beat its channel average, and what did it do differently? Use ' +
+                         src[0] + ' and ' + (src[1] || src[0]) + '.');
+    out.push('Does posting time explain anything, or is it the format?');
+    const stale = (p.sources || []).map(nm => D.DATASETS.filter(x => x.name === nm)[0])
+      .filter(x => x && x.health !== 'ok')[0];
+    out.push(stale
+      ? 'Why is ' + stale.name + ' stale, and what is missing from the weekly report because of it?'
+      : 'Which follower growth is real and which is one post?');
+    return out.slice(0, 4);
+  }
   if (src[0]) out.push('Profile ' + src[0] + ' — columns, ranges, what is missing.');
   if (src[0]) out.push('Chart the trend in ' + src[0] + ' over the last four quarters.');
   if (src[1]) out.push('Join ' + src[0] + ' with ' + src[1] + ' and show what does not match.');
@@ -2610,6 +2849,12 @@ function projectView(body, p){
     onClick:() => openProject(p)
   }));
   panel.append(know);
+
+  /* Where it publishes, and what is written but not out yet. Both only exist on
+     a project that posts — a project that only reads has neither, and shows
+     neither rather than showing two empty headings. */
+  if (p.channels && p.channels.length) projectChannels(panel, p);
+  if (p.queue) projectQueue(panel, p);
 
   /* ----------------------------------------------------------- the workflow
      What the project does without being asked: when it runs, and the script it
@@ -5734,6 +5979,8 @@ function boot(){
   $('#projClose').onclick = closeProject;
   $('#projHelp').onclick = () => setHints(!projHints);
   $('#projScrim').addEventListener('mousedown', e => { if (e.target === $('#projScrim')) closeProject(); });
+  $('#postClose').onclick = closePost;
+  $('#postScrim').addEventListener('mousedown', e => { if (e.target === $('#postScrim')) closePost(); });
 
   /* status bar */
   $('#stThemeBtn').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
@@ -5762,6 +6009,9 @@ function boot(){
     } else if (e.key === 'Escape' && $('#shareScrim').dataset.open === 'true'){
       /* Opened last, so it takes Escape first. */
       closeShare();
+    } else if (e.key === 'Escape' && $('#postScrim').dataset.open === 'true'){
+      /* Opened from the project page, so it is above everything on it. */
+      closePost();
     } else if (e.key === 'Escape' && $('#projScrim').dataset.open === 'true'){
       closeProject();
     } else if (e.key === 'Escape' && $('#scrim').dataset.open === 'true'){

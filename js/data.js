@@ -147,6 +147,64 @@ const ARTIFACTS = [
       'Backpressure exists at the edges and nowhere in the middle. <code>pipeline.py:318</code> builds an unbounded queue, so a slow sink accumulates an in-memory backlog instead of slowing producers. Bounding that queue is a prerequisite; credits are the refinement on top.'
     ].join('\n'),
     code:'— document artifact, no source —'
+  },
+  /* What the weekly run files. Two channels reporting and one not: LinkedIn's
+     connector is off, so the row says so instead of showing a zero, which would
+     read as "nothing worked" rather than "nothing was measured". */
+  {
+    id:'a7', kind:'table', title:'Channel performance · week 33',
+    from:'Social publishing', when:'20m', size:'9 rows',
+    rows:[
+      ['Facebook · reach','182.4k'],
+      ['Facebook · engagement rate','3.4%'],
+      ['Facebook · new follows','+412'],
+      ['Instagram · reach','246.1k'],
+      ['Instagram · engagement rate','5.1%'],
+      ['Instagram · new follows','+1,204'],
+      ['LinkedIn · reach','not measured'],
+      ['LinkedIn · engagement rate','not measured'],
+      ['Best post','IG reel · 48.9k reach']
+    ],
+    code:[
+      '# weekly channel report',
+      'import pandas as pd',
+      '',
+      'fb = wh.read("fb_page_insights")',
+      'ig = wh.read("ig_media_insights")',
+      'li = wh.read("li_page_analytics")   # stale: connector off',
+      '',
+      'wk = lambda d: d[d.published_at >= WEEK_START]',
+      'rate = lambda d: d.engagements.sum() / d.reach.sum()',
+      '',
+      '# a channel with no sync reports nothing, not zero',
+      'if li.max_date < WEEK_START:',
+      '    report["linkedin"] = None',
+      'print(rate(wk(fb)), rate(wk(ig)))'
+    ].join('\n')
+  },
+  {
+    id:'a8', kind:'doc', title:'Post pack · retrofit case study',
+    from:'Social publishing', when:'1d 2h', size:'3 posts',
+    md:[
+      'One story, three channels, three shapes. The claim — 31% energy per unit — is the one approved in the brand kit; the 9-day downtime figure comes from the case study itself.',
+      '',
+      '### LinkedIn',
+      'Retrofitting a 40-year-old line beats replacing it more often than the brochures admit. Northwind kept the frames, changed the drives, and took **31%** off energy per unit. The write-up, including what did not work: acme.com/stories/northwind',
+      '',
+      '### Instagram — carousel, 5 frames',
+      '- Same frame. New drives.',
+      '- 31% less energy per unit',
+      '- 9 days of downtime, not 11 weeks',
+      '- What we would do differently',
+      '- Read the write-up — link in bio',
+      '',
+      '### Facebook',
+      'We kept the frames and changed the drives. Nine days of downtime, 31% less energy per unit, and a line that outlives the people who signed it off. Full story: acme.com/stories/northwind',
+      '',
+      '### Not used',
+      'The word *revolutionary* appears in the source deck four times. It is on the avoid list, and the numbers do the work without it.'
+    ].join('\n'),
+    code:'— document artifact, no source —'
   }
 ];
 const ARTIFACT_BY_ID = id => ARTIFACTS.filter(a => a.id === id)[0] || null;
@@ -267,7 +325,9 @@ const THREADS = [
     ]
   },
   { id:'t5', title:'Pricing page rewrite', when:'4d', group:'Earlier', project:null, msgs:[] },
-  { id:'t6', title:'Cohort retention v2', when:'1w', group:'Earlier', project:'p3', msgs:[] }
+  { id:'t6', title:'Cohort retention v2', when:'1w', group:'Earlier', project:'p3', msgs:[] },
+  { id:'t7', title:'September social calendar', when:'20m', group:'Today', project:'p4', msgs:[] },
+  { id:'t8', title:'Why the reel beat the carousel', when:'2d', group:'Earlier', project:'p4', msgs:[] }
 ];
 
 /* --------------------------------------------------------------- projects
@@ -301,7 +361,50 @@ const PROJECTS = [
     assistant:'Revenue analyst', kbs:['Support corpus'], sources:['accounts_health','support_tickets'],
     run:{ every:'Every day', sched:'sc3',
           ask:'Refresh the watchlist and name the accounts whose churn signal moved since yesterday.' },
-    when:'1d' }
+    when:'1d' },
+  /* A project that publishes as well as reads. Two extra fields, and both are
+     optional like the rest — a project without them is exactly what it was:
+
+       channels  where it posts, each one pointing at the CONNECTORS row that
+                 holds the credential (`cn`), so connecting is done in one place
+                 and the project reports the state rather than owning it
+       queue     what is written but not yet out, per channel
+
+     The three insight tables under `sources` are the monitoring half: the posts
+     go out through the channels and the numbers come back through the tables. */
+  { id:'p4', name:'Social publishing', icon:'share', shared:true,
+    desc:'Posting to Facebook, Instagram and LinkedIn, and the weekly read on what any of it did.',
+    assistant:'Social editor', kbs:['Brand & social kit'],
+    sources:['fb_page_insights','ig_media_insights','li_page_analytics'],
+    channels:[
+      { id:'fb', nm:'Facebook', cn:'cn10', handle:'@acmeindustrial', posts:'18 / 30d' },
+      { id:'ig', nm:'Instagram', cn:'cn11', handle:'@acme.industrial', posts:'22 / 30d' },
+      { id:'li', nm:'LinkedIn', cn:'cn12', handle:'Acme Industrial', posts:'12 / 30d' }
+    ],
+    queue:[
+      { id:'q1', ch:'li', when:'Tue 09:00', state:'scheduled',
+        title:'Fleet retrofit case study',
+        text:'Retrofitting a 40-year-old line beats replacing it more often than the ' +
+             'brochures admit. Northwind kept the frames, changed the drives, and took ' +
+             '31% off energy per unit.\n\nThe write-up, including what did not work: ' +
+             'acme.com/stories/northwind' },
+      { id:'q2', ch:'ig', when:'Tue 17:30', state:'needs review',
+        title:'Retrofit carousel — 5 frames',
+        text:'Frame 1 — Same frame. New drives.\nFrame 2 — 31% less energy per unit\n' +
+             'Frame 3 — 9 days of downtime, not 11 weeks\nFrame 4 — What we would do ' +
+             'differently\nFrame 5 — Read the write-up (link in bio)' },
+      { id:'q3', ch:'fb', when:'Wed 12:00', state:'draft',
+        title:'Open day, 12 September',
+        text:'We are opening the Rotterdam floor on 12 September. Bring a line ' +
+             'problem you have not solved and an engineer who has tried.\n\n' +
+             'Places are limited: acme.com/openday' }
+    ],
+    run:{ every:'Every week', sched:'sc7',
+          ask:'Pull last week across Facebook, Instagram and LinkedIn. Report reach, ' +
+              'engagement rate and follower change per channel, name the post that beat ' +
+              'its channel average and say what it did differently, and flag anything ' +
+              'that fell more than 20% against the four-week mean.' },
+    when:'20m' }
 ];
 
 /* ------------------------------------------------------------- assistants
@@ -358,9 +461,12 @@ const ASSISTANTS = [
     skills:['search.docs'], kb:'Engineering docs', threads:0 },
   { id:'as16', name:'Meeting digest', state:'ok', model:'Nebula Mini', team:'Product', fav:false,
     desc:'Turns a transcript into decisions, owners and open questions. Nothing else.',
-    skills:['doc.write','classify'], kb:'Engineering docs', threads:3 }
+    skills:['doc.write','classify'], kb:'Engineering docs', threads:3 },
+  { id:'as17', name:'Social editor', state:'ok', model:'Nebula Pro', team:'Marketing', fav:true,
+    desc:'Writes for one channel at a time rather than posting the same paragraph three times. Reads the numbers before suggesting the next one.',
+    skills:['doc.write','social.publish','social.insights'], kb:'Brand & social kit', threads:2 }
 ];
-const ASSISTANT_TEAMS = ['Revenue','Engineering','Support','Product'];
+const ASSISTANT_TEAMS = ['Revenue','Engineering','Support','Product','Marketing'];
 
 /* The builder edits these same objects — an assistant is defined in Build and
    chosen in Chat, so there is one of each rather than a definition and a copy.
@@ -379,7 +485,7 @@ ASSISTANTS.forEach(a => {
    stored rather than a name so the fixture does not have to know who is signed
    in. A row shows the owner only when it is not you: your own things do not
    need to be labelled as yours. */
-const MINE   = ['as1','as2','as4','as5','as14','as16'];
+const MINE   = ['as1','as2','as4','as5','as14','as16','as17'];
 const OWNERS = { as3:'Ana', as6:'Ravi', as7:'Ana', as8:'Ravi', as9:'Marc',
                  as10:'Marc', as11:'Ana', as12:'Ana', as13:'Ravi', as15:'Marc' };
 ASSISTANTS.forEach(a => { a.owner = MINE.indexOf(a.id) > -1 ? 'me' : (OWNERS[a.id] || 'Ravi'); });
@@ -396,6 +502,14 @@ ASSISTANTS[2].conn = ['cn3','cn6'];
 ASSISTANTS[3].conn = ['cn2','cn4'];
 ASSISTANTS[4].conn = ['cn1'];
 ASSISTANTS[10].conn = ['cn1','cn3'];
+/* The social editor reaches all three channels — publishing through two of them
+   and reading insights from all three. The LinkedIn row is not connected yet,
+   which is the state the project reports rather than hides. */
+ASSISTANTS[16].conn = ['cn10','cn11','cn12'];
+ASSISTANTS[16].inst =
+  'Write for the channel, not for all of them at once: LinkedIn takes the argument, ' +
+  'Instagram takes the image and five words, Facebook takes the invitation. Never post ' +
+  'the same paragraph twice. Cite the insight table behind any claim about performance.';
 
 /* ------------------------------------------------- what an assistant CAN do
    A skill name says what it is called; this says what it is for, in the one
@@ -403,6 +517,8 @@ ASSISTANTS[10].conn = ['cn1','cn3'];
    this is the label, not the contract. Names that predate the SKILLS list are
    here too, so every capability an assistant claims can be described. */
 const SKILL_DESC = {
+  'social.publish': 'Queue a post on a connected channel',
+  'social.insights':'Read reach and engagement back from a channel',
   'warehouse.query':'Read the warehouse, read-only',
   'code.run':       'Run Python over the result',
   'chart.build':    'Draw the figure behind a number',
@@ -434,6 +550,10 @@ const ASSISTANT_EX = {
         'doc.write':['Draft this week\'s leadership digest', 'Rewrite the digest without adjectives'] },
   as5:{ 'warehouse.query':['Recurring base for Q3, excluding services'],
         'code.run':['Check the FY25 forecast against the recurring base'] },
+  as17:{ 'doc.write':['Draft this week\'s three posts from the retrofit case study',
+                      'Rewrite the LinkedIn post for Instagram — shorter, one hook, no link'],
+         'social.publish':['Queue the open-day post for Wednesday midday'],
+         'social.insights':['Which post beat its channel average last week, and what did it do differently?'] },
   as6:{ 'warehouse.query':['Which cohorts does the November uplift touch?'],
         'code.run':['Model the exposure if 10% opt out'],
         'chart.build':['Chart exposed ARR by renewal month'] },
@@ -502,7 +622,9 @@ const SCHEDULE = [
   { id:'sc5', name:'Corpus re-embed', cron:'manual', next:'—', state:'err',
     target:'Finance corpus', assistant:'—', last:'0:04' },
   { id:'sc6', name:'Forecast bridge rebuild', cron:'Fri 18:00', next:'in 5 d', state:'idle',
-    target:'Q3 close', assistant:'Revenue analyst', last:'—' }
+    target:'Q3 close', assistant:'Revenue analyst', last:'—' },
+  { id:'sc7', name:'Channel performance report', cron:'Mon 08:00', next:'in 3 d', state:'ok',
+    target:'Social publishing', assistant:'Social editor', last:'1:04' }
 ];
 
 /* -------------------------------------------------------- knowledge bases */
@@ -580,6 +702,41 @@ const KBS = [
       ['Aug 12','Nebulas','indexed 8 new ADRs','ok']
     ] },
 
+  { id:'k4', name:'Brand & social kit', docs:'184', updated:'2 h ago', health:'ok', embed:'nebula-embed-3',
+    desc:'What the brand sounds like and what it may claim: voice notes, the words we do not use, approved product copy and every post already published.',
+    files:[
+      { n:'voice-and-tone.md',        from:'Repo',       size:'18 KB',  b:18432,   added:'Aug 09, 2026 10:12', ts:20260809.1012, st:'indexed' },
+      { n:'words-we-avoid.md',        from:'Repo',       size:'4 KB',   b:4096,    added:'Aug 09, 2026 10:14', ts:20260809.1014, st:'indexed' },
+      { n:'product-claims-approved.docx', from:'Drive',  size:'212 KB', b:217088,  added:'Aug 11, 2026 14:40', ts:20260811.1440, st:'indexed' },
+      { n:'published-posts-2026.csv', from:'Local File', size:'96 KB',  b:98304,   added:'Aug 13, 2026 09:02', ts:20260813.0902, st:'indexed' },
+      { n:'northwind-case-study.pdf', from:'Drive',      size:'1.8 MB', b:1887437, added:'Aug 12, 2026 16:22', ts:20260812.1622, st:'indexed' }
+    ],
+    tables:[
+      ['published_posts','1,412 rows','9 cols','Aug 13, 2026'],
+      ['approved_claims','88 rows','4 cols','Aug 11, 2026']
+    ],
+    series:[
+      { n:'followers_total', cadence:'weekly', span:'last 12 weeks', bars:[61,62,64,66,67,69,72,74] },
+      { n:'engagement_rate', cadence:'weekly', span:'last 12 weeks', bars:[38,41,36,44,47,42,51,49] },
+      { n:'posts_published', cadence:'weekly', span:'last 12 weeks', bars:[9,11,8,12,10,13,11,12] }
+    ],
+    analysis:[
+      ['Channel performance · week 33','doc · Social publishing','20m'],
+      ['Post pack · retrofit case study','doc · Social publishing','1d'],
+      ['Carousels outperform reels on saves','note · flagged twice','5d']
+    ],
+    access:[
+      ['Cong Yu','Owner','everything'],
+      ['Social editor','Reader','voice, claims, published posts'],
+      ['Support team','Reader','approved claims only']
+    ],
+    activity:[
+      ['09:02','Nebulas','indexed published-posts-2026.csv','ok'],
+      ['Aug 12','Cong Yu','added northwind-case-study.pdf','ok'],
+      ['Aug 11','Ana','approved 6 product claims','ok'],
+      ['Aug 09','Cong Yu','created the base','ok']
+    ] },
+
   { id:'k3', name:'Support corpus', docs:'96,551', updated:'4 h ago', health:'warn', embed:'nebula-embed-2',
     desc:'Ticket history and macros. Still on the previous embedding model — the re-embed run is blocked on quota.',
     files:[
@@ -647,6 +804,52 @@ const DATASETS = [
       ['created_at','timestamp','no','2026-08-01 11:02:00']
     ],
     preview:[ ['TCK-91002','billing','high','2026-08-01'], ['TCK-91003','api','normal','2026-08-01'] ] },
+  { id:'d5', name:'fb_page_insights', source:'facebook', rows:'1,204', updated:'12 min ago', health:'ok', grant:'Reader',
+    desc:'One row per post per day: reach, engagement and what the page gained that day.',
+    schema:[
+      ['post_id','string','no','FB-2026-0812-1'],
+      ['published_at','timestamp','no','2026-08-12 09:00:00'],
+      ['format','string','no','link'],
+      ['reach','int','no','18402'],
+      ['engagements','int','no','612'],
+      ['page_follows','int','yes','24']
+    ],
+    preview:[
+      ['FB-2026-0812-1','link','18,402','612'],
+      ['FB-2026-0810-1','photo','12,908','508'],
+      ['FB-2026-0807-1','video','31,204','1,844'],
+      ['FB-2026-0805-1','text','6,120','142']
+    ] },
+  { id:'d6', name:'ig_media_insights', source:'instagram', rows:'2,088', updated:'14 min ago', health:'ok', grant:'Reader',
+    desc:'Per-media metrics including saves and shares, which is where a carousel shows its worth.',
+    schema:[
+      ['media_id','string','no','IG-2026-0812-2'],
+      ['media_type','string','no','carousel'],
+      ['reach','int','no','24108'],
+      ['saves','int','no','412'],
+      ['shares','int','no','188'],
+      ['profile_visits','int','yes','96']
+    ],
+    preview:[
+      ['IG-2026-0812-2','carousel','24,108','412'],
+      ['IG-2026-0811-1','reel','48,902','1,204'],
+      ['IG-2026-0809-1','image','9,408','88'],
+      ['IG-2026-0806-1','carousel','21,442','388']
+    ] },
+  { id:'d7', name:'li_page_analytics', source:'linkedin', rows:'618', updated:'not syncing', health:'warn', grant:'Reader',
+    desc:'Company-page impressions, click-through and follower change. Stops at 6 August — the connector is not connected.',
+    schema:[
+      ['update_id','string','no','LI-2026-0806-1'],
+      ['impressions','int','no','8402'],
+      ['clicks','int','no','412'],
+      ['ctr','decimal(5,4)','no','0.0490'],
+      ['follower_delta','int','yes','18']
+    ],
+    preview:[
+      ['LI-2026-0806-1','8,402','412','4.90%'],
+      ['LI-2026-0804-1','6,118','208','3.40%'],
+      ['LI-2026-0731-1','11,204','694','6.20%']
+    ] },
   { id:'d4', name:'renewals_export', source:'upload', rows:'812', updated:'2 d ago', health:'ok', grant:null,
     desc:'Manual CSV upload of the FY25 renewal book.',
     schema:[ ['account','string','no','Northwind'], ['renews_on','date','no','2026-11-04'], ['acv','decimal(12,2)','no','214000.00'] ],
@@ -794,6 +997,19 @@ const CONNECTORS = [
     desc:'Accounts, owners and renewal dates — the churn signal that shows up before usage moves.',
     endpoint:'—', auth:'OAuth', scope:'—', writes:false, calls:'—', last:'—' }
 ];
+CONNECTORS.push(
+  { id:'cn10', name:'Facebook Pages', kind:'social', state:'ok',
+    desc:'One page. Publishing and page insights — the credential lives here, the posts live in the project.',
+    endpoint:'graph.facebook.com/v21.0/acmeindustrial', auth:'OAuth',
+    scope:'1 page · pages_manage_posts, read_engagement', writes:true, calls:'218 / 7d', last:'12 min ago' },
+  { id:'cn11', name:'Instagram', kind:'social', state:'ok',
+    desc:'The business account behind the page. Publishing is scheduled, never immediate.',
+    endpoint:'graph.facebook.com/v21.0/17841400000000', auth:'OAuth',
+    scope:'1 business account · content_publish, insights', writes:true, calls:'196 / 7d', last:'14 min ago' },
+  { id:'cn12', name:'LinkedIn', kind:'social', state:'off',
+    desc:'The company page. Posts are drafted and queued without it; nothing leaves until it is connected.',
+    endpoint:'—', auth:'OAuth', scope:'—', writes:true, calls:'—', last:'—' }
+);
 const CONNECTOR_AUTHS = ['OAuth','Service account','API key','Integration token','App installation','Signed webhook'];
 
 /* -------------------------------------------------------- design elements
