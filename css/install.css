@@ -280,24 +280,8 @@
   font-size:var(--t-12); color:var(--text-2);
 }
 
-/* ----------------------------------------------------------------- bar list */
-.barlist{ display:flex; flex-direction:column; gap:var(--s-3) }
-.bl__top{ display:flex; align-items:baseline; gap:var(--s-3); margin-bottom:var(--s-1) }
-.bl__nm{
-  flex:1; min-width:0;
-  font-size:var(--t-12); color:var(--text);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.bl__v{ flex:none; font-family:var(--mono); font-size:var(--t-12); color:var(--text-2) }
-.bl__track{
-  display:block; height:6px;
-  border-radius:var(--r-full);
-  background:var(--raised-2);
-  overflow:hidden;
-}
-.bl__fill{ display:block; height:100%; background:var(--line-strong); border-radius:var(--r-full) }
-.bl__fill--err{ background:var(--err) }
-.bl__meta{ display:block; margin-top:var(--s-1); font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
+/* Ranked bars are the shared .barlist, in its --stack --flat form: a row of a
+   report rather than a widget in an answer. See components.css. */
 
 /* -------------------------------------------------------- tables and facts */
 .usecard{ margin-bottom:var(--s-4) }
@@ -383,25 +367,9 @@
 /* The dialog's hint is in the flow — nothing here needs centring. */
 .wizard__foot .cfg__hint{ position:static; translate:none; max-width:40ch }
 
-/* =============================================================== statusbar */
-.statusbar{
-  grid-column:1 / -1;
-  grid-row:2;
-  display:flex; align-items:center; gap:var(--s-4);
-  padding:0 var(--s-3);
-  border-top:var(--border) solid var(--line);
-  background:var(--surface);
-  font-size:var(--t-11); color:var(--text-4);
-}
-.statusbar__item{ display:flex; align-items:center; gap:6px; white-space:nowrap }
-.statusbar__spacer{ flex:1 }
-.statusbar__meter{ width:56px; flex:none }
-.statusbar button.statusbar__item{
-  padding:0 var(--s-2); height:calc(var(--status-h) - 6px);
-  border-radius:var(--r-sm);
-  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
-}
-.statusbar button.statusbar__item:hover{ background:var(--raised); color:var(--text-2) }
+/* The strip is a component (components.css). What belongs to this page is
+   where it sits: one row, spanning every column. */
+.setup > .statusbar{ grid-column:1 / -1; grid-row:2 }
 
 /* ============================================================== responsive
    The menu narrows before it disappears, because it is the only thing telling
@@ -418,5 +386,4 @@
 @media (max-width:760px){
   .fields{ grid-template-columns:minmax(0,1fr) }
   .fields > .field,.fields > .field--half{ grid-column:span 1 }
-  .statusbar__hide-sm{ display:none }
 }

@@ -55,6 +55,11 @@
   --accent-fg:   #ffffff;
   --accent-soft: rgba(91,91,214,.10);
   --accent-line: rgba(91,91,214,.28);
+  /* A wash of the accent's own foreground, for the one thing that sits ON the
+     accent and still needs a surface of its own: the ⌘↵ badge inside the send
+     button. It has to flip with the palette — in dark the accent lightens and
+     its foreground goes dark, so a white wash would glow. */
+  --accent-fg-soft: rgba(255,255,255,.16);
 
   /* ---------------------------------------------------- semantic · status
      Dull on purpose. These carry meaning in data, never in chrome. */
@@ -199,6 +204,7 @@
   --accent-fg:#0d0d0f;
   --accent-soft:rgba(124,124,240,.14);
   --accent-line:rgba(124,124,240,.34);
+  --accent-fg-soft:rgba(13,13,15,.18);
 
   --ok:#3fbd8b;   --ok-soft:rgba(63,189,139,.13);
   --warn:#d99b28; --warn-soft:rgba(217,155,40,.14);

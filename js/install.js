@@ -9,33 +9,7 @@
    Values persist to localStorage; nothing leaves the page.
    ========================================================================= */
 
-/* ==================================================================== icons
-   Same 24px grid, same stroke weight as the workspace. */
-const P = {
-  flag:'<path d="M5 21V4M5 4h11l-1.6 4L16 12H5"/>',
-  globe:'<circle cx="12" cy="12" r="9"/><path d="M3.4 9.2h17.2M3.4 14.8h17.2"/><path d="M12 3c2.4 2.6 3.7 5.6 3.7 9S14.4 18.4 12 21c-2.4-2.6-3.7-5.6-3.7-9S9.6 5.6 12 3Z"/>',
-  cube:'<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
-  data:'<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 12v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/>',
-  spark:'<path d="M12 3.5 13.6 9 19 10.6 13.6 12.2 12 17.7 10.4 12.2 5 10.6 10.4 9Z"/>',
-  layers:'<path d="m12 3 9 4.8-9 4.8-9-4.8Z"/><path d="m3 13.2 9 4.8 9-4.8"/>',
-  user:'<circle cx="12" cy="9" r="3.2"/><path d="M5.6 19.6a6.7 6.7 0 0 1 12.8 0"/>',
-  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
-  shield:'<path d="M12 3l7.5 3v5.6c0 4.3-3.1 7.8-7.5 8.9-4.4-1.1-7.5-4.6-7.5-8.9V6Z"/><path d="m9.2 12 2 2 3.6-3.6"/>',
-  branch:'<circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="9" r="2.4"/><path d="M6 8.4v7.2M8.4 6H14a2 2 0 0 1 2 2v.6"/>',
-  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
-  coin:'<circle cx="12" cy="12" r="9"/><path d="M14.6 9.2A2.6 2.6 0 0 0 12 7.8c-1.4 0-2.6.9-2.6 2s1.2 2 2.6 2 2.6.9 2.6 2-1.2 2-2.6 2a2.6 2.6 0 0 1-2.6-1.4M12 6.2v11.6"/>',
-  check:'<path d="m5 13 4 4L19 7"/>',
-  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 4.2V3M12 21v-1.2M4.2 12H3M21 12h-1.2M6.5 6.5l-.9-.9M18.4 18.4l-.9-.9M17.5 6.5l.9-.9M5.6 18.4l.9-.9"/>',
-  gauge:'<path d="M3.6 18a8.4 8.4 0 1 1 16.8 0"/><path d="m12 18 4.2-5.4"/><circle cx="12" cy="18" r="1.3"/>',
-  people:'<circle cx="9.2" cy="8.8" r="3"/><path d="M3.5 19a5.9 5.9 0 0 1 11.4 0"/><path d="M16.4 6.2a2.9 2.9 0 0 1 0 5.6M17.6 19a6 6 0 0 0-1.5-3.3"/>',
-  x:'<path d="M6 6l12 12M18 6 6 18"/>'
-};
-function ic(name, size){
-  const s = size || 16;
-  return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" ' +
-         'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
-         (P[name] || '') + '</svg>';
-}
+/* Icons live in js/icons.js — one set for every page, loaded before this. */
 
 /* ==================================================================== state
    MODULES[0] is initialisation — the dialog. PAGES are the eleven that get a
@@ -507,15 +481,15 @@ function threshHTML(c){
 
 function barsHTML(c){
   const hi = Math.max.apply(null, c.rows.map(r => r.v)) || 1;
-  return '<div class="barlist">' + c.rows.map(r =>
-    '<div class="bl">' +
-      '<div class="bl__top">' +
-        '<span class="bl__nm">' + esc(r.nm) + '</span>' +
-        '<span class="bl__v">' + esc(r.val) + '</span>' +
+  return '<div class="barlist barlist--stack barlist--flat">' + c.rows.map(r =>
+    '<div class="barlist__row">' +
+      '<div class="barlist__top">' +
+        '<span class="barlist__k">' + esc(r.nm) + '</span>' +
+        '<span class="barlist__v">' + esc(r.val) + '</span>' +
       '</div>' +
-      '<span class="bl__track"><i class="bl__fill' + (r.tone ? ' bl__fill--' + r.tone : '') +
-        '" style="width:' + (r.v / hi * 100).toFixed(1) + '%"></i></span>' +
-      (r.meta ? '<span class="bl__meta">' + esc(r.meta) + '</span>' : '') +
+      '<span class="meter' + (r.tone ? ' meter--' + r.tone : '') + '">' +
+        '<i style="width:' + (r.v / hi * 100).toFixed(1) + '%"></i></span>' +
+      (r.meta ? '<span class="barlist__meta">' + esc(r.meta) + '</span>' : '') +
     '</div>').join('') + '</div>';
 }
 

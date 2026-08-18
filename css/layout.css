@@ -826,25 +826,9 @@
   font-size:var(--t-11); color:var(--text-4);
 }
 
-/* =============================================================== statusbar */
-.statusbar{
-  grid-column:1 / -1;
-  grid-row:2;
-  display:flex; align-items:center; gap:var(--s-4);
-  padding:0 var(--s-3);
-  border-top:var(--border) solid var(--line);
-  background:var(--surface);
-  font-size:var(--t-11); color:var(--text-4);
-}
-.statusbar__item{ display:flex; align-items:center; gap:6px; white-space:nowrap }
-.statusbar__spacer{ flex:1 }
-.statusbar__meter{ width:56px; flex:none }
-.statusbar button.statusbar__item{
-  padding:0 var(--s-2); height:calc(var(--status-h) - 6px);
-  border-radius:var(--r-sm);
-  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
-}
-.statusbar button.statusbar__item:hover{ background:var(--raised); color:var(--text-2) }
+/* The strip is a component (components.css). What belongs to this page is
+   where it sits: one row, spanning every column. */
+.app > .statusbar{ grid-column:1 / -1; grid-row:2 }
 
 /* ============================================================== responsive
    Widths that cannot coexist are resolved in app.js, which closes panes by
@@ -854,5 +838,4 @@
   .pane__pad{ padding:var(--s-4) }
   .composer-wrap{ padding:0 var(--s-4) var(--s-4) }
   .topbar__title{ max-width:20ch }
-  .statusbar__hide-sm{ display:none }
 }
