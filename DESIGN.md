@@ -79,6 +79,15 @@ page says `grid-row:2`. `.kpi` is a tile; the page decides what sits under the
 row of them. The moment a component names a grid position it only works in pages
 that have one.
 
+**A component contains what it positions.** If a block positions any part of
+itself absolutely, the block is the containing block — otherwise the part anchors
+to the document and no longer belongs to the component at all. `.switch` had a
+hidden `input` positioned this way and no `position` of its own, so every switch
+left an absolutely positioned box at its static position in the document: nothing
+visible, but scrollable overflow that no pane can clip, which is enough to make an
+in-page anchor scroll a whole shell instead of the column the reader is looking
+at. One line on the block, and it is contained.
+
 **Colour is spoken for.** The accent means *you can act* or *the model acted* —
 never decoration, and one per surface. App colour answers *which app* and lives
 only on a tile. A status colour carries meaning in data and never in chrome, so a

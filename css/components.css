@@ -200,6 +200,12 @@ button.chip--plain:hover{ background:var(--raised) }
 
 /* Switch. The track is a sibling, not adjacent — use ~ not +. */
 .switch{
+  /* Positioned so the hidden input below is anchored here. Without it the input
+     falls back to the initial containing block, which means a switch used inside
+     a scrolling pane leaves an absolutely positioned box at its static position
+     in the document — invisible, but it gives the document scrollable overflow
+     the pane cannot clip. */
+  position:relative;
   display:flex; align-items:center; gap:var(--s-2);
   padding:var(--s-2) 0;
   font-size:var(--t-12); color:var(--text-2);

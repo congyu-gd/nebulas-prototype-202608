@@ -538,6 +538,56 @@ function render(){
   const count = SECTIONS.reduce((a, s) => a + (s.items ? s.items.length : 0), 0);
   $sg('#sgCount').textContent = count + ' specimens · ' +
     TOKENS.reduce((a, g) => a + g.items.length, 0) + ' tokens';
+
+  markCurrent();
+}
+
+/* The section list is beside the page now rather than above it, so it can say
+   where you are.
+
+   The rule is "the last section whose heading has passed the top of the column",
+   not "the first one visible" — after an anchor jump the section you left is still
+   on screen by a few pixels, and picking the first visible one keeps the mark one
+   row behind for the whole page. Measured against the right column, because that
+   is the scroll container; the viewport never moves. */
+let spying = false;
+
+function markCurrent(){
+  const body = $sg('#sgBody');
+  const links = [].slice.call($sg('#sgNav').children);
+  const top = body.getBoundingClientRect().top;
+
+  /* The edge is each section's own scroll-margin plus a pixel, not a number of my
+     own choosing: that margin is exactly where an anchor jump parks a heading, so
+     anything smaller would leave the mark on the previous section for the whole
+     page — and the margin is a density-scaled token, so hard-coding it would be
+     right at one density and wrong at the other two. */
+  let here = links[0];
+  links.forEach(a => {
+    const sec = document.getElementById(a.hash.slice(1));
+    if (!sec) return;
+    const edge = parseFloat(getComputedStyle(sec).scrollMarginTop) + 1;
+    if (sec.getBoundingClientRect().top - top <= edge) here = a;
+  });
+  links.forEach(a => a.setAttribute('aria-current', String(a === here)));
+
+  if (!spying) {
+    spying = true;
+    let queued = false;
+    body.addEventListener('scroll', () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; markCurrent(); });
+    });
+    /* Clicking says where you are going before the scroll gets there, so the mark
+       moves on the click rather than a frame later. */
+    $sg('#sgNav').addEventListener('click', e => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      [].forEach.call($sg('#sgNav').children,
+        el => el.setAttribute('aria-current', String(el === a)));
+    });
+  }
 }
 
 /* The page's own chrome is the system's own segmented control, on the same

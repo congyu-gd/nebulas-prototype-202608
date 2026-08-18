@@ -8,7 +8,7 @@ dependencies, no network calls — open a file in a browser and it runs.
 | [index.html](index.html) | The workspace: rail · sidebar · conversation · results column · app panel · app rail |
 | ↳ **start here** | Open a new chat and click a starter — each one runs a worked case ending in something you can fill in, answer or sort, and whatever it settles on is filed in the results column on the right, which can hand it back as a file (csv · md · txt · json · pdf, offered from what the content can take), as a shared link behind an access choice, or delete it with an undo |
 | [nebulas-cloud.html](nebulas-cloud.html) | Cloud setting — twelve-module enterprise deployment, gated by a tenant-onboarding dialog, plus two usage perspectives that grade it against its own settings |
-| [styleguide.html](styleguide.html) | The design system, rendered — every token and every component state, with theme and density switches. Loads `components.css` only, so anything that needs a page's stylesheet to look right shows up as broken |
+| [styleguide.html](styleguide.html) | The design system, rendered — every token and every component state, with theme and density switches. The section list is a column beside the specimens, each side the height of the viewport and scrolling on its own, and the list says which section you are in. Loads `components.css` only, so anything that needs a page's stylesheet to look right shows up as broken |
 | [v1-single-file.html](v1-single-file.html) | The earlier conversation-only prototype, kept for reference |
 
 ```

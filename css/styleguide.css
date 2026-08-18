@@ -7,41 +7,70 @@
    in. No specimen selector appears below.
    ========================================================================= */
 
+/* Two columns under one header, each the height of the viewport and scrolling on
+   its own — the same rule as the workspace sidebar and the project page. The
+   section list is the one thing you always want reachable, so it never scrolls
+   away; the specimens are what moves. */
 .sg{
-  display:flex; flex-direction:column;
-  min-height:100vh;
+  display:grid;
+  grid-template-columns:var(--list-w) minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr);
+  height:100vh;
   background:var(--bg);
 }
 
-/* Stays put, because the theme and density controls are the point of scrolling
-   past something twice. */
+/* Spans both columns, and no longer needs to stick: it is a grid row that the
+   scrolling happens inside of, so the theme and density controls stay put by
+   construction rather than by z-index. */
 .sg__top{
-  position:sticky; top:0; z-index:10;
+  grid-column:1 / -1;
   display:flex; align-items:center; gap:var(--s-4); flex-wrap:wrap;
   padding:var(--s-3) var(--s-6);
   background:var(--bg);
   border-bottom:var(--border) solid var(--line);
 }
-.sg__id{ display:flex; align-items:baseline; gap:var(--s-3); margin-right:auto }
+/* Nowrap so the header wraps between its parts rather than inside them: at a
+   narrow width the name and the count keep a line and the two controls take the
+   next one, instead of the title breaking across three. */
+.sg__id{
+  display:flex; align-items:baseline; gap:var(--s-3); margin-right:auto;
+  white-space:nowrap;
+}
 .sg__name{ font-size:var(--t-15); font-weight:var(--w-medium); letter-spacing:var(--ls-snug) }
 .sg__count{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-4) }
 
 .sg__nav{
-  display:flex; gap:var(--s-1); flex-wrap:wrap;
-  padding:var(--s-2) var(--s-6);
-  border-bottom:var(--border) solid var(--line);
+  grid-column:1; grid-row:2;
+  display:flex; flex-direction:column; gap:var(--s-1);
+  min-height:0; overflow:hidden auto;
+  padding:var(--s-4) var(--s-3);
+  border-right:var(--border) solid var(--line);
   background:var(--surface);
 }
 .sg__nav a{
-  padding:2px var(--s-2);
+  display:block;
+  padding:var(--s-1) var(--s-2);
   border-radius:var(--r-sm);
-  font-size:var(--t-11); color:var(--text-3);
+  font-size:var(--t-12); color:var(--text-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .sg__nav a:hover{ background:var(--raised); color:var(--text) }
+/* Which section you are reading. A persistent list that never says where you are
+   is a list you have to re-read every time you look at it. */
+.sg__nav a[aria-current="true"]{
+  background:var(--raised); color:var(--text); font-weight:var(--w-medium);
+}
 
-.sg__body{ flex:1; padding:var(--s-8) var(--s-6) var(--s-16); max-width:1080px; width:100% }
+/* The right column is the scroll container, which is why the anchor offset below
+   is small: nothing overlaps the top of it. Long prose is capped in ch by the
+   blurb and note rules, so the column itself takes whatever width is left. */
+.sg__body{
+  grid-column:2; grid-row:2;
+  min-height:0; overflow:hidden auto;
+  padding:var(--s-8) var(--s-6) var(--s-16);
+}
 
-.sg__sec{ margin-bottom:var(--s-16); scroll-margin-top:var(--s-16) }
+.sg__sec{ margin-bottom:var(--s-16); scroll-margin-top:var(--s-6) }
 .sg__sech{
   display:flex; align-items:baseline; gap:var(--s-3);
   padding-bottom:var(--s-2); margin-bottom:var(--s-4);
@@ -64,6 +93,11 @@
    draws no background of its own is still visible, and one that does can be
    seen not to match. */
 .sg__demo{
+  /* The stage contains what it stages. A specimen that positions something
+     absolutely — a tooltip, a popover, a visually hidden label — anchors to its
+     own box here rather than to the document, which both puts it where the
+     specimen means it to be and keeps it inside the column that scrolls. */
+  position:relative;
   display:flex; align-items:flex-start; flex-wrap:wrap; gap:var(--s-3);
   padding:var(--s-4);
   border:var(--border) dashed var(--line);
@@ -106,3 +140,23 @@
 }
 .sg__gapt{ font-size:var(--t-12); color:var(--text-2) }
 .sg__gapb{ margin:2px 0 0; font-size:var(--t-11); color:var(--text-4) }
+
+/* -------------------------------------------------------------- responsive
+   Below the width the rest of the project calls narrow, a 264px column costs
+   more than it gives, so the list goes back to being a strip above the page and
+   the specimens get the whole width. One breakpoint, because there is no
+   in-between state worth designing. */
+@media (max-width:820px){
+  .sg{ grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr) }
+  .sg__nav{
+    grid-column:1; grid-row:2;
+    flex-direction:row; flex-wrap:wrap;
+    overflow:visible;
+    padding:var(--s-2) var(--s-6);
+    border-right:0; border-bottom:var(--border) solid var(--line);
+  }
+  /* Both columns have to be named, not just the rows: leaving the body on
+     grid-column:2 against a single-column template creates an implicit second
+     column, which takes the width and leaves the list a few characters wide. */
+  .sg__body{ grid-column:1; grid-row:3 }
+}
