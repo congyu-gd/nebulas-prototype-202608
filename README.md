@@ -72,7 +72,9 @@ which — a clock if it runs by itself, a `users` mark if the workspace can see 
 Each setting explains itself the first time and the hints retire once you have
 used the dialog; the `?` in its header brings them back.
 
-Its page is a **panel and a box**. On the left, a column with the sidebar's own
+Its page is a **panel and a box**, and each side is the height of the pane and
+scrolls on its own, like the sidebar — reading to the bottom of the panel leaves
+the box where it was. On the left, a column with the sidebar's own
 surface — the project's name, the description written for it, who can see it, then
 its assistant, its knowledge (documents and tables), its workflow with the script
 it runs and a `Run now`, then its threads and results. Every row is a door: the

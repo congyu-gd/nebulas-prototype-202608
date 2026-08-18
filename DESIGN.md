@@ -517,6 +517,17 @@ does not wrap under the content when the pane narrows — a panel that becomes a
 full-width band is no longer a panel — it shrinks, and the composer's toolbar
 wraps if the remainder gets tight.
 
+**Each column is the height of the pane and scrolls inside itself**, the way the
+sidebar does, so `.pane__body` gives up its own scrolling for this view
+(`.pane__body--split`, reset on every render so the modifier belongs to the view
+that asked for it). One scrollbar for the whole page would tie the two halves
+together: reading to the bottom of a panel carrying channels, a queue, a
+workflow, threads and results would drag the box off the screen, and the box is
+what the page is for. Vertical centring stays `margin:auto 0` rather than
+`justify-content:center` for the same reason it always did — auto margins
+collapse to zero once the content is taller than the column, so Auto program's
+form scrolls from its top instead of being clipped at both ends.
+
 **What the panel says, in the order it says it.** The three facts that are true
 of the project itself — its **name** under the glyph its owner picked, the
 **description** written for it, and **who can see it**, as the control that

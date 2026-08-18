@@ -241,10 +241,18 @@
 
    It does not wrap under the content: a panel that becomes a full-width band is
    no longer a panel. It shrinks instead, and the composer's toolbar wraps if the
-   remainder gets tight. */
-.projwrap{ display:flex; align-items:stretch; min-height:100% }
+   remainder gets tight.
+
+   Both columns are the height of the pane and scroll inside themselves, the way
+   the sidebar does — so the pane body gives up its own scrolling for this view.
+   One scrollbar for the page would tie the two together: reading to the bottom
+   of a long panel would carry the box off the screen, and a project with three
+   results would move the thing the page is for. Each column keeps its place. */
+.pane__body--split{ overflow:hidden }
+.projwrap{ display:flex; align-items:stretch; height:100%; min-height:0 }
 .projpanel{
-  flex:0 1 268px; min-width:0;
+  flex:0 1 268px; min-width:0; min-height:0;
+  overflow:hidden auto;
   padding:var(--s-5) var(--s-4);
   background:var(--surface);
   border-right:var(--border) solid var(--line);
@@ -254,7 +262,8 @@
    rather than justify-content, which clips the top of anything taller than the
    pane instead of scrolling it. */
 .projmain{
-  flex:1 1 auto; min-width:0;
+  flex:1 1 auto; min-width:0; min-height:0;
+  overflow:hidden auto;
   display:flex; flex-direction:column; align-items:center;
   padding:var(--s-6);
 }

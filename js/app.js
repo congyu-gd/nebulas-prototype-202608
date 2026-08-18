@@ -2778,6 +2778,8 @@ function projectView(body, p){
   const panel = el('aside','projpanel');
   const main = el('div','projmain');
   wrap.append(panel, main);
+  /* The two columns scroll on their own, so the pane body does not. */
+  body.classList.add('pane__body--split');
   body.append(wrap);
 
   /* ------------------------------------------------------------- identity
@@ -5420,6 +5422,10 @@ function render(){
      the pane would delete it along with its listeners. */
   detachComposer();
   mb.innerHTML = '';
+  /* A view may take the pane's scrolling away from it — the project page scrolls
+     its two columns separately. Reset it here so the modifier belongs to the
+     view that asked for it and not to whatever is rendered next. */
+  mb.className = 'pane__body';
   S.main(mb);
 
   const wantsComposer = typeof S.composer === 'function' ? S.composer() : !!S.composer;
