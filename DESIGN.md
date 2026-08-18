@@ -18,6 +18,11 @@ js/app.js            routing, section renderers, the builder, the results
 index.html           shell markup; everything inside is rendered by app.js
 v1-single-file.html  the earlier single-file conversation-only prototype
 
+styleguide.html      the system, rendered: every token, every component state
+css/styleguide.css   that page's shell only — no specimen selector is in it
+js/styleguide.js     the specimen list, held to two audit rules
+tools/audit.py       the rules, as a check. python3 tools/audit.py
+
 nebulas-cloud.html   deployment setup — an independent page on the same tokens
 css/install.css      its shell only: menu · configuration · usage views
 js/install-data.js   the twelve deployment modules, as configuration
@@ -40,6 +45,68 @@ first.
 
 Plain `<script src>`, not modules, so `file://` works with no server.
 Load order matters: `data.js` before `app.js`.
+
+## The system, as rules
+
+Everything below this section is *why*. This is *what*, in the form a decision
+can be checked against. [styleguide.html](styleguide.html) renders it — 117
+tokens and 78 specimens, on its own theme and density switches — and
+[tools/audit.py](tools/audit.py) enforces the parts a page can break silently.
+
+**Four layers, and a value belongs to exactly one.**
+
+```
+tokens.css       every colour, size, duration     — the only place values live
+base.css         reset, document defaults, type, .prose
+components.css   page-agnostic parts, every page
+<page>.css       that page's shell (layout · install · styleguide)
+```
+
+**One name, one owner.** A component in `components.css` may not take a name a
+page shell already uses, and a page shell may not name a component. When two
+pages need the same part it moves up under one name; when one page needs a
+variant it takes a modifier. A page may *extend* a component with a state
+(`.chip[aria-pressed]`) or place it in a context (`.projwrap .section`), but
+re-declaring the bare block claims the name — which is exactly how `.menu`
+deleted the cloud page's left column and `.barlist` silently redefined a shared
+geometry.
+
+**`block__element--modifier`**, lowercase, no abbreviations for new blocks:
+`.cols__bar`, not `.cols__b`; `.barlist`, not `.bl`.
+
+**A component does not know where it sits.** `.statusbar` describes a strip; the
+page says `grid-row:2`. `.kpi` is a tile; the page decides what sits under the
+row of them. The moment a component names a grid position it only works in pages
+that have one.
+
+**Colour is spoken for.** The accent means *you can act* or *the model acted* —
+never decoration, and one per surface. App colour answers *which app* and lives
+only on a tile. A status colour carries meaning in data and never in chrome, so a
+measurement takes one only when it has crossed a limit somebody configured.
+Everything else is a neutral.
+
+**Mono means machine-generated** — tool names, timings, counts, paths, numeric
+columns, ids. It is a reservation, not a style.
+
+**Where a new thing goes.** Used by one page → that page's stylesheet. Used by
+two → `components.css`. A value used twice → `tokens.css`. A state that does not
+exist yet → the styleguide's list of gaps, so the system says what it lacks.
+
+**What the check enforces** (`python3 tools/audit.py`):
+
+| Rule | Failure |
+|---|---|
+| Colour lives in `tokens.css` | any hex or `rgba()` in another stylesheet |
+| A class block has one owner | the same bare `.name` declared in two files |
+| A glyph name has one drawing | the same name in two scripts, copied or diverged |
+| The styleguide shows every token | a token declared and never rendered |
+| The styleguide names only real classes | a specimen whose class exists nowhere |
+| Raw px never increases | the total across known files going up |
+
+The last one is a ratchet rather than a ban: 187 values remain, mostly 2–6px
+optical offsets, and the number may only come down. Moving a rule between files
+moves its values with it, which is why the comparison is a total rather than
+per-file.
 
 ## The premise
 
@@ -1248,11 +1315,15 @@ harder to find, which is why the green came back out again after the first pass.
 
 ## Next
 
-- `styleguide.html` — render every token and every component state as an
-  enforceable contract, so `index.html` is a consumer of the system rather
-  than its definition.
+- ~~`styleguide.html` — render every token and every component state as an
+  enforceable contract.~~ Resolved: the page exists, and `tools/audit.py` holds
+  it to the system. What is still missing is coverage — 78 of the 269 classes in
+  `components.css` have a specimen, and the rest are composites (`.tpl`,
+  `.canvas`, `.live`, `.detail`, `.palette`) that need a page around them to mean
+  anything. A seventh rule reporting that percentage would say so out loud.
 - The states that are still missing: loading, permission-denied, failed tool
-  call mid-turn, an artifact that fails to render, zero search results.
+  call mid-turn, an artifact that fails to render, zero search results. They are
+  listed in the styleguide as gaps now, which is not the same as building them.
 - ~~The app rail is a launcher with nowhere to launch to.~~ Resolved: apps open
   as a sheet beside the rail. What is still missing is any *state* inside one —
   every app surface is read-only, and a queue you cannot triage from is a report.
