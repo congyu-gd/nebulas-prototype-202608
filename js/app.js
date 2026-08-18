@@ -96,7 +96,9 @@ const state = {
      The tab survives switching bases — you were looking at Files for a
      reason — but a selection does not. */
   kb:{ tab:'files', sel:[], sort:{ c:'added', d:-1 } },
-  asst:{ tab:'All' },          /* which assistant filter is showing */
+  /* Two levels: `scope` is whose catalogue you are in (My · Public) and is
+     the outer choice; `tab` classifies within it. */
+  asst:{ scope:'My', tab:'All' },
   /* Build's sidebar is Miller columns: `open` is the kind showing in the second
      column, `last` is where you were in each kind so returning to one puts you
      back, and `scope` filters the second column. Scope starts at All — a filter
@@ -1711,17 +1713,18 @@ function useExample(a, text){
    is the same act as putting it within reach of the next message. */
 const favourites = () => D.ASSISTANTS.filter(a => a.fav);
 
-function asstTabs(){
+function asstTabs(scoped){
+  /* Classification within the scope the switch above chose, so every count is
+     a count of what is actually on the page. A tab that would show nothing is
+     not offered: a dead filter reads as missing content. */
   const counts = {
-    All:D.ASSISTANTS.length,
-    'My assistants':D.ASSISTANTS.filter(a => a.owner === 'me').length,
-    Recommended:D.ASSISTANTS.filter(a => a.rec).length,
-    Favourites:favourites().length
+    All:scoped.length,
+    Recommended:scoped.filter(a => a.rec).length,
+    Favourites:scoped.filter(a => a.fav).length
   };
-  D.ASSISTANT_TEAMS.forEach(t => counts[t] = D.ASSISTANTS.filter(a => a.team === t).length);
-  /* Whose it is, then what the workspace suggests, then what you starred —
-     the personal classifications lead, the org chart follows. */
-  const order = ['All','My assistants','Recommended','Favourites'].concat(D.ASSISTANT_TEAMS);
+  D.ASSISTANT_TEAMS.forEach(t => counts[t] = scoped.filter(a => a.team === t).length);
+  const order = ['All','Recommended','Favourites'].concat(D.ASSISTANT_TEAMS)
+    .filter(t => t === 'All' || counts[t] > 0);
 
   const bar = el('div','tabs');
   bar.style.flexWrap = 'wrap';
@@ -1786,14 +1789,31 @@ function assistantsView(body){
 
   const split = el('div','asst');
   const left = el('div','asst__main');
-  left.append(asstTabs());
+
+  /* The top-level choice: whose catalogue. A switch rather than another tab,
+     because it is not one more filter — everything below it, tabs and counts
+     included, is inside the side it names. Switching resets the tab, since a
+     classification of the other side may not exist on this one. */
+  const scoped = state.asst.scope === 'My'
+    ? D.ASSISTANTS.filter(a => a.owner === 'me')
+    : D.ASSISTANTS.filter(a => a.owner !== 'me');
+  const scopeRow = el('div', null);
+  scopeRow.style.cssText = 'display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-4)';
+  scopeRow.append(segCtl(['My','Public'], state.asst.scope, v => {
+    state.asst.scope = v;
+    state.asst.tab = 'All';
+    render();
+  }));
+  scopeRow.append(el('span','t-mono', scoped.length + ' of ' + D.ASSISTANTS.length));
+  left.append(scopeRow);
+
+  left.append(asstTabs(scoped));
 
   const tab = state.asst.tab;
-  const shown = tab === 'All' ? D.ASSISTANTS
-              : tab === 'My assistants' ? D.ASSISTANTS.filter(a => a.owner === 'me')
-              : tab === 'Recommended' ? D.ASSISTANTS.filter(a => a.rec)
-              : tab === 'Favourites' ? favourites()
-              : D.ASSISTANTS.filter(a => a.team === tab);
+  const shown = tab === 'All' ? scoped
+              : tab === 'Recommended' ? scoped.filter(a => a.rec)
+              : tab === 'Favourites' ? scoped.filter(a => a.fav)
+              : scoped.filter(a => a.team === tab);
 
   const grid = el('div','grid-cards');
   grid.style.marginTop = 'var(--s-4)';
