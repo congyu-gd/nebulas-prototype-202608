@@ -6583,7 +6583,9 @@ function appTodo(app){
      the item and, if asked, when it is due — the same next seven days the
      calendar offers, since nobody dates a todo by typing. */
   const add = el('form');
-  add.style.cssText = 'display:flex;gap:var(--s-2);flex-wrap:wrap;margin-bottom:var(--s-3)';
+  /* A raised tray, so the way in reads as a place and not a stray row. */
+  add.style.cssText = 'display:flex;gap:var(--s-2);flex-wrap:wrap;margin-bottom:var(--s-3);' +
+    'padding:var(--s-2);border-radius:var(--r-md);background:var(--raised)';
   const input = el('input','input');
   input.type = 'text';
   input.placeholder = 'Add an item…';
