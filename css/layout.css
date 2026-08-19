@@ -177,12 +177,6 @@
 }
 .miller__head .listcol__count{ margin-right:auto }
 
-/* The item column's filter: whose things are listed. Full width because it
-   governs everything below it, and three equal buttons because the three
-   answers are equally likely. */
-.listcol__filter{ padding:0 var(--s-2) var(--s-2) }
-.listcol__filter .seg{ width:auto }
-.listcol__filter .seg button{ flex:1; min-width:0 }
 .listcol__note{
   padding:var(--s-2) var(--s-3) var(--s-3);
   font-size:var(--t-11); color:var(--text-4); line-height:var(--lh-ui);

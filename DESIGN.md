@@ -473,7 +473,7 @@ should land next to the thing it affects.
 | Four stat cards on the project page | ~~one line under the name~~ → the panel itself. Four cards for four small known numbers was a dashboard where a sentence would do; then the sentence became a column that says the same things and opens each one |
 | The project's facts as page content | a panel with the sidebar's surface and hairline. It is a column of the shell, not a block of the page, because it names what you are working inside |
 | The results column, open on a project page | closed on arrival, as a loan. Panel + box + results is three columns too many, and the results column is the one with a way back from the content |
-| Projects as an undifferentiated list of folders | a row that carries the glyph its owner picked, a clock if it runs by itself, and a `users` mark if the workspace can see it. Personal is the default, so personal is what goes unmarked |
+| Projects as an undifferentiated list of folders | a row that carries the glyph it was given, a clock if it runs by itself, and a `users` mark if the workspace can see it. Personal is the default, so personal is what goes unmarked |
 
 ## The knowledge detail is tabbed
 
@@ -605,7 +605,7 @@ collapse to zero once the content is taller than the column, so Auto program's
 form scrolls from its top instead of being clipped at both ends.
 
 **What the panel says, in the order it says it.** The three facts that are true
-of the project itself — its **name** under the glyph its owner picked, the
+of the project itself — its **name** under the glyph it was given, the
 **description** written for it, and **who can see it**, as the control that
 changes it — then the three that decide what an answer will be: the
 **assistant**, the **knowledge** (a base is documents, a dataset is a table, and
@@ -864,10 +864,10 @@ thing itself:
 ```
 ┌──────────────────┬───────────────────────┬──────────────────────────┐
 │ ◈ Assistants   › │ ASSISTANTS      17  + │  Revenue analyst         │
-│ ▤ Projects     › │ ┌ Mine ┬ Teams ┬ All┐ │  ┌ form ────┬ inspector ┐│
-│ ▣ Widgets      › │  Revenue analyst      │  │ name…    │ becomes   ││
-│ ▦ Templates    › │  Code reviewer        │  │ skills…  │ test      ││
-│                  │  Support triage   Ana │  └──────────┴───────────┘│
+│ ▤ Projects     › │  Revenue analyst      │  ┌ form ────┬ inspector ┐│
+│ ▣ Widgets      › │  Code reviewer        │  │ name…    │ becomes   ││
+│ ▦ Templates    › │  Support triage       │  │ skills…  │ test      ││
+│                  │  Meeting minutes      │  └──────────┴───────────┘│
 └──────────────────┴───────────────────────┴──────────────────────────┘
    --mill-w 176      the rest of --list-w      the pane = last column
 ```
@@ -888,23 +888,14 @@ thing itself:
   nobody asked for cost the labels their width, and the item column's head
   carries the count for the kind you are actually in.
 
-### The scope filter
+### No ownership filter
 
-- **It answers the two questions a list this size provokes**: *where is the one
-  I made* and *what has the rest of the company built*. Hence `Mine · Teams ·
-  All`, at the top of the item column because it governs what is below it.
-  Ownership is stored on the record as `owner: 'me'`, so the filter needs no
-  notion of the signed-in user beyond the label.
-- **The count says how much of the pile is showing** — `16` unfiltered,
-  `7/16` filtered.
-- **Your own things are not labelled as yours.** The row shows an owner only
-  when it is someone else's, so the column stays quiet for the common case, and
-  the page head repeats it as `Ravi · Support` next to the state badge.
-- **The filter never hides the row you are on.** `scoped(list, keep)` keeps the
-  current selection in the list even when it falls outside the scope: a filter
-  one row loose beats a selection with no visible home.
-- Scope starts at `All`. A filter that hides content on arrival reads as missing
-  content.
+Build once carried a `Mine · Teams · All` scope, and the assistants page a
+`My · Public` catalogue switch. Both retired: this is a **personal workspace**,
+so every record is yours and a filter whose answer is always "all of it" is
+dead weight. With the filter went the fiction — records carry no `owner`
+field, rows carry no owner label, and the page head shows only the state
+badge. The item column's count is simply the count.
 
 Every build surface is the same two-part shape — `.build`:
 

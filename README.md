@@ -212,7 +212,8 @@ The workspace's **Build** section is the maker's half, and it has four lanes:
 the external systems they reach granted as connections), **widgets**, and
 **templates** — web pages and PDF layouts, previewed live as you configure
 them. Its sidebar is **Miller columns** — kind, then item, with the builder
-itself as the last column — filtered on ownership (`Mine · Teams · All`).
+itself as the last column. Everything listed is yours: this is a personal
+workspace, so there is no ownership filter to work.
 Connectors live in Cloud → Connections, since connecting a system is an
 administrative act; Build only grants one.
 

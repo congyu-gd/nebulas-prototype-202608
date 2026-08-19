@@ -97,14 +97,12 @@ const state = {
      The tab survives switching bases — you were looking at Files for a
      reason — but a selection does not. */
   kb:{ tab:'files', sel:[], sort:{ c:'added', d:-1 } },
-  /* Two levels: `scope` is whose catalogue you are in (My · Public) and is
-     the outer choice; `tab` classifies within it. */
-  asst:{ scope:'My', tab:'All' },
+  /* Which classification tab the assistants page is on. */
+  asst:{ tab:'All' },
   /* Build's sidebar is Miller columns: `open` is the kind showing in the second
      column, `last` is where you were in each kind so returning to one puts you
-     back, and `scope` filters the second column. Scope starts at All — a filter
-     that hides content on arrival reads as missing content. */
-  build:{ open:'as', scope:'All', last:{} },
+     back. */
+  build:{ open:'as', last:{} },
   assistant:null,              /* the assistant bound to the next message */
   /* null means "follow the viewport"; true/false is an explicit choice. The app
      rail is not in here: it never closes. */
@@ -240,7 +238,7 @@ const SECTIONS = {
       body.append(pinned);
 
       /* A project is a container, not an event — its age says nothing useful,
-         so the row carries the name, the glyph its owner picked, and one mark:
+         so the row carries the name, the glyph it was given, and one mark:
          whether what you put in it is visible to the workspace. Personal is the
          default, so personal is what goes unmarked. */
       body.append(groupLabel('Projects', { tip:'New project', onClick:() => openProject(null) }));
@@ -396,31 +394,24 @@ const SECTIONS = {
       });
 
       const g = BUILD_GROUPS.filter(x => x.kind === state.build.open)[0] || BUILD_GROUPS[0];
-      const all = g.items();
-      const shown = scoped(all, x => state.item.build === key(g.kind, x.id));
+      const shown = g.items();
 
       /* The second column's own head: what it is showing, how much of it, and
          the "+" that makes another one of exactly this kind. */
       const head = el('div','miller__head',
         '<span class="t-eyebrow">' + esc(g.label) + '</span>' +
-        '<span class="listcol__count">' +
-          (shown.length !== all.length ? shown.length + '/' + all.length : String(all.length)) +
-        '</span>');
+        '<span class="listcol__count">' + shown.length + '</span>');
       const add = el('button','iconbtn iconbtn--xs tip tip--below', ic('plus',12));
       add.setAttribute('data-tip', g.addTip);
       add.onclick = g.add;
       head.append(add);
       items.append(head);
-      items.append(scopeFilter());
 
       if (!shown.length){
         items.append(el('div','listcol__note', esc(g.empty)));
       } else {
         shown.forEach(x => items.append(listRow({
           lead:g.lead(x), title:x.name, sub:g.sub(x),
-          /* Your own things are not labelled as yours — the absence is the
-             signal, and the column stays quiet for the common case. */
-          meta:x.owner === 'me' ? '' : x.owner,
           current:state.item.build === key(g.kind, x.id),
           onClick:() => select('build', key(g.kind, x.id))
         })));
@@ -520,51 +511,26 @@ const BUILD_GROUPS = [
   { kind:'as', label:'Assistants', icon:'agent', addTip:'New assistant — describe it', add:() => openMaker('as'),
     items:() => D.ASSISTANTS,
     lead:a => dotLead(a.state), sub:a => a.model,
-    empty:'No assistant here matches this filter.' },
+    empty:'No assistants yet — the plus above makes one.' },
 
   { kind:'pj', label:'Projects', icon:'folder', addTip:'New project — describe it', add:() => openMaker('pj'),
     items:() => D.PROJECTS,
     lead:p => '<span class="row__icon">' + ic(p.icon, 13) + '</span>',
     sub:p => (p.shared ? 'shared' : 'personal') + (p.run ? ' · runs' : ''),
-    empty:'No project here matches this filter.' },
+    empty:'No projects yet — the plus above makes one.' },
 
   { kind:'wg', label:'Widgets', icon:'widget', addTip:'New widget — describe it', add:() => openMaker('wg'),
     items:() => D.DESIGNS.filter(d => d.kind === 'widget'),
     lead:() => '<span class="row__icon">' + ic('widget', 13) + '</span>',
     sub:d => d.shape,
-    empty:'No widget here matches this filter.' },
+    empty:'No widgets yet — the plus above makes one.' },
 
   { kind:'tp', label:'Templates', icon:'template', addTip:'New template — describe it', add:() => openMaker('tp'),
     items:() => D.DESIGNS.filter(d => d.kind === 'template'),
     lead:() => '<span class="row__icon">' + ic('template', 13) + '</span>',
     sub:d => d.shape === 'pdf' ? 'PDF' : 'web · ' + d.shape,
-    empty:'No template here matches this filter.' }
+    empty:'No templates yet — the plus above makes one.' }
 ];
-
-/* Ownership scope. Two questions get asked of a list this size — "where is the
-   one I made" and "what has the rest of the company built" — so the filter
-   answers exactly those two, plus the union. `me` is stored on the record, so
-   this needs no notion of the signed-in user beyond the label. */
-const SCOPES = ['Mine','Teams','All'];
-const isMine = x => x.owner === 'me';
-/* `keep` survives the filter: the row you are looking at stays in the list even
-   when the scope excludes it, because a selection you cannot see is worse than
-   a filter that is one row loose. */
-function scoped(list, keep){
-  const s = state.build.scope;
-  if (s === 'All') return list;
-  const pred = s === 'Mine' ? isMine : x => !isMine(x);
-  return list.filter(x => pred(x) || (keep && keep(x)));
-}
-function scopeFilter(){
-  const wrap = el('div','listcol__filter');
-  const seg = segCtl(SCOPES, state.build.scope, v => { state.build.scope = v; render(); });
-  /* segCtl sizes to its content for forms; here it governs the list below it,
-     so it takes the column's width. */
-  seg.style.width = 'auto';
-  wrap.append(seg);
-  return wrap;
-}
 
 /* ------------------------------------------------------- small builders */
 function pageHead(title, desc, trailing){
@@ -1956,7 +1922,7 @@ function openAssistant(a){
   ex.innerHTML = '';
   asstPrompts(a).forEach(p => ex.append(exampleChip(a, p)));
 
-  const who = a.owner === 'me' ? D.ACCOUNT.name : a.owner;
+  const who = D.ACCOUNT.name;
   $('#asstMeta').innerHTML =
     '<span style="display:flex;color:var(--text-4)">' + ic('cloud',14) + '</span>' +
     '<span>' + esc(D.ACCOUNT.org) + '</span>' +
@@ -2103,7 +2069,7 @@ function asstLogs(body, a){
 
 /* --------------------------------------------------------------- activity */
 function asstActivity(body, a){
-  const who = a.owner === 'me' ? D.ACCOUNT.name : a.owner;
+  const who = D.ACCOUNT.name;
   const events = [
     [parseAge(a.upd),                 'Instructions edited', who],
     [parseAge(a.upd) + 3 * 864e5,     'Model set to ' + a.model, who],
@@ -2127,7 +2093,7 @@ function asstActivity(body, a){
 
 /* ----------------------------------------------------------------- access */
 function asstAccess(body, a){
-  const owner = a.owner === 'me' ? D.ACCOUNT.name + ' (you)' : a.owner;
+  const owner = D.ACCOUNT.name + ' (you)';
   const rows = [
     ['<td>' + esc(owner) + '</td>', '<td>Owner</td>', '<td>Edit and delete</td>'],
     ['<td>' + esc(a.team + ' team') + '</td>', '<td>Editor</td>', '<td>Edit configuration</td>'],
@@ -2183,16 +2149,15 @@ function useExample(a, text){
    is the same act as putting it within reach of the next message. */
 const favourites = () => D.ASSISTANTS.filter(a => a.fav);
 
-function asstTabs(scoped){
-  /* Classification within the scope the switch above chose, so every count is
-     a count of what is actually on the page. A tab that would show nothing is
-     not offered: a dead filter reads as missing content. */
+function asstTabs(list){
+  /* Every count is a count of what is actually on the page. A tab that would
+     show nothing is not offered: a dead filter reads as missing content. */
   const counts = {
-    All:scoped.length,
-    Recommended:scoped.filter(a => a.rec).length,
-    Favourites:scoped.filter(a => a.fav).length
+    All:list.length,
+    Recommended:list.filter(a => a.rec).length,
+    Favourites:list.filter(a => a.fav).length
   };
-  D.ASSISTANT_TEAMS.forEach(t => counts[t] = scoped.filter(a => a.team === t).length);
+  D.ASSISTANT_TEAMS.forEach(t => counts[t] = list.filter(a => a.team === t).length);
   const order = ['All','Recommended','Favourites'].concat(D.ASSISTANT_TEAMS)
     .filter(t => t === 'All' || counts[t] > 0);
 
@@ -2260,30 +2225,15 @@ function assistantsView(body){
   const split = el('div','asst');
   const left = el('div','asst__main');
 
-  /* The top-level choice: whose catalogue. A switch rather than another tab,
-     because it is not one more filter — everything below it, tabs and counts
-     included, is inside the side it names. Switching resets the tab, since a
-     classification of the other side may not exist on this one. */
-  const scoped = state.asst.scope === 'My'
-    ? D.ASSISTANTS.filter(a => a.owner === 'me')
-    : D.ASSISTANTS.filter(a => a.owner !== 'me');
-  const scopeRow = el('div', null);
-  scopeRow.style.cssText = 'display:flex;align-items:center;gap:var(--s-3);margin-bottom:var(--s-4)';
-  scopeRow.append(segCtl(['My','Public'], state.asst.scope, v => {
-    state.asst.scope = v;
-    state.asst.tab = 'All';
-    render();
-  }));
-  scopeRow.append(el('span','t-mono', scoped.length + ' of ' + D.ASSISTANTS.length));
-  left.append(scopeRow);
-
-  left.append(asstTabs(scoped));
+  /* Everything here is yours — the tabs classify, nothing gates. */
+  const all = D.ASSISTANTS;
+  left.append(asstTabs(all));
 
   const tab = state.asst.tab;
-  const shown = tab === 'All' ? scoped
-              : tab === 'Recommended' ? scoped.filter(a => a.rec)
-              : tab === 'Favourites' ? scoped.filter(a => a.fav)
-              : scoped.filter(a => a.team === tab);
+  const shown = tab === 'All' ? all
+              : tab === 'Recommended' ? all.filter(a => a.rec)
+              : tab === 'Favourites' ? all.filter(a => a.fav)
+              : all.filter(a => a.team === tab);
 
   const grid = el('div','grid-cards');
   grid.style.marginTop = 'var(--s-4)';
@@ -3125,14 +3075,14 @@ function createProgram(w){
 }
 
 /* The element widget's one action: the draft becomes a design record in Build,
-   under the same id scheme and Mine scope as one made in Build itself
+   under the same id scheme as one made in Build itself
    (newDesign is the precedent). No navigation — the reader is mid-thread and
    the widget now carries the door. Undo takes the record back and re-arms the
    draft: one fact, both halves together. */
 function createElement(w){
   const d = {
     id:'de-n' + (++madeN), name:w.name, kind:'widget', shape:w.shape,
-    state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
+    state:'draft', team:D.ASSISTANT_TEAMS[0],
     desc:'Drafted in chat. Everything about it is set in the inspector.',
     cfg:Object.assign({}, w.cfg, { title:w.name })
   };
@@ -4126,12 +4076,6 @@ function usedBySection(title, entries, emptyText){
   }
   return sec;
 }
-/* Who owns it, in the page head next to its state — the same two facts the
-   sidebar row carries, so arriving from a filtered list explains itself. */
-function ownerBadge(x){
-  return '<span class="badge badge--mono">' +
-    esc((isMine(x) ? 'You' : x.owner) + ' · ' + (x.team || '—')) + '</span>';
-}
 function stateBadge(s){
   const badge = { live:'badge--ok', ok:'badge--ok', run:'badge--info', beta:'badge--info',
                   warn:'badge--warn', err:'badge--err', idle:'', draft:'', off:'' }[s] || '';
@@ -4144,7 +4088,7 @@ function stateBadge(s){
    The same record the chat sidebar lists. Chat picks one; this defines it. */
 function assistantBuildView(body, a){
   const pad = el('div','pane__pad');
-  pad.append(pageHead(a.name, a.desc, ownerBadge(a) + stateBadge(a.state)));
+  pad.append(pageHead(a.name, a.desc, stateBadge(a.state)));
   const s = buildSplit();
 
   const pair = el('div','build__pair');
@@ -4269,14 +4213,13 @@ function assistantBuildView(body, a){
   body.append(pad);
 }
 
-/* Anything made here is yours, which is what puts it under Mine in the filter
-   without anyone having to say so. The draft* functions make the record and
-   nothing else — the maker overlay drafts without navigating — and the new*
-   pair adds the navigation Build's own flows want. */
+/* The draft* functions make the record and nothing else — the maker overlay
+   drafts without navigating — and the new* pair adds the navigation Build's
+   own flows want. */
 function draftAssistant(){
   const a = {
     id:'as-n' + (++madeN), name:'Untitled assistant', state:'draft', model:D.MODELS[0],
-    team:D.ASSISTANT_TEAMS[0], owner:'me', fav:false, threads:0,
+    team:D.ASSISTANT_TEAMS[0], fav:false, threads:0,
     desc:'No description yet.', skills:[], kb:null, conn:[],
     opts:{ cite:true, confirm:true, think:false }, inst:''
   };
@@ -4291,7 +4234,7 @@ function draftDesign(kind, shape){
   const tpl = kind === 'template';
   const d = tpl ? {
     id:'de-n' + (++madeN), name:'Untitled template', kind:'template', shape:shape || 'landing',
-    state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
+    state:'draft', team:D.ASSISTANT_TEAMS[0],
     desc:'A new template. Everything about it is set in the inspector.',
     cfg:{ title:'Untitled', sub:'', cta:'Get started', nav:'Home, Docs, Pricing',
           sections:'Summary, Detail, Actions', footer:'',
@@ -4299,7 +4242,7 @@ function draftDesign(kind, shape){
           header:true, credit:true }
   } : {
     id:'de-n' + (++madeN), name:'Untitled widget', kind:'widget', shape:shape || 'kpi',
-    state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
+    state:'draft', team:D.ASSISTANT_TEAMS[0],
     desc:'A new metric tile. Everything about it is set in the inspector.',
     cfg:{ title:'Untitled', sub:'', accent:'Nebulas', radius:'Soft', theme:'Follow',
           width:'Narrow', header:true, credit:true,
@@ -4317,7 +4260,7 @@ function newDesign(kind){
 function draftProject(){
   const p = {
     id:'p' + (++projN), name:'Untitled project', icon:'folder', shared:false,
-    desc:'No description yet.', descAuto:true, owner:'me',
+    desc:'No description yet.', descAuto:true,
     assistant:null, kbs:[], sources:[], conn:[], run:null, when:'now'
   };
   D.PROJECTS.unshift(p);
@@ -5208,7 +5151,7 @@ function designView(body, d){
   pad.append(pageHead(d.name, d.desc,
     '<span class="badge badge--mono">' + (d.kind === 'widget' ? 'Widget'
       : d.shape === 'pdf' ? 'PDF template' : 'Website template') + '</span>' +
-    ownerBadge(d) + stateBadge(d.state)));
+    stateBadge(d.state)));
 
   const s = buildSplit();
   s.main.append(designCanvas(d));

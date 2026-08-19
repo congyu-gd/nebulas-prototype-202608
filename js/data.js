@@ -413,9 +413,9 @@ const PROJECTS = [
               'that fell more than 20% against the four-week mean.' },
     when:'20m' }
 ];
-/* Build lists projects as a lane, and the ownership filter reads `owner`.
-   Every project here is yours — `shared` is visibility, not ownership. */
-PROJECTS.forEach(p => { p.owner = 'me'; if (!p.conn) p.conn = []; });
+/* Build lists projects as a lane; every lane row is yours — this is a personal
+   workspace, so records carry no owner. `shared` is visibility, not ownership. */
+PROJECTS.forEach(p => { if (!p.conn) p.conn = []; });
 
 /* ------------------------------------------------------------- assistants
    An assistant is a named binding of model, skills and knowledge. The rail
@@ -490,16 +490,6 @@ ASSISTANTS.forEach(a => {
     'Answer only from ' + a.kb + '. Name what is missing rather than filling it in, ' +
     'and attach the source to every claim.';
 });
-/* Ownership. The Build sidebar filters on it, because in a workspace with more
-   of these than you made, "whose is this" is the first question — and `me` is
-   stored rather than a name so the fixture does not have to know who is signed
-   in. A row shows the owner only when it is not you: your own things do not
-   need to be labelled as yours. */
-const MINE   = ['as1','as2','as4','as5','as14','as16','as17'];
-const OWNERS = { as3:'Ana', as6:'Ravi', as7:'Ana', as8:'Ravi', as9:'Marc',
-                 as10:'Marc', as11:'Ana', as12:'Ana', as13:'Ravi', as15:'Marc' };
-ASSISTANTS.forEach(a => { a.owner = MINE.indexOf(a.id) > -1 ? 'me' : (OWNERS[a.id] || 'Ravi'); });
-
 /* Recommended: the workspace's shortlist for people who have not built their
    own yet — broadly useful, none of them mine, each owned by the team that
    keeps it healthy. A flag rather than a list page, so the card can say so. */
@@ -1191,46 +1181,46 @@ const CONNECTOR_AUTHS = ['OAuth','Service account','API key','Integration token'
    IS the page. `shape` picks the preview renderer; `cfg` is what the inspector
    edits. The accent named here is the customer's brand, not ours. */
 const DESIGNS = [
-  { id:'de1', name:'Metric tile', kind:'widget', shape:'kpi', state:'live', owner:'me', team:'Revenue',
+  { id:'de1', name:'Metric tile', kind:'widget', shape:'kpi', state:'live',team:'Revenue',
     desc:'One number, its movement against plan, and the period it covers.',
     cfg:{ title:'Q3 revenue', sub:'live', accent:'Amber', radius:'Soft', theme:'Follow',
           width:'Narrow', header:true, credit:true,
           value:'$41.2M', delta:'+12.4%', cap:'Against plan · quarter to date' } },
 
-  { id:'de2', name:'Trend card', kind:'widget', shape:'chart', state:'live', owner:'me', team:'Revenue',
+  { id:'de2', name:'Trend card', kind:'widget', shape:'chart', state:'live',team:'Revenue',
     desc:'A series and its latest value. The last bar takes the brand colour; the rest carry it at low opacity.',
     cfg:{ title:'ARR by month', sub:'8 mo', accent:'Nebulas', radius:'Soft', theme:'Follow',
           width:'Medium', header:true, credit:true,
           value:'$66.0M', delta:'+8.2%', cap:'Monthly recurring, last eight months' },
     bars:[42,46,51,47,55,58,61,66] },
 
-  { id:'de3', name:'Ask box', kind:'widget', shape:'ask', state:'live', owner:'Ravi', team:'Product',
+  { id:'de3', name:'Ask box', kind:'widget', shape:'ask', state:'live',team:'Product',
     desc:'A question field and the three questions worth starting from. The smallest surface a solution can ship as.',
     cfg:{ title:'Ask the renewal book', sub:'', accent:'Indigo', radius:'Round', theme:'Follow',
           width:'Medium', header:true, credit:true,
           placeholder:'Ask about renewals, exposure or owners…',
           starters:'What renews in November?, Which accounts are exposed?, Who owns Contoso?' } },
 
-  { id:'de4', name:'Watchlist', kind:'widget', shape:'rows', state:'live', owner:'Ana', team:'Support',
+  { id:'de4', name:'Watchlist', kind:'widget', shape:'rows', state:'live',team:'Support',
     desc:'A ranked list where the bar is the score, so the order is legible before any number is read.',
     cfg:{ title:'Accounts at risk', sub:'5', accent:'Red', radius:'Soft', theme:'Follow',
           width:'Medium', header:true, credit:true, cap:'Churn probability, next quarter' },
     rows:[['Northwind Traders','0.81',81],['Contoso Retail','0.74',74],
           ['Fabrikam','0.63',63],['Tailspin Toys','0.61',61],['Adventure Works','0.22',22]] },
 
-  { id:'de5', name:'Internal portal', kind:'template', shape:'portal', state:'live', owner:'me', team:'Revenue',
+  { id:'de5', name:'Internal portal', kind:'template', shape:'portal', state:'live',team:'Revenue',
     desc:'A signed-in page: nav down the side, cards in the middle. What a team lands on rather than what a prospect reads.',
     cfg:{ title:'Finance Portal', sub:'Everything feeding the close', accent:'Nebulas',
           radius:'Soft', theme:'Follow', width:'Wide', header:true, credit:true,
           nav:'Overview, Revenue, Renewals, Reports' } },
 
-  { id:'de6', name:'Product landing', kind:'template', shape:'landing', state:'draft', owner:'Marc', team:'Product',
+  { id:'de6', name:'Product landing', kind:'template', shape:'landing', state:'draft',team:'Product',
     desc:'A public page with one claim, three supports and one action. Still unwired — no package points at it.',
     cfg:{ title:'Ask your revenue data anything', sub:'Answers with the source attached, from the ledger your finance team already trusts.',
           accent:'Emerald', radius:'Round', theme:'Follow', width:'Wide', header:true, credit:true,
           cta:'Request access', nav:'Product, Pricing, Docs' } },
 
-  { id:'de7', name:'Docs & FAQ', kind:'template', shape:'docs', state:'live', owner:'Ravi', team:'Product',
+  { id:'de7', name:'Docs & FAQ', kind:'template', shape:'docs', state:'live',team:'Product',
     desc:'Three columns: what exists, what you are reading, and where you are in it.',
     cfg:{ title:'Help Centre', sub:'Sources, assistants and the API', accent:'Blue',
           radius:'Square', theme:'Follow', width:'Wide', header:true, credit:true,
@@ -1239,7 +1229,7 @@ const DESIGNS = [
   /* A PDF template is a document layout, not a site: what a result looks like
      once it leaves as a page. Sections are the reading order; the footer is
      printed opposite the page number. */
-  { id:'de8', name:'Monthly report layout', kind:'template', shape:'pdf', state:'live', owner:'me', team:'Revenue',
+  { id:'de8', name:'Monthly report layout', kind:'template', shape:'pdf', state:'live',team:'Revenue',
     desc:'The page every monthly report is set on: headline numbers first, then the detail, then what to do.',
     cfg:{ title:'Acme Industrial', sub:'Monthly performance report', accent:'Nebulas',
           radius:'Soft', theme:'Light', width:'Medium', header:true, credit:true,
