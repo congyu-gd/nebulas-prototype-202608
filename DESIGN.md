@@ -1136,6 +1136,7 @@ two things to act on in one answer means neither gets acted on.
 | `chart` | switch series; negative bars take the loss colour | Visualization, Chart a trend |
 | `table` | sort any column, numerically where the column is numeric | Explanation, Profile a table, Find anomalies |
 | `code` | switch runtime or dialect, copy | Documentation, Join two sources |
+| `program` | edit the cadence and the steps, then create it | Auto program — every routine, worked or typed |
 
 **Answering has to change something**, or a questionnaire is a form nobody
 completes. The outcome block appears when the last question is answered and is
@@ -1147,6 +1148,38 @@ you cannot take back is one people hesitate to give.
 **The chosen option takes the accent.** This is the one-accent rule working, not
 an exception to it — choosing is exactly the "you can act / you acted" the accent
 is reserved for.
+
+### A routine becomes a program
+
+The hero's third mode reads a plain sentence — *"every morning, check the
+weather and my calendar, then write me a briefing"* — as a program. The reading
+is a **parse, not understanding**: cadence words pick the cadence, the joins
+people actually say split the steps, a stated time becomes a free-text cron
+override. That would be a dangerous thing to act on, which is exactly why it is
+not acted on: the parse lands in an editable widget, the footer says *not
+created yet — nothing runs until you press Create*, and the person who wrote
+the sentence approves the reading of it before anything exists anywhere.
+
+Three decisions worth recording:
+
+- **A program's result is `null`.** Every other widget files its outcome in the
+  results column; a program's outcome is the schedule row it creates, and
+  filing a document about it would put the same fact in two stores. The row
+  *is* the record.
+- **`createProgram` is the first writer of `steps`.** Jobs existed only as
+  fixtures until this mode; a multi-step routine becomes a job, a one-step
+  routine a task, and the row's `thread` points back at the conversation that
+  described it — the schedule's Chat cell is a door to where the words were
+  said.
+- **Cadence stays a three-item choice.** The parser normalises everything to
+  Every day / week / month plus a free-text clock the schedule already accepts
+  (`daily 07:40`, `Fri 17:00`); picking a cadence by hand in the widget
+  discards the parsed clock, because the seg is now the truth. This is the
+  standing refusal of cron, kept.
+
+Created, the widget freezes into a record and a door — the row is the fact,
+and two editable copies of one program would drift. Undo removes the row *and*
+re-arms the draft: one fact, both halves together.
 
 ### The widget stays; its outcome is what leaves
 
