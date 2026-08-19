@@ -406,7 +406,6 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .meter--warn > i{ background:var(--warn) }
 .meter--err > i{ background:var(--err) }
-.meter--ink > i{ background:var(--text) }
 
 
 /* ============================================================== rows/list

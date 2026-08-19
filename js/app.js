@@ -6578,31 +6578,12 @@ function appTodo(app){
   const c = appCard('Items', el('span','badge' + (done === st.items.length ? ' badge--ok' : ''),
     done + ' of ' + st.items.length + ' done'));
 
-  const meter = el('span','meter meter--ink');
-  meter.style.margin = 'var(--s-3) var(--s-3) var(--s-2)';
-  meter.innerHTML = '<i style="width:' + Math.round(done / st.items.length * 100) + '%"></i>';
-  c.body.append(meter);
-
-  const list = el('div','picklist');
-  list.style.cssText = 'border:0;border-radius:0';
-  st.items.forEach(it => {
-    const row = el('label','picklist__row');
-    row.dataset.done = String(it.done);
-    const box = el('input','check check--ink');
-    box.type = 'checkbox';
-    box.checked = it.done;
-    box.onchange = () => { it.done = box.checked; repaintApp(app); };
-    row.append(box);
-    row.append(el('span','picklist__main','<span class="picklist__nm">' + esc(it.t) + '</span>'));
-    if (it.due) row.append(el('span','badge' + (it.due === 'today' ? ' badge--warn' : ''), esc(it.due)));
-    list.append(row);
-  });
-  c.body.append(list);
-
-  /* The add row takes the item and, if asked, when it is due — the same next
-     seven days the calendar offers, since nobody dates a todo by typing. */
+  /* The add row leads: this app exists to catch the next thing before it is
+     forgotten, so writing one down must not wait below the list. It takes
+     the item and, if asked, when it is due — the same next seven days the
+     calendar offers, since nobody dates a todo by typing. */
   const add = el('form');
-  add.style.cssText = 'display:flex;gap:var(--s-2);flex-wrap:wrap';
+  add.style.cssText = 'display:flex;gap:var(--s-2);flex-wrap:wrap;margin-bottom:var(--s-3)';
   const input = el('input','input');
   input.type = 'text';
   input.placeholder = 'Add an item…';
@@ -6625,7 +6606,24 @@ function appTodo(app){
     st.items.unshift({ t:v, due:when, done:false });
     repaintApp(app);
   };
-  return [c.card, add];
+  c.body.append(add);
+
+  const list = el('div','picklist');
+  list.style.cssText = 'border:0;border-radius:0';
+  st.items.forEach(it => {
+    const row = el('label','picklist__row');
+    row.dataset.done = String(it.done);
+    const box = el('input','check check--ink');
+    box.type = 'checkbox';
+    box.checked = it.done;
+    box.onchange = () => { it.done = box.checked; repaintApp(app); };
+    row.append(box);
+    row.append(el('span','picklist__main','<span class="picklist__nm">' + esc(it.t) + '</span>'));
+    if (it.due) row.append(el('span','badge' + (it.due === 'today' ? ' badge--warn' : ''), esc(it.due)));
+    list.append(row);
+  });
+  c.body.append(list);
+  return [c.card];
 }
 
 function appSurface(app){

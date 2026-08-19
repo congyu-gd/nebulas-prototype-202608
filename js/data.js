@@ -1298,7 +1298,7 @@ const APPS = [
   { id:'ap4', short:'MF', name:'My files',          state:'live', c:2, icon:'folder',   desc:'Everything uploaded here, newest first.' },
   { id:'ap5', short:'NW', name:'News',              state:'beta', c:4, icon:'news',     desc:'What moved in the accounts you follow.' },
   { id:'ap6', short:'NO', name:'Note',              state:'live', c:5, icon:'note',     desc:'A scratchpad that survives navigation.' },
-  { id:'ap7', short:'TD', name:'Todo',              state:'live', c:6, icon:'checksq',  desc:'What you said you would do.' }
+  { id:'ap7', short:'TD', name:'Todo',              state:'live', c:4, icon:'checksq',  desc:'What you said you would do.' }
 ];
 
 /* An app opens into a panel, so each one needs a surface rather than a page.

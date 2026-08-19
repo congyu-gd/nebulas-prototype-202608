@@ -1050,7 +1050,7 @@ exist elsewhere — an app is a new arrangement, not a new vocabulary:
 | `files` | rows that attach to the next message | My files |
 | `news` | headline cards — token-drawn picture, topic tabs, summary in place, three verbs | News |
 | `note` | a note list, each opening into a contenteditable editor with a small formatting hand and tags | Note |
-| `todo` | `.picklist` rows with real checkboxes in ink, a meter, and an add row with a due picker | Todo |
+| `todo` | an add row with a due picker on top, then `.picklist` rows with real checkboxes in ink | Todo |
 
 **The calendar is generated from the clock**, and the fixture marks events by
 their offset from today rather than by date — a calendar pinned to August 2026
@@ -1133,14 +1133,14 @@ into `APP_STATE`, with no repaint — a repaint per character would take the
 caret with it — and `Save` is the door that says so: it names what was kept
 and puts you back on the list.
 
-**The todo writes in ink.** Its main colour is dark black by request — the
-tile takes `--app-6`, and a ticked box and the progress meter draw in
+**The todo writes in ink, and the add row leads.** A ticked box draws in
 `--text` rather than the accent, because a thing done is a fact written
-down, not an action. Both halves flip with theme (ink is light on dark
-paper), and dark redefines `--app-6` a step lighter so a near-black tile
-does not vanish into a dark rail. The add row also asks *when*: a due
-picker with the same next seven days the calendar offers, since nobody
-dates a todo by typing.
+down, not an action — and ink flips with theme, light on dark paper. The
+tile keeps its colour: the ink is for the marks, not the identity. The add
+row sits at the top — this app exists to catch the next thing before it is
+forgotten — and asks *when* as well as *what*: a due picker with the same
+next seven days the calendar offers, since nobody dates a todo by typing.
+The progress meter is gone; the count in the head already says it.
 
 **Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
 once and owned in JS after that — the same rule as a chat widget's state. A
