@@ -833,6 +833,53 @@
    where it sits: one row, spanning every column. */
 .app > .statusbar{ grid-column:1 / -1; grid-row:2 }
 
+/* ================================================================== maker
+   Build's chat layer: a conversation on the left, the record being made or
+   changed live on the right, inside one overlay — so nothing navigates away
+   from Build while the chat works. Sized off --measure rather than its own
+   numbers; the right pane takes the sidebar's proportions. */
+.maker{
+  display:flex; flex-direction:column;
+  width:min(calc(var(--measure) * 1.45), 96vw);
+  height:min(var(--measure), 88vh);
+  background:var(--bg);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-xl);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  translate:0 calc(-1 * var(--s-2)); scale:.985;
+  transition:translate var(--base) var(--ease), scale var(--base) var(--ease);
+}
+.scrim[data-open="true"] .maker{ translate:0 0; scale:1 }
+.maker__body{
+  flex:1 1 0; min-height:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0, calc(var(--list-w) * 1.45));
+}
+.maker__chat{ display:flex; flex-direction:column; min-width:0; min-height:0 }
+.maker__log{ flex:1 1 0; min-height:0; overflow-y:auto; padding:var(--s-4) var(--s-5) }
+.maker__log > * + *{ margin-top:var(--s-5) }
+.maker__ask{
+  flex:none;
+  display:flex; align-items:flex-end; gap:var(--s-2);
+  padding:var(--s-3) var(--s-5) var(--s-4);
+  border-top:var(--border) solid var(--line);
+}
+.maker__ask .textarea{ flex:1; min-width:0 }
+.maker__side{
+  display:flex; flex-direction:column; min-height:0;
+  border-left:var(--border) solid var(--line);
+  background:var(--surface);
+}
+.maker__preview{ flex:1 1 0; min-height:0; overflow-y:auto; padding:var(--s-4) }
+.maker__preview > * + *{ margin-top:var(--s-4) }
+.maker__foot{
+  flex:none;
+  display:flex; gap:var(--s-2); flex-wrap:wrap;
+  padding:var(--s-3) var(--s-4);
+  border-top:var(--border) solid var(--line);
+}
+
 /* ============================================================== responsive
    Widths that cannot coexist are resolved in app.js, which closes panes by
    priority as the viewport narrows. What is left here is only padding. */

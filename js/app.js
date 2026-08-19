@@ -286,8 +286,13 @@ const SECTIONS = {
       const t = find(D.THREADS, v);
       const turns = t.msgs.length ? plural(t.msgs.length, 'turn') : 'empty';
       /* A thread filed in a project says so here: it is the one place the
-         scoping is visible once you are reading the conversation. */
+         scoping is visible once you are reading the conversation. A maker
+         thread says what it built, the same way. */
       const p = t.project ? find(D.PROJECTS, t.project) : null;
+      if (t.build){
+        const rec = byId(makerStore(kindOf(t.build)), idOf(t.build));
+        return { title:t.title, sub:(rec ? rec.name + ' · Build · ' : 'Build · ') + turns };
+      }
       return { title:t.title, sub:p ? p.name + ' · ' + turns : turns };
     },
     main(body){
@@ -512,24 +517,24 @@ const ORDER = ['chat','knowledge','build','cloud'];
    organises work (including what external systems it reaches), a widget
    that embeds, and a template a page or a PDF is laid out by. */
 const BUILD_GROUPS = [
-  { kind:'as', label:'Assistants', icon:'agent', addTip:'New assistant', add:() => newAssistant(),
+  { kind:'as', label:'Assistants', icon:'agent', addTip:'New assistant — describe it', add:() => openMaker('as'),
     items:() => D.ASSISTANTS,
     lead:a => dotLead(a.state), sub:a => a.model,
     empty:'No assistant here matches this filter.' },
 
-  { kind:'pj', label:'Projects', icon:'folder', addTip:'New project', add:() => openProject(null),
+  { kind:'pj', label:'Projects', icon:'folder', addTip:'New project — describe it', add:() => openMaker('pj'),
     items:() => D.PROJECTS,
     lead:p => '<span class="row__icon">' + ic(p.icon, 13) + '</span>',
     sub:p => (p.shared ? 'shared' : 'personal') + (p.run ? ' · runs' : ''),
     empty:'No project here matches this filter.' },
 
-  { kind:'wg', label:'Widgets', icon:'widget', addTip:'New widget', add:() => newDesign('widget'),
+  { kind:'wg', label:'Widgets', icon:'widget', addTip:'New widget — describe it', add:() => openMaker('wg'),
     items:() => D.DESIGNS.filter(d => d.kind === 'widget'),
     lead:() => '<span class="row__icon">' + ic('widget', 13) + '</span>',
     sub:d => d.shape,
     empty:'No widget here matches this filter.' },
 
-  { kind:'tp', label:'Templates', icon:'template', addTip:'New template', add:() => newDesign('template'),
+  { kind:'tp', label:'Templates', icon:'template', addTip:'New template — describe it', add:() => openMaker('tp'),
     items:() => D.DESIGNS.filter(d => d.kind === 'template'),
     lead:() => '<span class="row__icon">' + ic('template', 13) + '</span>',
     sub:d => d.shape === 'pdf' ? 'PDF' : 'web · ' + d.shape,
@@ -4246,6 +4251,8 @@ function assistantBuildView(body, a){
   const star = el('button','btn btn--secondary',
     ic(a.fav ? 'starOn' : 'star', 13) + (a.fav ? 'In the composer' : 'Add to composer'));
   star.onclick = () => { a.fav = !a.fav; render(); renderComposer(); };
+  const opt = el('button','btn btn--secondary', ic('spark',13) + 'Optimize in chat');
+  opt.onclick = () => openMaker('as', a);
   const dup = el('button','btn btn--ghost', ic('copy',13) + 'Duplicate');
   dup.onclick = () => {
     const c = Object.assign({}, a, {
@@ -4256,15 +4263,17 @@ function assistantBuildView(body, a){
     select('build', key('as', c.id));
     toast('Duplicated as ' + c.name);
   };
-  inspectorActs(s.side, [test, star, dup]);
+  inspectorActs(s.side, [test, opt, star, dup]);
 
   pad.append(s.wrap);
   body.append(pad);
 }
 
 /* Anything made here is yours, which is what puts it under Mine in the filter
-   without anyone having to say so. */
-function newAssistant(){
+   without anyone having to say so. The draft* functions make the record and
+   nothing else — the maker overlay drafts without navigating — and the new*
+   pair adds the navigation Build's own flows want. */
+function draftAssistant(){
   const a = {
     id:'as-n' + (++madeN), name:'Untitled assistant', state:'draft', model:D.MODELS[0],
     team:D.ASSISTANT_TEAMS[0], owner:'me', fav:false, threads:0,
@@ -4272,29 +4281,47 @@ function newAssistant(){
     opts:{ cite:true, confirm:true, think:false }, inst:''
   };
   D.ASSISTANTS.push(a);
-  select('build', key('as', a.id));
+  return a;
+}
+function newAssistant(){
+  select('build', key('as', draftAssistant().id));
 }
 
-function newDesign(kind){
+function draftDesign(kind, shape){
   const tpl = kind === 'template';
   const d = tpl ? {
-    id:'de-n' + (++madeN), name:'Untitled template', kind:'template', shape:'landing',
+    id:'de-n' + (++madeN), name:'Untitled template', kind:'template', shape:shape || 'landing',
     state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
-    desc:'A new landing page. Everything about it is set in the inspector.',
+    desc:'A new template. Everything about it is set in the inspector.',
     cfg:{ title:'Untitled', sub:'', cta:'Get started', nav:'Home, Docs, Pricing',
+          sections:'Summary, Detail, Actions', footer:'',
           accent:'Nebulas', radius:'Soft', theme:'Follow', width:'Wide',
           header:true, credit:true }
   } : {
-    id:'de-n' + (++madeN), name:'Untitled widget', kind:'widget', shape:'kpi',
+    id:'de-n' + (++madeN), name:'Untitled widget', kind:'widget', shape:shape || 'kpi',
     state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
     desc:'A new metric tile. Everything about it is set in the inspector.',
     cfg:{ title:'Untitled', sub:'', accent:'Nebulas', radius:'Soft', theme:'Follow',
           width:'Narrow', header:true, credit:true,
-          value:'—', delta:'', cap:'' }
+          value:'—', delta:'', cap:'', placeholder:'', starters:'' }
   };
   D.DESIGNS.push(d);
-  select('build', key(tpl ? 'tp' : 'wg', d.id));
   return d;
+}
+function newDesign(kind){
+  const d = draftDesign(kind);
+  select('build', key(kind === 'template' ? 'tp' : 'wg', d.id));
+  return d;
+}
+
+function draftProject(){
+  const p = {
+    id:'p' + (++projN), name:'Untitled project', icon:'folder', shared:false,
+    desc:'No description yet.', descAuto:true, owner:'me',
+    assistant:null, kbs:[], sources:[], conn:[], run:null, when:'now'
+  };
+  D.PROJECTS.unshift(p);
+  return p;
 }
 
 /* --------------------------------------------------------- project builder
@@ -4433,12 +4460,475 @@ function projectBuildView(body, p){
 
   const open = el('button','btn btn--primary', ic('open',13) + 'Open the project');
   open.onclick = () => select('chat', key('p', p.id));
+  const opt = el('button','btn btn--secondary', ic('spark',13) + 'Optimize in chat');
+  opt.onclick = () => openMaker('pj', p);
   const del = el('button','btn btn--ghost', ic('trash',13) + 'Delete');
   del.onclick = () => deleteProject(p);
-  inspectorActs(s.side, [open, del]);
+  inspectorActs(s.side, [open, opt, del]);
 
   pad.append(s.wrap);
   body.append(pad);
+}
+
+/* ==================================================================== maker
+   Build's chat layer: an overlay with the conversation on the left and the
+   record live on the right, so a change said in words is visible the moment
+   it lands. One idea holds it together: CREATE IS OPTIMIZE ON A FRESH DRAFT.
+   The + of a lane opens this on a new draft record; "Optimize in chat" on a
+   builder page opens it on the record that exists — same overlay, same verbs,
+   no separate create ceremony. The conversation is a REAL thread, tagged
+   `build:` the way project threads are tagged `project:`, so it shows in
+   History and resumes when the record is optimized again. The reading is a
+   parse, not understanding: every reply names exactly what was applied, and
+   the inspector remains the editor of everything else. */
+let makerOn = null;          /* { kind, rec, thread, fresh } — the overlay's state */
+
+const MAKER_KIND = {
+  as:{ noun:'assistant', icon:'agent',
+    hint:'Describe who it answers and with what. Skills, knowledge, connectors and models are matched by name; behaviour by phrases like "always confirm".',
+    starters:['An assistant that answers billing questions from the Finance corpus and can query the warehouse',
+              'Make it stricter — always confirm before writing anywhere'] },
+  pj:{ noun:'project', icon:'folder',
+    hint:'Describe the work and what it reads. Knowledge and connectors are matched by name; "every week" and friends set the program.',
+    starters:['A churn watch project reading the Support corpus and HubSpot, reporting every week',
+              'Share it with the workspace'] },
+  wg:{ noun:'widget', icon:'widget',
+    hint:'Describe the tile. Shapes are read from the words — a value, a trend, a question box, a list — and colours, corners and width by name.',
+    starters:['A KPI tile for open tickets, 47 against a 100 goal',
+              'Make it amber and wide'] },
+  tp:{ noun:'template', icon:'template',
+    hint:'Describe the page — a landing page, a portal, docs, or a PDF report layout with its sections.',
+    starters:['A PDF report layout with sections for headline numbers, detail and actions',
+              'Call it Quarterly board pack'] }
+};
+
+const makerStore = kind => kind === 'as' ? D.ASSISTANTS : kind === 'pj' ? D.PROJECTS : D.DESIGNS;
+const makerUnnamed = rec => /^(Untitled|New)\b/.test(rec.name);
+
+function openMaker(kind, rec){
+  const fresh = !rec;
+  if (!rec) rec = kind === 'as' ? draftAssistant()
+    : kind === 'pj' ? draftProject()
+    : draftDesign(kind === 'tp' ? 'template' : 'widget');
+  const tag = key(kind, rec.id);
+  /* The record's conversation, resumed if it has one: optimizing twice is one
+     chat, not an archaeology of little ones. */
+  let t = D.THREADS.filter(x => x.build === tag)[0];
+  if (!t){
+    t = { id:'n' + (++newThreadN), title:rec.name, when:'now', group:'Today',
+          project:null, build:tag, msgs:[] };
+    D.THREADS.unshift(t);
+  }
+  makerOn = { kind:kind, rec:rec, thread:t, fresh:fresh };
+  renderMaker();
+  $('#makerScrim').dataset.open = 'true';
+  $('#makerInput').value = '';
+  $('#makerInput').focus();
+}
+function closeMaker(){
+  if (makerOn && makerOn.fresh && !makerOn.thread.msgs.length){
+    /* Nothing was said, so nothing was made: the silent draft and its empty
+       thread leave with the overlay. */
+    const st = makerStore(makerOn.kind);
+    const i = st.indexOf(makerOn.rec);
+    if (i > -1) st.splice(i, 1);
+    const ti = D.THREADS.indexOf(makerOn.thread);
+    if (ti > -1) D.THREADS.splice(ti, 1);
+    renderList();
+  }
+  $('#makerScrim').dataset.open = 'false';
+  makerOn = null;
+}
+
+function renderMakerHead(){
+  const m = makerOn, mk = MAKER_KIND[m.kind];
+  $('#makerIco').innerHTML = ic(mk.icon, 15);
+  $('#makerTitle').textContent = makerUnnamed(m.rec) ? 'Make a ' + mk.noun : m.rec.name;
+  $('#makerSub').textContent = mk.noun + ' · ' + (m.rec.state || (m.rec.shared ? 'shared' : 'draft')) +
+    ' — the chat drafts and adjusts; the inspector edits everything';
+}
+function renderMakerSide(){
+  const m = makerOn, rec = m.rec, side = $('#makerSide');
+  side.innerHTML = '';
+  if (m.kind === 'wg' || m.kind === 'tp'){
+    side.append(designCanvas(rec));
+    side.append(defList([
+      ['State', esc(rec.state)],
+      ['Shape', esc(rec.shape)],
+      ['Accent', esc(rec.cfg.accent)],
+      ['Width', esc(rec.cfg.width)],
+      ['Theme', esc(rec.cfg.theme)]
+    ]));
+  } else if (m.kind === 'as'){
+    side.append(defList([
+      ['State', dotLead(rec.state) + esc(rec.state)],
+      ['Model', esc(rec.model)],
+      ['Team', esc(rec.team)],
+      ['Skills', rec.skills.length ? esc(rec.skills.join(', ')) : '<span style="color:var(--warn)">none</span>'],
+      ['Knowledge', esc(rec.kb || 'none')],
+      ['Connectors', rec.conn.length ? esc(rec.conn.map(id => (connById(id) || {}).name).join(', ')) : 'none'],
+      ['Behaviour', esc([rec.opts.cite && 'cites', rec.opts.confirm && 'confirms writes',
+                         rec.opts.think && 'extended thinking'].filter(Boolean).join(' · ') || '—')]
+    ]));
+    if (rec.inst){
+      const q = el('blockquote','maker__quote');
+      q.style.cssText = 'margin:0;padding-left:var(--s-3);border-left:var(--ring) solid var(--line-strong);' +
+        'font-size:var(--t-12);line-height:var(--lh-prose);color:var(--text-3)';
+      q.textContent = rec.inst;
+      side.append(q);
+    }
+  } else {
+    side.append(defList([
+      ['Visibility', rec.shared ? 'shared' : 'personal'],
+      ['Assistant', esc(rec.assistant || 'none')],
+      ['Knowledge', esc((rec.kbs || []).concat(rec.sources || []).join(', ') || 'none')],
+      ['Connections', (rec.conn || []).length
+        ? esc(rec.conn.map(id => (connById(id) || {}).name).join(', ')) : 'none'],
+      ['Schedule', rec.run ? esc(rec.run.every.toLowerCase()) : '—']
+    ]));
+    if (rec.run && rec.run.ask){
+      const q = el('div');
+      q.style.cssText = 'padding-left:var(--s-3);border-left:var(--ring) solid var(--line-strong);' +
+        'font-size:var(--t-12);line-height:var(--lh-prose);color:var(--text-3)';
+      q.textContent = rec.run.ask;
+      side.append(q);
+    }
+  }
+  const foot = $('#makerFoot');
+  foot.innerHTML = '';
+  const open = el('button','btn btn--primary btn--sm', ic('open', 13) +
+    (m.kind === 'pj' ? 'Open in Build' : 'Open in Build'));
+  open.type = 'button';
+  open.onclick = () => {
+    const to = key(m.kind, rec.id);
+    makerOn = null;                                  /* keep the record: it is made */
+    $('#makerScrim').dataset.open = 'false';
+    select('build', to);
+  };
+  foot.append(open);
+  if (m.kind === 'pj'){
+    const page = el('button','btn btn--secondary btn--sm', ic('folder', 13) + 'Open the project');
+    page.type = 'button';
+    page.onclick = () => {
+      const id = rec.id;
+      makerOn = null;
+      $('#makerScrim').dataset.open = 'false';
+      select('chat', key('p', id));
+    };
+    foot.append(page);
+  }
+  if (m.fresh){
+    const bin = el('button','btn btn--ghost btn--sm', ic('trash', 13) + 'Discard');
+    bin.type = 'button';
+    bin.onclick = () => makerDiscard();
+    foot.append(bin);
+  }
+}
+function makerDiscard(){
+  const m = makerOn;
+  const st = makerStore(m.kind);
+  const i = st.indexOf(m.rec);
+  const ti = D.THREADS.indexOf(m.thread);
+  if (i > -1) st.splice(i, 1);
+  if (ti > -1) D.THREADS.splice(ti, 1);
+  makerOn = null;
+  $('#makerScrim').dataset.open = 'false';
+  render();
+  toast('Discarded ' + m.rec.name, { label:'Undo', run:() => {
+    if (i > -1) st.splice(i, 0, m.rec);
+    if (ti > -1) D.THREADS.splice(ti, 0, m.thread);
+    render();
+  } });
+}
+function renderMaker(){
+  renderMakerHead();
+  renderMakerSide();
+  const log = $('#makerLog');
+  log.innerHTML = '';
+  const m = makerOn;
+  if (!m.thread.msgs.length){
+    /* The hint carries the class runTurn clears, so the first turn takes it
+       with it. The starters are worked first sentences, not suggestions. */
+    const hint = emptyState(MAKER_KIND[m.kind].icon, 'Say what it should be', MAKER_KIND[m.kind].hint);
+    const chips = el('div');
+    chips.style.cssText = 'display:flex;flex-direction:column;gap:var(--s-2);margin-top:var(--s-4);align-items:center';
+    MAKER_KIND[m.kind].starters.forEach(t => {
+      const c = el('button','chip','<span>' + esc(t) + '</span>');
+      c.type = 'button';
+      c.onclick = () => { $('#makerInput').value = t; makerSubmit(); };
+      chips.append(c);
+    });
+    hint.append(chips);
+    log.append(hint);
+  } else {
+    m.thread.msgs.forEach(msg => log.append(msgNode(msg)));
+    log.scrollTop = log.scrollHeight;
+  }
+}
+
+function makerSubmit(){
+  const m = makerOn;
+  const v = $('#makerInput').value.trim();
+  if (!m || !v || state.busy) return;
+  $('#makerInput').value = '';
+  runTurn(v, makerScript(v, m), {
+    host:$('#makerLog'),
+    thread:m.thread,
+    scroll:() => { const s = $('#makerLog'); s.scrollTo({ top:s.scrollHeight, behavior:'instant' }); },
+    busy:on => { $('#makerSend').disabled = on; $('#makerInput').disabled = on; if (!on) $('#makerInput').focus(); },
+    sync:() => {
+      renderMakerHead();
+      renderMakerSide();
+      /* The lane behind the overlay shows names and subs; keep it true. */
+      if (state.section === 'build') renderList();
+    }
+  });
+}
+
+/* ------------------------------------------------------- the maker's read
+   A small verb table, not understanding. Each parser collects `changes`
+   (the human lines the reply prints) and `acts` (applied after the trace),
+   and the reply is honest about the remainder. */
+const titleCase = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+function makerScript(text, m){
+  const rec = m.rec, kind = m.kind;
+  const low = ' ' + text.toLowerCase() + ' ';
+  const changes = [], acts = [];
+  const say = (line, f) => { changes.push(line); acts.push(f); };
+  const removing = /\b(remove|drop|take (away|off|out)|revoke|without)\b/.test(low);
+
+  /* rename — every kind speaks it */
+  const rn = text.match(/\b(?:rename|call)\s+(?:it|this)?\s*(?:to\s+)?["“]?([^"”.,]{2,48})["”]?/i);
+  if (rn){
+    const nm = titleCase(rn[1].trim());
+    say('renamed it **' + nm + '**', () => {
+      rec.name = nm;
+      if (rec.cfg) rec.cfg.title = nm;
+      m.thread.title = nm;
+    });
+  }
+
+  if (kind === 'as') makerAsstRead(text, low, rec, m, say, removing);
+  else if (kind === 'pj') makerProjRead(text, low, rec, m, say, removing);
+  else makerDesignRead(text, low, rec, m, say, removing);
+
+  const noun = MAKER_KIND[kind].noun;
+  const steps = [
+    { n:'maker.read', d:'"' + text.slice(0, 46) + (text.length > 46 ? '…' : '') + '"', t:'0.3s' },
+    { n:'maker.apply', d:changes.length ? plural(changes.length, 'change') + ' to the ' + noun
+                                        : 'nothing recognised', t:'0.4s' }
+  ];
+  const md = changes.length
+    ? 'Done — applied to **' + (rn ? rn[1].trim() : rec.name) + '**:\n\n' +
+      changes.map(c => '- ' + c).join('\n') +
+      '\n\nAnything I did not catch, the inspector on its Build page edits — this chat and that panel write the same record.'
+    : 'I read it, but nothing in it maps to what a ' + noun + ' has. I match **names** — a model, ' +
+      'a skill, a corpus, a connector, a colour — and a few phrases like *rename it…* or *every week*. ' +
+      'The inspector on its Build page edits everything, always.';
+  return { steps:steps, md:md, apply:() => acts.forEach(f => f()) };
+}
+
+/* assistant: model · team · skills (by name part) · knowledge · connectors ·
+   behaviour phrases · instructions. A first sentence also names and seeds it. */
+function makerAsstRead(text, low, a, m, say, removing){
+  if (m.fresh && makerUnnamed(a) && !/\brename|call\b/i.test(text)){
+    const mt = text.match(/(?:assistant|helper|bot)?\s*(?:that|which|who)\s+([a-z][^,.;]{3,42}?)(?:\s+(?:from|using|with|and|via)\b|[,.;]|$)/i);
+    const nm = titleCase(((mt && mt[1]) || 'new assistant').trim());
+    say('named it **' + nm + '**', () => { a.name = nm; m.thread.title = nm; });
+    say('wrote the ask into its instructions', () => {
+      a.desc = text.length > 140 ? text.slice(0, 137) + '…' : text;
+      a.inst = text;
+    });
+  }
+  D.MODELS.forEach(md => {
+    if (low.indexOf(md.toLowerCase()) > -1 && md !== a.model)
+      say('routed it to **' + md + '**', () => { a.model = md; });
+  });
+  D.ASSISTANT_TEAMS.forEach(t => {
+    if (new RegExp('\\b(for|to) (the )?' + t.toLowerCase() + '( team)?\\b').test(low) && t !== a.team)
+      say('moved it to the **' + t + '** team', () => { a.team = t; });
+  });
+  D.SKILLS.forEach(sk => {
+    const words = sk.name.split('.').filter(w => w.length > 3);
+    if (!words.some(w => low.indexOf(w) > -1)) return;
+    const has = a.skills.indexOf(sk.name) > -1;
+    if (removing && has) say('took away the **' + sk.name + '** skill',
+      () => { a.skills = a.skills.filter(n => n !== sk.name); });
+    if (!removing && !has) say('gave it the **' + sk.name + '** skill',
+      () => { a.skills.push(sk.name); });
+  });
+  D.KBS.forEach(k => {
+    if (low.indexOf(k.name.toLowerCase()) > -1 && a.kb !== k.name)
+      say('pointed it at **' + k.name + '**', () => { a.kb = k.name; });
+  });
+  D.CONNECTORS.forEach(c => {
+    if (low.indexOf(c.name.toLowerCase()) < 0 &&
+        !(c.kind === 'warehouse' && low.indexOf('warehouse') > -1)) return;
+    const has = a.conn.indexOf(c.id) > -1;
+    if (removing && has) say('revoked **' + c.name + '**',
+      () => { a.conn = a.conn.filter(x => x !== c.id); });
+    if (!removing && !has) say('granted **' + c.name + '**' +
+      (c.state === 'off' ? ' — not connected yet; Cloud → Connections does that' : ''),
+      () => { a.conn.push(c.id); });
+  });
+  if (/\b(always confirm|confirm before|stricter)\b/.test(low) && !a.opts.confirm)
+    say('set it to **confirm before writing** anywhere', () => { a.opts.confirm = true; });
+  if (/\b(stop confirming|no confirmation|less strict)\b/.test(low) && a.opts.confirm)
+    say('stopped it confirming writes', () => { a.opts.confirm = false; });
+  if (/\b(cite|sources? on every|attach sources)\b/.test(low) && !a.opts.cite)
+    say('made it **cite a source** on every claim', () => { a.opts.cite = true; });
+  if (/\b(extended thinking|think longer|think harder)\b/.test(low) && !a.opts.think)
+    say('turned on **extended thinking**', () => { a.opts.think = true; });
+  const inst = text.match(/\b(?:tell it to|instruct(?:ions?)?:?)\s+(.{4,})$/i);
+  if (inst && !(m.fresh && makerUnnamed(a)))
+    say('added to its instructions', () => { a.inst = (a.inst ? a.inst + '\n' : '') + inst[1].trim(); });
+}
+
+/* project: name · visibility · knowledge and tables by name · connectors ·
+   assistant by name · the program from cadence words. */
+function makerProjRead(text, low, p, m, say, removing){
+  if (m.fresh && makerUnnamed(p) && !/\brename|call\b/i.test(text)){
+    const mt = text.match(/^(?:a|an|the)?\s*(.{2,36}?)\s+project\b/i);
+    const nm = titleCase(((mt && mt[1]) || 'new project').trim());
+    say('named it **' + nm + '**', () => {
+      p.name = nm; m.thread.title = nm;
+      p.desc = text.length > 140 ? text.slice(0, 137) + '…' : text;
+      p.descAuto = false;
+    });
+  }
+  if (/\bshare(d)?\b.*\b(workspace|team|everyone)\b/.test(low) && !p.shared)
+    say('shared it with the workspace', () => { p.shared = true; });
+  if (/\b(personal|private|only me)\b/.test(low) && p.shared)
+    say('made it personal', () => { p.shared = false; });
+  D.KBS.forEach(k => {
+    if (low.indexOf(k.name.toLowerCase()) < 0) return;
+    const has = (p.kbs || []).indexOf(k.name) > -1;
+    if (removing && has) say('detached **' + k.name + '**',
+      () => { p.kbs = p.kbs.filter(n => n !== k.name); });
+    if (!removing && !has) say('attached **' + k.name + '**',
+      () => { (p.kbs = p.kbs || []).push(k.name); });
+  });
+  D.DATASETS.forEach(t => {
+    if (low.indexOf(t.name.toLowerCase()) < 0) return;
+    if ((p.sources || []).indexOf(t.name) < 0 && !removing)
+      say('pointed it at the **' + t.name + '** table', () => { (p.sources = p.sources || []).push(t.name); });
+  });
+  D.CONNECTORS.forEach(c => {
+    if (low.indexOf(c.name.toLowerCase()) < 0) return;
+    const has = (p.conn || []).indexOf(c.id) > -1;
+    if (removing && has) say('revoked **' + c.name + '**',
+      () => { p.conn = p.conn.filter(x => x !== c.id); });
+    if (!removing && !has) say('granted **' + c.name + '**' +
+      (c.state === 'off' ? ' — not connected yet; Cloud → Connections does that' : ''),
+      () => { (p.conn = p.conn || []).push(c.id); });
+  });
+  D.ASSISTANTS.forEach(x => {
+    if (low.indexOf(x.name.toLowerCase()) > -1 && p.assistant !== x.name)
+      say('bound the **' + x.name + '** assistant', () => { p.assistant = x.name; });
+  });
+  const every = /\b(daily|every day|each morning|every morning)\b/.test(low) ? 'Every day'
+    : /\b(weekly|every week|on mondays?)\b/.test(low) ? 'Every week'
+    : /\b(monthly|every month)\b/.test(low) ? 'Every month' : null;
+  if (every){
+    const prod = text.match(/\b(?:produce|write|report|make|send|build)(?:ing|s)?\s+(?:an?\s+|the\s+)?(.{4,80}?)(?:[,.;]|$)/i);
+    say('set the program to run **' + every.toLowerCase() + '**', () => {
+      const prev = p.run && p.run.sched;
+      p.run = { every:every, ask:(prod ? titleCase(prod[1].trim()) : p.run && p.run.ask) ||
+        'Summarise what changed in ' + p.name + '.' };
+      syncProjectRun(p, prev);
+    });
+  }
+  if (/\b(stop|turn off|switch off)\b.*\b(schedule|program|running)\b/.test(low) && p.run)
+    say('turned the program off', () => {
+      const prev = p.run.sched;
+      p.run = null;
+      syncProjectRun(p, prev);
+    });
+}
+
+/* widget / template: a first sentence goes through the same parser Auto
+   program's element maker uses; later ones speak the inspector's vocabulary. */
+function makerDesignRead(text, low, d, m, say, removing){
+  if (m.fresh && makerUnnamed(d) && !/\brename|call\b/i.test(text)){
+    if (d.kind === 'widget'){
+      const spec = parseElement(text);
+      /* Unlike Auto program's element (placeholders until bound), the maker
+         takes the sentence's own numbers: "47 against a 100 goal" is a value
+         and a caption, said out loud. */
+      const num = text.match(/(?:^|[\s,])(\d[\d,.]*%?)(?=[\s,.;]|$)/);
+      const vs = text.match(/\b(against|versus|vs\.?|towards?)\s+(.{2,48}?)(?:[,.;]|$)/i);
+      say('drafted the **' + spec.shape + '** — named it **' + spec.name + '**', () => {
+        d.shape = spec.shape;
+        d.name = spec.name;
+        m.thread.title = spec.name;
+        Object.assign(d.cfg, spec.cfg, { title:spec.name });
+        if (num && d.cfg.value !== undefined) d.cfg.value = num[1];
+        if (vs) d.cfg.cap = titleCase(vs[1].toLowerCase() + ' ' + vs[2].trim());
+        if (spec.bars) d.bars = spec.bars;
+        if (spec.rows) d.rows = spec.rows;
+        d.desc = text.length > 140 ? text.slice(0, 137) + '…' : text;
+      });
+    } else {
+      const shape = /\bpdf|report layout|document|letter|invoice layout\b/.test(low) ? 'pdf'
+        : /\bportal|dashboard site|intranet\b/.test(low) ? 'portal'
+        : /\bdocs|help|faq|manual\b/.test(low) ? 'docs' : 'landing';
+      const mt = text.match(/^(?:a|an|the)?\s*(.{2,40}?)\s*(?:template|layout|page|site)\b/i);
+      const nm = titleCase(((mt && mt[1]) || shape + ' template').replace(/^pdf\s*/i, '').trim() || 'New template');
+      say('drafted a **' + (shape === 'pdf' ? 'PDF layout' : shape + ' page') + '** — named it **' + nm + '**', () => {
+        d.shape = shape;
+        d.name = nm;
+        m.thread.title = nm;
+        d.cfg.title = nm;
+        d.desc = text.length > 140 ? text.slice(0, 137) + '…' : text;
+        const secs = text.match(/sections?\s+(?:for|of|:)?\s*(.{4,120}?)(?:[.;]|$)/i);
+        if (shape === 'pdf' && secs)
+          d.cfg.sections = commaList(secs[1].replace(/\s+and\s+/g, ', ')).map(titleCase).join(', ');
+      });
+    }
+  }
+  D.DESIGN_ACCENTS.forEach(([nm]) => {
+    if (low.indexOf(nm.toLowerCase()) > -1 && d.cfg.accent !== nm)
+      say('set the accent to **' + nm + '**', () => { d.cfg.accent = nm; });
+  });
+  [['square','Square'], ['soft', 'Soft'], ['round', 'Round']].forEach(([w, v]) => {
+    if (new RegExp('\\b' + w + '(ed|er)? corners?\\b').test(low) && d.cfg.radius !== v)
+      say('set the corners to **' + v.toLowerCase() + '**', () => { d.cfg.radius = v; });
+  });
+  [['narrow', 'Narrow'], ['medium', 'Medium'], ['wide', 'Wide']].forEach(([w, v]) => {
+    if (new RegExp('\\b' + w + 'r?\\b').test(low) && d.cfg.width !== v)
+      say('made it **' + v.toLowerCase() + '**', () => { d.cfg.width = v; });
+  });
+  [['light', 'Light'], ['dark', 'Dark'], ['follow', 'Follow']].forEach(([w, v]) => {
+    if (new RegExp('\\b' + w + '( theme| mode)?\\b').test(low) && d.cfg.theme !== v &&
+        new RegExp('\\b' + w + '\\b( theme| mode|$| and| ,)').test(low))
+      say('set the theme to **' + v.toLowerCase() + '**', () => { d.cfg.theme = v; });
+  });
+  const val = text.match(/\bvalue (?:to |of )?["']?([^"',.;]{1,16})/i);
+  if (val && d.cfg.value !== undefined)
+    say('set the value to **' + val[1].trim() + '**', () => { d.cfg.value = val[1].trim(); });
+  const delta = text.match(/\bdelta (?:to |of )?["']?([^"',.;]{1,12})/i);
+  if (delta && d.cfg.delta !== undefined)
+    say('set the delta to **' + delta[1].trim() + '**', () => { d.cfg.delta = delta[1].trim(); });
+  const cap = text.match(/\bcaption (?:to |of |says? )?["']?([^"'.;]{2,80})/i);
+  if (cap) say('set the caption', () => { d.cfg.cap = titleCase(cap[1].trim()); });
+  const secs2 = !(m.fresh && makerUnnamed(d)) && text.match(/\bsections?\s+(?:to|:)?\s*(.{4,120}?)(?:[.;]|$)/i);
+  if (secs2 && d.shape === 'pdf')
+    say('set the sections', () => {
+      d.cfg.sections = commaList(secs2[1].replace(/\s+and\s+/g, ', ')).map(titleCase).join(', ');
+    });
+  const foot = text.match(/\bfooter\s+(?:to|says?|:)?\s*["']?([^"'.;]{2,60})/i);
+  if (foot && d.shape === 'pdf')
+    say('set the footer', () => { d.cfg.footer = titleCase(foot[1].trim()); });
+  const nav = text.match(/\b(?:nav(?:igation)?|routes?)\s+(?:to|of|:)?\s*(.{3,80}?)(?:[.;]|$)/i);
+  if (nav && d.kind === 'template' && d.shape !== 'pdf')
+    say('set the navigation', () => {
+      d.cfg.nav = commaList(nav[1].replace(/\s+and\s+/g, ', ')).map(titleCase).join(', ');
+    });
+  if (/\bhide (the )?header\b/.test(low) && d.cfg.header)
+    say('hid the header', () => { d.cfg.header = false; });
+  if (/\bshow (the )?header\b/.test(low) && !d.cfg.header)
+    say('brought the header back', () => { d.cfg.header = true; });
 }
 
 /* -------------------------------------------------------------- connectors
@@ -4800,9 +5290,11 @@ function designView(body, d){
     ic('check',13) + (live ? 'Published' : 'Publish element'));
   pub.disabled = live;
   pub.onclick = () => { d.state = 'live'; render(); toast(d.name + ' published'); };
-  const copy = el('button','btn btn--secondary', ic('copy',13) + (d.kind === 'widget' ? 'Copy embed' : 'Copy command'));
+  const opt = el('button','btn btn--secondary', ic('spark',13) + 'Optimize in chat');
+  opt.onclick = () => openMaker(d.kind === 'widget' ? 'wg' : 'tp', d);
+  const copy = el('button','btn btn--ghost', ic('copy',13) + (d.kind === 'widget' ? 'Copy embed' : 'Copy command'));
   copy.onclick = () => toast('Copied — prototype');
-  inspectorActs(s.side, [pub, copy]);
+  inspectorActs(s.side, [pub, opt, copy]);
 
   pad.append(s.wrap);
   body.append(pad);
@@ -7025,19 +7517,28 @@ function syncHead(){
   $('#mainSub').textContent = h.sub || '';
 }
 
-async function runTurn(userText, script){
+/* `opts` lets a turn run somewhere other than the chat pane — the maker
+   overlay streams into its own log. opts.host is the container, opts.scroll
+   its scroller, opts.thread the record the turn is written into, opts.busy a
+   lock indicator for the host's own send button, opts.sync a redraw called
+   once the script's work has been applied. With no opts, everything below is
+   exactly what it always was. */
+async function runTurn(userText, script, opts){
   if (state.busy) return;
   state.busy = true;
   $('#sendBtn').disabled = true;
+  if (opts && opts.busy) opts.busy(true);
   syncStatus();
+  const down = opts ? (opts.scroll || (() => {})) : scrollDown;
 
   /* The thread this turn belongs to, resolved before anything is appended so
      the turn can be written into it at the end. */
-  const thread = state.section === 'chat' ? find(D.THREADS, state.item.chat) : null;
+  const thread = opts ? (opts.thread || null)
+    : (state.section === 'chat' ? find(D.THREADS, state.item.chat) : null);
 
   /* An empty thread is showing the hero, which is centred and therefore not a
      reading column. The first turn replaces it with one. */
-  let inner = $('.pane__measure', $('#mainBody'));
+  let inner = opts ? opts.host : $('.pane__measure', $('#mainBody'));
   if (!inner){
     detachComposer();          /* the hero has it — see render() */
     $('#mainBody').innerHTML = '';
@@ -7048,7 +7549,7 @@ async function runTurn(userText, script){
   if (emptyNode) emptyNode.remove();
 
   inner.append(msgNode({ role:'user', text:userText }));
-  scrollDown();
+  down();
 
   /* A scripted case supplies its own turn; anything typed cycles the canned
      replies as before. */
@@ -7071,7 +7572,7 @@ async function runTurn(userText, script){
   $('[data-label]', trace).textContent = 'Working...';
   wrap.append(trace);
   inner.append(wrap);
-  scrollDown();
+  down();
 
   let elapsed = 0;
   for (const s of reply.steps){
@@ -7081,7 +7582,7 @@ async function runTurn(userText, script){
       '<span class="step__detail">' + esc(s.d) + '</span>' +
       '<span class="step__t"></span>');
     tbody.append(step);
-    scrollDown();
+    down();
     await sleep(parseFloat(s.t) * 620);
     $('.dot', step).className = 'dot dot--ok';
     $('.step__t', step).textContent = s.t;
@@ -7095,6 +7596,14 @@ async function runTurn(userText, script){
   $('.trace__dur', trace).textContent = dur;
   trace.dataset.open = 'false';
   $('[data-dur]', head).textContent = 'responding...';
+
+  /* A script may carry work. It is applied once the steps have run, so the
+     reply below describes something that has already happened — and the host
+     redraws whatever shows the record (the maker's live pane). */
+  if (reply.apply){
+    reply.apply();
+    if (opts && opts.sync) opts.sync();
+  }
 
   /* Build the full markup, empty every text node, then refill progressively.
      Nothing reflows because the layout already exists. */
@@ -7130,7 +7639,7 @@ async function runTurn(userText, script){
       for (let i = 0; i < parts.length; i += 2){
         x.node.nodeValue += parts.slice(i, i + 2).join('');
         state.tokens += 2;
-        if (i % 8 === 0){ syncStatus(); scrollDown(); }
+        if (i % 8 === 0){ syncStatus(); down(); }
         await sleep(11 + (i % 3) * 6);
       }
     }
@@ -7139,10 +7648,11 @@ async function runTurn(userText, script){
   body.classList.remove('is-streaming');
   $$('.is-revealed', body).forEach(e => e.classList.remove('is-revealed'));
 
-  /* The artifact lands in the pane, and the thread keeps the reference. */
+  /* The artifact lands in the pane, and the thread keeps the reference. The
+     results column is not opened over an overlay's shoulder. */
   if (reply.artifactId){
     const a = D.ARTIFACT_BY_ID(reply.artifactId);
-    if (a){ wrap.append(artRefNode(a)); openArtifact(a.id); }
+    if (a){ wrap.append(artRefNode(a)); if (!opts) openArtifact(a.id); }
   }
   /* The widget stays in the thread. What it has settled on is registered as a
      named result in the artifact column — immediately for a table, a chart or a
@@ -7179,15 +7689,17 @@ async function runTurn(userText, script){
       renderList();
     }
     if (w) w.msg = ai;
-    /* The topbar counted turns before this one existed. */
-    syncHead();
+    /* The topbar counted turns before this one existed — but only the chat
+       pane's topbar; an overlay turn leaves the page behind it alone. */
+    if (!opts) syncHead();
   }
 
   state.turns += 2;
   state.busy = false;
   $('#sendBtn').disabled = !$('#composerInput').value.trim();
+  if (opts && opts.busy) opts.busy(false);
   syncStatus();
-  scrollDown();
+  down();
 }
 
 /* =============================================================== composer */
@@ -7569,6 +8081,15 @@ function boot(){
   $('#schedClose').onclick = closeSched;
   $('#schedScrim').addEventListener('mousedown', e => { if (e.target === $('#schedScrim')) closeSched(); });
 
+  /* the maker */
+  $('#makerClose').onclick = closeMaker;
+  $('#makerScrim').addEventListener('mousedown', e => { if (e.target === $('#makerScrim')) closeMaker(); });
+  $('#makerSend').onclick = makerSubmit;
+  /* Enter sends, Shift+Enter breaks the line — the small box convention. */
+  $('#makerInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); makerSubmit(); }
+  });
+
   /* status bar */
   $('#stThemeBtn').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   $('#stDensityBtn').onclick = () => {
@@ -7599,6 +8120,9 @@ function boot(){
     } else if (e.key === 'Escape' && $('#postScrim').dataset.open === 'true'){
       /* Opened from the project page, so it is above everything on it. */
       closePost();
+    } else if (e.key === 'Escape' && $('#makerScrim').dataset.open === 'true'){
+      /* The maker opens over Build, so it yields before Build's own layers. */
+      closeMaker();
     } else if (e.key === 'Escape' && $('#schedScrim').dataset.open === 'true'){
       closeSched();
     } else if (e.key === 'Escape' && $('#projScrim').dataset.open === 'true'){

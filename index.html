@@ -343,6 +343,39 @@
   </div>
 </div>
 
+<!-- ================================================================= maker
+     Build's chat layer: describe the thing, watch it become that thing. Two
+     panes — the conversation, and the record as it currently is — so a change
+     said in words is visible the moment it lands. -->
+<div class="scrim scrim--center" id="makerScrim" data-open="false">
+  <div class="maker" role="dialog" aria-modal="true" aria-labelledby="makerTitle">
+    <header class="dialog__head">
+      <span class="dialog__ico" id="makerIco" aria-hidden="true"></span>
+      <span class="dialog__id">
+        <span class="dialog__title" id="makerTitle">Maker</span>
+        <span class="dialog__sub" id="makerSub"></span>
+      </span>
+      <button class="iconbtn iconbtn--sm" id="makerClose" title="Close (esc)" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="maker__body">
+      <div class="maker__chat">
+        <div class="maker__log" id="makerLog"></div>
+        <div class="maker__ask">
+          <textarea class="textarea" id="makerInput" rows="2"
+            placeholder="Describe it, or describe a change&#8230;"></textarea>
+          <button class="btn btn--primary btn--sm" id="makerSend" type="button">Send</button>
+        </div>
+      </div>
+      <aside class="maker__side">
+        <div class="maker__preview" id="makerSide"></div>
+        <footer class="maker__foot" id="makerFoot"></footer>
+      </aside>
+    </div>
+  </div>
+</div>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="js/icons.js"></script>
