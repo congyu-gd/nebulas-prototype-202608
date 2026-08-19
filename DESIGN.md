@@ -1037,7 +1037,7 @@ exist elsewhere — an app is a new arrangement, not a new vocabulary:
 |---|---|---|
 | `agenda` | a week time grid + a month grid over one event list, and an Upcoming list | Calendar |
 | `cvx` | an upload box, a candidate list, and the fields of whoever is selected | CV extractor |
-| `extract` | a source card, a `.deflist` of fields, chips, and one action | Invoice extractor |
+| `invx` | the same tray with a second way in — the camera — and totals re-added | Invoice extractor |
 | `files` | rows that attach to the next message | My files |
 | `news` | rows that wrap, unread marked, that ask the thread about themselves | News |
 | `note` | a list plus a `textarea`, first line as title | Note |
@@ -1080,6 +1080,16 @@ the cards underneath always describe whoever is selected — fields, skills, a
 `check` badge where the model guessed rather than read, and `Save to results`
 filing that candidate under their name. The first CV ships already read so
 the format is visible on arrival.
+
+**The invoice tray is the CV tray with two ways in** — a picture from disk,
+or a capture from the computer's camera — and each way has its own pretend
+pool, so the two buttons keep meaning two different things. One `Digitise`
+reads everything waiting into the same seven fields with the totals
+**re-added rather than trusted**, the Source card names where each invoice
+came from (a camera capture carries the camera mark), and a field the frame
+cropped out reads `—` with a `check` badge and a note saying retake or fill
+it by hand — a guess would be worse than a gap. Neither the upload nor the
+capture is real, and both say so where they happen.
 
 **Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
 once and owned in JS after that — the same rule as a chat widget's state. A

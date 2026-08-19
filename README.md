@@ -192,7 +192,11 @@ message, a headline writes the question into the composer, an extraction is file
 in the results column, and a ticked box or a typed note survives switching apps
 and sections. The CV extractor is a tray: upload several CVs, press one
 `Extract`, and each becomes a candidate in a list — every file read into the
-same five fields, so clicking through the candidates compares them. The calendar reads a week as a time grid or a month as a day grid
+same five fields, so clicking through the candidates compares them. The
+invoice extractor is the same tray with a second way in — a picture from disk
+or a capture from the computer's camera — digitised into seven fields with
+the totals re-added rather than trusted, and clicking a vendor's name opens
+that invoice's detail. The calendar reads a week as a time grid or a month as a day grid
 — arrows move whichever is on screen — with an Upcoming list naming what the
 blocks can only place. The grids are doors: an empty slot drafts an event at
 that day and hour, and an existing event opens for editing, with an undoable

@@ -5755,6 +5755,15 @@ function appState(app){
       s.pool = p.cvs.slice(1).map(mk);
       s.sel = 0;
     }
+    if (p.s === 'invx'){
+      const mk = v => ({ file:v.file, src:v.src, pages:v.pages, check:v.check, note:v.note,
+        read:false, fields:v.fields.map(x => x.slice()) });
+      /* Two pretend pools, one per way in, so the two buttons stay distinct. */
+      s.invs = [Object.assign(mk(p.invs[0]), { read:true })];
+      s.pics  = p.invs.slice(1).filter(v => v.src !== 'camera').map(mk);
+      s.shots = p.invs.filter(v => v.src === 'camera').map(mk);
+      s.sel = 0;
+    }
     if (p.s === 'news') s.read = p.rows.map(r => !r[3]);
     APP_STATE[app.id] = s;
   }
@@ -6134,65 +6143,115 @@ function appCvx(app, p){
   return nodes;
 }
 
-/* ------------------------------------------------------------- extract
-   A document read into fields. Two things make it honest: a field the model
-   guessed is marked as needing a look, and the outcome can be FILED — an
-   extraction is exactly the kind of definite result the store is for. */
-function appExtract(app, p){
+/* ----------------------------------------------------------------- invx
+   The invoice tray is the CV tray with two ways in: a picture from disk, or
+   a capture from the computer's camera â each fed by its own pretend pool,
+   because the two buttons should keep meaning two different things. One
+   Digitise reads everything waiting into the same seven fields, totals
+   re-added rather than trusted, and a field the frame cropped out says so
+   instead of guessing. A row is a vendor once digitised and a filename
+   until then; the cards underneath always describe the selected invoice. */
+const INV_SRC = { upload:'from a file', photo:'from a photo', camera:'from the camera' };
+function appInvx(app, p){
+  const st = appState(app);
   const nodes = [];
+  const intake = (v, verb) => {
+    st.invs.push(v);
+    st.sel = st.invs.length - 1;
+    repaintApp(app);
+    toast(v.file + ' ' + verb + ' — Digitise reads it');
+  };
+
+  const up = appCard('Add an invoice');
+  const box = el('button','dropbox');
+  box.type = 'button';
+  box.innerHTML =
+    '<span style="display:flex;color:var(--text-4)">' + ic('receipt', 18) + '</span>' +
+    '<span><b>Add a picture</b> — photo, scan or pdf</span>' +
+    '<span class="field__help">' + (st.pics.length
+      ? plural(st.pics.length, 'pretend picture') + ' left in the tray — uploads are simulated'
+      : 'The tray is empty — every pretend picture is in') + '</span>';
+  box.onclick = () => {
+    if (!st.pics.length)
+      return toast('Nothing left to upload — the pretend tray is empty');
+    intake(st.pics.shift(), 'uploaded');
+  };
+  const cam = el('button','btn btn--ghost btn--sm', ic('camera', 13) + 'Use the camera');
+  cam.type = 'button';
+  cam.title = 'The capture is simulated — nothing is filmed';
+  cam.onclick = () => {
+    if (!st.shots.length)
+      return toast('Nothing in front of the pretend camera — both captures are in');
+    intake(st.shots.shift(), 'captured');
+  };
+  const acts0 = el('div','live__acts');
+  acts0.append(cam);
+  up.body.append(box, acts0);
+  nodes.push(up.card);
+
+  const unread = st.invs.filter(v => !v.read).length;
+  let lead;
+  if (unread){
+    lead = el('button','btn btn--primary btn--sm',
+      ic('spark', 12) + 'Digitise ' + (unread > 1 ? unread + ' invoices' : 'invoice'));
+    lead.type = 'button';
+    lead.onclick = () => {
+      st.invs.forEach(v => v.read = true);
+      repaintApp(app);
+      toast(plural(unread, 'invoice') + ' digitised into the same 7 fields');
+    };
+  } else lead = el('span','badge badge--ok','all digitised');
+  const list = appCard('Invoices', lead);
+  list.body.style.padding = 'var(--s-1) var(--s-2)';
+  st.invs.forEach((v, i) => {
+    list.body.append(listRow({
+      lead: dotLead(v.read ? 'ok' : ''),
+      title: v.read ? v.fields[0][1] + ' · ' + v.fields[1][1] : v.file,
+      sub: v.read
+        ? v.fields[v.fields.length - 1][1] + ' · ' + (INV_SRC[v.src] || v.src)
+        : (v.src === 'camera' ? 'captured' : 'uploaded') + ' · not digitised yet',
+      current: i === st.sel,
+      onClick: () => { st.sel = i; repaintApp(app); }
+    }));
+  });
+  nodes.push(list.card);
+
+  const inv = st.invs[st.sel];
+  if (!inv.read){
+    nodes.push(banner('info', esc(inv.file) + ' is in and unread — Digitise fills the seven fields.'));
+    return nodes;
+  }
   const src = appCard('Source');
   src.body.style.padding = 'var(--s-3)';
   src.body.append(el('div', null,
     '<span style="display:flex;align-items:center;gap:var(--s-2)">' +
-      '<span style="display:flex;color:var(--text-4)">' + ic('doc',14) + '</span>' +
-      '<span style="font-size:var(--t-12);color:var(--text)">' + esc(p.file) + '</span>' +
+      '<span style="display:flex;color:var(--text-4)">' + ic(inv.src === 'camera' ? 'camera' : 'doc', 14) + '</span>' +
+      '<span style="font-size:var(--t-12);color:var(--text)">' + esc(inv.file) + '</span>' +
     '</span>' +
-    '<div class="field__help" style="margin-top:4px">' + esc(p.pages) + '</div>'));
+    '<div class="field__help" style="margin-top:4px">' + esc(inv.pages) + '</div>'));
   nodes.push(src.card);
 
-  const f = appCard('Fields', el('span','badge badge--ok', String(p.fields.length) + ' read'));
-  f.body.append(defList(p.fields.map(([k, v, flag]) => [k,
+  const f = appCard('Fields', el('span','badge badge--ok', String(inv.fields.length) + ' read'));
+  f.body.append(defList(inv.fields.map(([k, v, flag]) => [k,
     esc(v) + (flag === 'check' ? ' <span class="badge badge--warn">check</span>' : '')])));
   nodes.push(f.card);
 
-  if (p.chips){
-    const c = appCard(p.chipsLabel || 'Found');
-    const wrap = el('div');
-    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:var(--s-2)';
-    p.chips.forEach(s => wrap.append(el('span','chip','<span>' + esc(s) + '</span>')));
-    c.body.append(wrap);
-    nodes.push(c.card);
-  }
-  if (p.check) nodes.push(banner('info', esc(p.check)));
-  if (p.note)  nodes.push(banner('warn', esc(p.note)));
-
-  if (p.queue){
-    const q = appCard(p.queueLabel || 'Queue');
-    q.body.style.padding = '0 var(--s-3)';
-    p.queue.forEach(([nm, sub, st]) => {
-      const r = el('div','artlist__row');
-      r.innerHTML = dotLead(st) +
-        '<span class="row__main" style="flex:1">' +
-          '<span class="row__title">' + esc(nm) + '</span>' +
-          '<span class="row__sub">' + esc(sub) + '</span>' +
-        '</span>';
-      q.body.append(r);
-    });
-    nodes.push(q.card);
-  }
+  if (inv.check) nodes.push(banner('info', esc(inv.check)));
+  if (inv.note)  nodes.push(banner('warn', esc(inv.note)));
 
   /* The one action worth having here: put the fields where every other outcome
      in the workspace is kept, under a name. */
   const acts = el('div','live__acts');
-  const save = el('button','btn btn--primary btn--sm', ic('check',13) + 'Save to results');
+  const save = el('button','btn btn--primary btn--sm', ic('check', 13) + 'Save to results');
   save.type = 'button';
   save.onclick = () => fileResult({
-    id:'r-' + app.id, title:p.res, from:app.name, shape:'list',
-    size:plural(p.fields.length, 'field'),
-    rows:p.fields.map(([k, v]) => [k, v])
+    id:'r-' + app.id + '-' + slug(inv.fields[1][1]),
+    title:inv.fields[1][1] + ' — invoice fields', from:app.name, shape:'list',
+    size:plural(inv.fields.length, 'field'),
+    rows:inv.fields.map(([k, v]) => [k, v])
   });
   acts.append(save);
-  nodes.push(acts);
+  nodes.push(acts, helpNote('Every invoice is digitised into the same seven fields, totals re-added.'));
   return nodes;
 }
 
@@ -6341,7 +6400,7 @@ function appSurface(app){
   if (!p) return [emptyState('cube', app.name, app.desc)];
   if (p.s === 'agenda')  return appAgenda(app, p);
   if (p.s === 'cvx')     return appCvx(app, p);
-  if (p.s === 'extract') return appExtract(app, p);
+  if (p.s === 'invx')    return appInvx(app, p);
   if (p.s === 'files')   return appFiles(app, p);
   if (p.s === 'news')    return appNews(app, p);
   if (p.s === 'note')    return appNoteSurface(app);
