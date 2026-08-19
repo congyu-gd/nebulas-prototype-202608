@@ -858,7 +858,7 @@ function msgNode(m){
    results column under a name (see syncResult). */
 const LIVE = {};
 let liveN = 0;
-const WIDGET_ICON = { form:'filetext', quiz:'checksq', chart:'chart', table:'table', code:'code' };
+const WIDGET_ICON = { form:'filetext', quiz:'checksq', chart:'chart', table:'table', code:'code', program:'clock' };
 
 function makeLive(spec, from){
   const w = Object.assign({}, spec, {
@@ -904,6 +904,9 @@ function liveFoot(w){
   if (w.kind === 'chart') text = w.series[w.ser].n + ' · ' + w.series[w.ser].unit;
   if (w.kind === 'table') text = plural(w.rows.length, 'row') + (w.sort ? ' · sorted by ' + w.cols[w.sort.c] : '');
   if (w.kind === 'code')  text = w.variant;
+  if (w.kind === 'program') text = w.created
+    ? 'created · in Chat → Schedule'
+    : (w.cron || CRON_OF[w.every]) + ' · not created yet — nothing runs until you press Create';
   return text ? el('div','live__foot', esc(text)) : null;
 }
 
@@ -1095,8 +1098,86 @@ const LIVE_KIND = {
     copy.onclick = () => toast('Copied ' + w.variant + ' to clipboard');
     row.append(copy);
     body.append(row);
+  },
+
+  /* A routine, drafted as a program. Everything is still editable here — the
+     cadence, every step's wording, the step count — because the parse is a
+     guess about what was meant, and the person who meant it is looking at it.
+     The one action writes a real row into Chat → Schedule; until then nothing
+     exists anywhere, which the footer says out loud. Created, the widget
+     freezes into a record of what was made and a door to where it lives now —
+     the row is the fact, and two editable copies of one program would drift. */
+  program(body, w){
+    if (w.created){
+      body.append(defList([
+        ['Cadence', esc(w.cron || CRON_OF[w.every])],
+        ['Steps', w.steps.map(esc).join(' → ')],
+        ['Produces', esc(w.out)]
+      ]));
+      const row = el('div','live__acts');
+      const go = el('button','btn btn--secondary btn--sm',
+        '<span style="display:flex">' + ic('clock',13) + '</span>Open in Chat → Schedule');
+      go.type = 'button';
+      go.onclick = () => select('chat','schedule');
+      row.append(go);
+      body.append(row);
+      return;
+    }
+
+    const cad = field('How often',
+      segCtl(CADENCE, w.every, v => {
+        w.every = v;
+        /* The parsed clock belonged to the sentence; picking a cadence by hand
+           makes the seg the truth, so the override goes. */
+        delete w.cron;
+        rerender(w);
+      }),
+      (w.cron || CRON_OF[w.every]) + ' · first run ' + NEXT_OF[w.every]);
+    body.append(cad);
+
+    const stepsWrap = el('div', null);
+    stepsWrap.style.cssText = 'display:flex;flex-direction:column;gap:var(--s-2);margin-bottom:var(--s-3)';
+    stepsWrap.append(el('div','field__label','<span>Steps, in order</span>'));
+    w.steps.forEach((name, i) => {
+      const r = el('div', null);
+      r.style.cssText = 'display:flex;align-items:center;gap:var(--s-2)';
+      r.append(el('span','t-mono', String(i + 1)));
+      const inp = inputCtl(name, v => {
+        if (v.trim()) w.steps[i] = v.trim();
+        rerender(w);
+      });
+      inp.style.flex = '1';
+      r.append(inp);
+      if (w.steps.length > 1){
+        const x = el('button','iconbtn iconbtn--sm', ic('x',12));
+        x.type = 'button';
+        x.title = 'Remove this step';
+        x.onclick = () => { w.steps.splice(i, 1); rerender(w); };
+        r.append(x);
+      }
+      stepsWrap.append(r);
+    });
+    const add = el('button','btn btn--ghost btn--sm',
+      '<span style="display:flex">' + ic('plus',13) + '</span>Add a step');
+    add.type = 'button';
+    add.style.alignSelf = 'flex-start';
+    add.onclick = () => { w.steps.push('New step'); rerender(w); };
+    stepsWrap.append(add);
+    body.append(stepsWrap);
+
+    body.append(el('div','field__help', 'Each run produces ' + esc(lc1(w.out)) + '.'));
+
+    const row = el('div','live__acts');
+    const make = el('button','btn btn--primary btn--sm','Create the program');
+    make.type = 'button';
+    make.onclick = () => createProgram(w);
+    row.append(make);
+    body.append(row);
   }
 };
+
+/* "A short briefing" reads wrong mid-sentence; this is only for that seam. */
+const lc1 = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
 
 /* Acting on a widget re-renders it in place and re-derives its result, which is
    the only thing that leaves the thread. */
@@ -1134,6 +1215,10 @@ const RESULT_TYPE = { list:'Form', grid:'Table', bars:'Chart', doc:'Document', c
 const KIND_TYPE   = { table:'Table', chart:'Chart', doc:'Document', diff:'Diff' };
 
 function liveResult(w){
+  /* A program's outcome is the schedule row it creates, not a document about
+     itself — filing one would put the same fact in two stores. (Also a crash
+     guard: the fallback below reads w.variants, which a program lacks.) */
+  if (w.kind === 'program') return null;
   if (w.kind === 'form'){
     if (!w.added.length) return null;
     return { shape:'list', size:plural(w.added.length, 'row'),
@@ -2548,6 +2633,44 @@ function deleteProject(p){
 /* What "it runs by itself" looks like when you do not want to wait for Monday.
    The result lands in the store like every other one — timestamped, downloadable,
    shareable — because a project that runs produces results, not notifications. */
+/* The program widget's one action: the draft becomes a row in Chat → Schedule.
+   Multi-step → a job (the first job app.js has ever authored — until now steps
+   existed only in fixtures); one step → a task. The row's thread points back at
+   the conversation that described it, so the schedule's Chat cell is a door to
+   where the words were said. Undoable from the toast, which also re-arms the
+   widget — the draft and the row are one fact, so both come back together. */
+let schedN = 0;
+function createProgram(w){
+  const steps = w.steps.map(s => s.trim()).filter(Boolean);
+  if (!steps.length) return;
+  const row = {
+    id:'sc-n' + (++schedN), name:w.title,
+    cron:w.cron || CRON_OF[w.every], next:NEXT_OF[w.every],
+    state:'idle', last:'—', target:w.out, produces:w.out,
+    thread:w.thread || null, assistant:'—',
+    history:[]
+  };
+  if (steps.length > 1) row.steps = steps.map(n =>
+    ({ name:n, target:'—', assistant:'—', last:'—', state:'idle' }));
+  D.SCHEDULE.push(row);
+  w.created = row.id;
+  /* Not a full render(): the reader is mid-thread and the pane must not
+     rebuild under them. The sidebar count is the one thing that changed. */
+  rerender(w);
+  renderList();
+  toast('Created ' + w.title + ' — first run ' + NEXT_OF[w.every], {
+    label:'Undo', icon:'clock',
+    run:() => {
+      const i = D.SCHEDULE.indexOf(row);
+      if (i > -1) D.SCHEDULE.splice(i, 1);
+      w.created = null;
+      rerender(w);
+      renderList();
+      toast('Removed ' + w.title + ' — the draft is back');
+    }
+  });
+}
+
 function runProject(p){
   const now = Date.now();
   const reads = (p.kbs || []).concat(p.sources || []);
@@ -5840,6 +5963,9 @@ async function runTurn(userText, script){
   let w = null;
   if (reply.w){
     w = makeLive(reply.w, thread ? thread.title : 'this thread');
+    /* Where the widget was authored. A program widget writes this into its
+       schedule row, so the row's Chat cell can point back here. */
+    w.thread = thread ? thread.id : null;
     wrap.append(liveHost(w));
     syncResult(w);
   }

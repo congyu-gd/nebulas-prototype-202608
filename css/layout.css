@@ -732,7 +732,10 @@
   padding:var(--s-2);
 }
 /* Narrow rail: the row collapses to just its tile. The hover surface goes
-   with the label, because a circle already has its own hover state. */
+   with the label, because a circle already has its own hover state. The gap
+   steps up from the list's --s-1: free-standing circles need more air than
+   rows that share hover surfaces, or the column reads as one striped blob. */
+.app:not([data-apps="wide"]) .apprail__body{ gap:var(--s-3); padding-top:var(--s-3) }
 .app:not([data-apps="wide"]) .approw{ justify-content:center; padding:0 }
 .app:not([data-apps="wide"]) .approw:hover{ background:none }
 .app:not([data-apps="wide"]) .approw__name,
