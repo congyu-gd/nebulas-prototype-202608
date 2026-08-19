@@ -210,8 +210,8 @@ it cannot write to, and says so.
 The workspace's **Build** section is the maker's half, and it has four lanes:
 **assistants**, **projects** (the chat sidebar's own, defined here too — with
 the external systems they reach granted as connections), **widgets**, and
-**templates** — web pages and PDF layouts, previewed live as you configure
-them. Its sidebar is **Miller columns** — kind, then item, with the builder
+**result templates** — the web pages and PDF layouts results are presented
+on, previewed live as you configure them. Its sidebar is **Miller columns** — kind, then item, with the builder
 itself as the last column. Everything listed is yours: this is a personal
 workspace, so there is no ownership filter to work.
 Connectors live in Cloud → Connections, since connecting a system is an

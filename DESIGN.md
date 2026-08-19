@@ -854,7 +854,7 @@ it did not need a page:
 | Agents | scheduled runs are already visible in Chat → Schedule. Two lists of "things that run on a clock" was one too many. |
 | Connectors | Cloud → Connections. Connecting a system is an administrative act, usually by a different person than the one composing an assistant. Build *grants* a connector; Cloud makes the grant mean something. |
 | Solutions | retired. A solution duplicated what a project already is — an assistant, knowledge, connections and a place results land — behind a second linking convention and a publish ceremony. Projects took the role; the checklist went with it. |
-| "Design settings" | split into **Widgets** and **Templates**. One label had been holding two genuinely different artifacts (an embeddable widget, a hosted page or a PDF layout) with one creation path that could only ever make a KPI tile. |
+| "Design settings" | split into **Widgets** and **Result templates**. One label had been holding two genuinely different artifacts (an embeddable widget, a hosted page or a PDF layout) with one creation path that could only ever make a KPI tile. The lane is named for what the layouts are *for* — presenting results — not for the artifact class. |
 
 ### The sidebar is Miller columns
 
@@ -866,7 +866,7 @@ thing itself:
 │ ◈ Assistants   › │ ASSISTANTS      17  + │  Revenue analyst         │
 │ ▤ Projects     › │  Revenue analyst      │  ┌ form ────┬ inspector ┐│
 │ ▣ Widgets      › │  Code reviewer        │  │ name…    │ becomes   ││
-│ ▦ Templates    › │  Support triage       │  │ skills…  │ test      ││
+│ ▦ Result tem…  › │  Support triage       │  │ skills…  │ test      ││
 │                  │  Meeting minutes      │  └──────────┴───────────┘│
 └──────────────────┴───────────────────────┴──────────────────────────┘
    --mill-w 176      the rest of --list-w      the pane = last column

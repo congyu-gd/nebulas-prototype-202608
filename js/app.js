@@ -425,7 +425,7 @@ const SECTIONS = {
       if (k === 'wg' || k === 'tp'){
         const d = find(D.DESIGNS, id);
         return { title:d.name, sub:d.kind === 'widget' ? 'widget · ' + d.shape
-          : (d.shape === 'pdf' ? 'PDF template' : 'website template · ' + d.shape) };
+          : (d.shape === 'pdf' ? 'PDF result template' : 'web result template · ' + d.shape) };
       }
       if (k === 'pj'){
         const p = find(D.PROJECTS, id);
@@ -525,11 +525,11 @@ const BUILD_GROUPS = [
     sub:d => d.shape,
     empty:'No widgets yet — the plus above makes one.' },
 
-  { kind:'tp', label:'Templates', icon:'template', addTip:'New template — describe it', add:() => openMaker('tp'),
+  { kind:'tp', label:'Result templates', icon:'template', addTip:'New result template — describe it', add:() => openMaker('tp'),
     items:() => D.DESIGNS.filter(d => d.kind === 'template'),
     lead:() => '<span class="row__icon">' + ic('template', 13) + '</span>',
     sub:d => d.shape === 'pdf' ? 'PDF' : 'web · ' + d.shape,
-    empty:'No templates yet — the plus above makes one.' }
+    empty:'No result templates yet — the plus above makes one.' }
 ];
 
 /* ------------------------------------------------------- small builders */
@@ -4511,9 +4511,9 @@ function newAssistant(){
 function draftDesign(kind, shape){
   const tpl = kind === 'template';
   const d = tpl ? {
-    id:'de-n' + (++madeN), name:'Untitled template', kind:'template', shape:shape || 'landing',
+    id:'de-n' + (++madeN), name:'Untitled result template', kind:'template', shape:shape || 'landing',
     state:'draft', team:D.ASSISTANT_TEAMS[0],
-    desc:'A new template. Everything about it is set in the inspector.',
+    desc:'A new result template. Everything about it is set in the inspector.',
     cfg:{ title:'Untitled', sub:'', cta:'Get started', nav:'Home, Docs, Pricing',
           sections:'Summary, Detail, Actions', footer:'',
           accent:'Nebulas', radius:'Soft', theme:'Follow', width:'Wide',
@@ -4796,7 +4796,7 @@ const MAKER_KIND = {
     hint:'Describe the tile. Shapes are read from the words — a value, a trend, a question box, a list — and colours, corners and width by name.',
     starters:['A KPI tile for open tickets, 47 against a 100 goal',
               'Make it amber and wide'] },
-  tp:{ noun:'template', icon:'template',
+  tp:{ noun:'result template', icon:'template',
     hint:'Describe the page — a landing page, a portal, docs, or a PDF report layout with its sections.',
     starters:['A PDF report layout with sections for headline numbers, detail and actions',
               'Call it Quarterly board pack'] }
@@ -5174,7 +5174,7 @@ function makerDesignRead(text, low, d, m, say, removing){
         : /\bportal|dashboard site|intranet\b/.test(low) ? 'portal'
         : /\bdocs|help|faq|manual\b/.test(low) ? 'docs' : 'landing';
       const mt = text.match(/^(?:a|an|the)?\s*(.{2,40}?)\s*(?:template|layout|page|site)\b/i);
-      const nm = titleCase(((mt && mt[1]) || shape + ' template').replace(/^pdf\s*/i, '').trim() || 'New template');
+      const nm = titleCase(((mt && mt[1]) || shape + ' result template').replace(/^pdf\s*/i, '').trim() || 'New result template');
       say('drafted a **' + (shape === 'pdf' ? 'PDF layout' : shape + ' page') + '** — named it **' + nm + '**', () => {
         d.shape = shape;
         d.name = nm;
@@ -5507,7 +5507,7 @@ function designView(body, d){
   const pad = el('div','pane__pad');
   pad.append(pageHead(d.name, d.desc,
     '<span class="badge badge--mono">' + (d.kind === 'widget' ? 'Widget'
-      : d.shape === 'pdf' ? 'PDF template' : 'Website template') + '</span>' +
+      : d.shape === 'pdf' ? 'PDF result template' : 'Web result template') + '</span>' +
     stateBadge(d.state)));
 
   const s = buildSplit();
@@ -5529,7 +5529,7 @@ function designView(body, d){
     ? 'The widget ships its own tokens, so it looks like this inside a page whose CSS we have never seen.'
     : pdf
     ? 'A PDF layout styles what leaves as a document — when a result downloads as pdf, this is the page it is set on.'
-    : 'A template is a hosted page. The routes come from the nav; the palette comes from the accent chosen here.'));
+    : 'A web result template is a hosted page. The routes come from the nav; the palette comes from the accent chosen here.'));
   s.main.append(emb);
 
   /* --------------------------------------------------- inspector = config */
@@ -8116,7 +8116,7 @@ function palRender(q){
     items.push({ g:'Connectors', nm:c.name, sub:c.state === 'off' ? 'not connected' : c.kind,
                  run:() => select('cloud', key('cn', c.id)) }); });
   D.DESIGNS.forEach(d => { if (hitOnly(d.name))
-    items.push({ g:d.kind === 'widget' ? 'Widgets' : 'Templates', nm:d.name, sub:d.shape,
+    items.push({ g:d.kind === 'widget' ? 'Widgets' : 'Result templates', nm:d.name, sub:d.shape,
                  run:() => select('build', key(d.kind === 'widget' ? 'wg' : 'tp', d.id)) }); });
 
   COMMANDS.forEach(c => { if (hit(c.nm)) items.push(c); });
