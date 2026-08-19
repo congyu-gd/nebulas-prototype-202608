@@ -1045,7 +1045,7 @@ exist elsewhere — an app is a new arrangement, not a new vocabulary:
 | Surface | Built from | Apps |
 |---|---|---|
 | `agenda` | a week time grid + a month grid over one event list, and an Upcoming list | Calendar |
-| `cvx` | an upload box, a candidate list, and the fields of whoever is selected | CV extractor |
+| `cvx` | an upload box, a candidate list, and behind each candidate the resume itself | CV extractor |
 | `invx` | the same tray with a second way in — the camera — and totals re-added | Invoice extractor |
 | `files` | rows that attach to the next message | My files |
 | `news` | rows that wrap, unread marked, that ask the thread about themselves | News |
@@ -1079,16 +1079,19 @@ work calendar this prototype cannot write to. Sync says the same thing when
 clicked — nothing upstream to fetch, so it reports being a mirror instead of
 pretending.
 
-**The CV extractor is a tray, not a page-per-file.** An upload box takes CVs
-(from a fixed pretend set — an upload is simulated here like every reply, and
-the box says so), one `Extract` reads everything waiting, and every file is
-read into the **same five fields** — the pre-set format is the point, because
-five shaped records compare and five prose summaries do not. The candidate
-list is the pivot: a row is a person once read and a filename until then, and
-the cards underneath always describe whoever is selected — fields, skills, a
-`check` badge where the model guessed rather than read, and `Save to results`
-filing that candidate under their name. The first CV ships already read so
-the format is visible on arrival.
+**The CV extractor is a tray and a reading room, two screens deep.** The
+first screen is the tray: an upload box (from a fixed pretend set — an upload
+is simulated here like every reply, and the box says so), one `Extract` for
+everything waiting, and a candidate list where a row is a person once read
+and a filename until then. Clicking a candidate goes one screen deeper, to
+**the resume itself** — name, title and location as a header, a summary,
+experience with dates, education, what they work with — with one control, the
+way back to the list. The first pass at this surface showed a "Fields" table
+and a "Skills found" card; both were extraction furniture standing between
+the reader and the person, and the word *field* meant nothing to the reader
+anyway. What remains of the extraction's honesty is the one thing that needs
+a human: a notice period inferred from prose carries a `check` badge and a
+note saying so, and the footer names the file each resume was read from.
 
 **The invoice tray is the CV tray with two ways in** — a picture from disk,
 or a capture from the computer's camera — and each way has its own pretend

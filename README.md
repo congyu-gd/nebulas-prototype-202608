@@ -191,8 +191,8 @@ workspace rather than being pictures of apps — a file attaches to your next
 message, a headline writes the question into the composer, an extraction is filed
 in the results column, and a ticked box or a typed note survives switching apps
 and sections. The CV extractor is a tray: upload several CVs, press one
-`Extract`, and each becomes a candidate in a list — every file read into the
-same five fields, so clicking through the candidates compares them. The
+`Extract`, and each becomes a candidate in a list — clicking a candidate
+opens the resume itself, read from the file, with one way back. The
 invoice extractor is the same tray with a second way in — a picture from disk
 or a capture from the computer's camera — digitised into seven fields with
 the totals re-added rather than trusted, and clicking a vendor's name opens

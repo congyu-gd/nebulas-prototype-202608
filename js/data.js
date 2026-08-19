@@ -1305,7 +1305,7 @@ const APPS = [
    Seven apps, seven shapes — `s` picks the renderer:
 
      agenda   a week at hour resolution, a month, and what is coming up
-     cvx      a CV tray: upload, extract into one format, compare candidates
+     cvx      a CV tray: upload, extract, then read each one as a resume
      invx     an invoice tray: a picture or a camera capture, digitised into
               one format, totals re-added
      files    what has been uploaded, attachable to the next message
@@ -1335,63 +1335,68 @@ const APP_PANELS = {
       [ 8,'11:00',45,'Q3 close','Finance']
     ] },
 
-  /* One reader, one format: every CV is read into the SAME five fields, so
-     candidates compare — ten shaped records line up, ten prose summaries do
-     not. The first CV ships read so the format is visible on arrival; the
-     rest wait in a pretend tray behind the upload box, because an upload is
-     simulated here like every reply. */
-  ap2:{ s:'cvx', sub:'1 of 5 read · one format', foot:'Fields are read from the file, never invented. Uploads are simulated, like every reply here.',
+  /* A tray of CVs, each read into a digital resume — not a table of fields:
+     the reader wants the person, so the detail IS the resume, and the list
+     is how you get between them. The first CV ships read so a resume is one
+     click away on arrival; the rest wait in a pretend tray behind the upload
+     box, because an upload is simulated here like every reply. A note marks
+     what was inferred rather than read — only one of those needs a human. */
+  ap2:{ s:'cvx', sub:'1 of 5 read', foot:'Resumes are read from the file, never invented. Uploads are simulated, like every reply here.',
     cvs:[
       { file:'cv-priya-raman.pdf', pages:'2 pages · read in 1.4s',
-        fields:[
-          ['Name','Priya Raman',''],
-          ['Current title','Staff Data Engineer',''],
-          ['Location','Berlin · EU work permit',''],
-          ['Experience','8 years',''],
-          ['Notice period','~2 months','check']
+        name:'Priya Raman', title:'Staff Data Engineer', loc:'Berlin · EU work permit',
+        years:'8 years', notice:'~2 months', flag:true,
+        summary:'Data engineer who has taken two warehouse migrations end to end — models, orchestration and cost — and writes the runbook as she goes.',
+        exp:[
+          ['Staff Data Engineer','Helios Analytics','2022 – now','Owns the lakehouse: 40+ dbt models on Snowflake, Airflow orchestration, warehouse spend down 30% in a year.'],
+          ['Senior Data Engineer','Nordwind Retail','2018 – 2022','Built the ingestion platform (Kafka → Snowflake) that carried 12 markets; on-call rotation lead.'],
+          ['Data Engineer','Bitfabrik','2016 – 2018','ETL for a payments product; first hire on the data team.']
         ],
-        skills:['Python','dbt','Airflow','Snowflake','Terraform','Kafka','Postgres'],
-        /* Named because a field the model guessed and a field it read are not
-           the same fact, and only one of them needs a human. */
-        note:'Notice period was written in prose — "about two months" — not in a field. Confirm before it goes in an offer.' },
+        edu:'MSc Computer Science, TU Berlin',
+        skills:'Python · dbt · Airflow · Snowflake · Terraform · Kafka · Postgres',
+        note:'The notice period was written in prose — "about two months" — not stated as a date. Confirm before it goes in an offer.' },
       { file:'cv-marco-silva.pdf', pages:'1 page · read in 0.8s',
-        fields:[
-          ['Name','Marco Silva',''],
-          ['Current title','Senior Frontend Engineer',''],
-          ['Location','Lisbon · EU citizen',''],
-          ['Experience','6 years',''],
-          ['Notice period','1 month','']
+        name:'Marco Silva', title:'Senior Frontend Engineer', loc:'Lisbon · EU citizen',
+        years:'6 years', notice:'1 month',
+        summary:'Frontend engineer who treats performance budgets as a feature; happiest owning a design system and the app that stresses it.',
+        exp:[
+          ['Senior Frontend Engineer','Fjord Commerce','2021 – now','Leads the storefront rebuild: Next.js, 60% faster LCP, a component library three teams ship on.'],
+          ['Frontend Engineer','Azul Bank','2019 – 2021','Rebuilt onboarding flows; conversion up 18%; introduced Playwright end-to-end suites.']
         ],
-        skills:['TypeScript','React','Next.js','GraphQL','Playwright','CSS'] },
+        edu:'BSc Computer Engineering, IST Lisbon',
+        skills:'TypeScript · React · Next.js · GraphQL · Playwright · CSS' },
       { file:'cv-anaelle-dupont.pdf', pages:'2 pages · read in 1.1s',
-        fields:[
-          ['Name','Anaëlle Dupont',''],
-          ['Current title','Product Data Analyst',''],
-          ['Location','Paris',''],
-          ['Experience','4 years',''],
-          ['Notice period','3 months','check']
+        name:'Anaëlle Dupont', title:'Product Data Analyst', loc:'Paris',
+        years:'4 years', notice:'3 months', flag:true,
+        summary:'Analyst who turns product questions into experiments and experiments into decisions the roadmap actually follows.',
+        exp:[
+          ['Product Data Analyst','Voilà Media','2022 – now','Owns the experimentation pipeline: 40+ A/B tests a year, self-serve Looker for three squads.'],
+          ['Data Analyst','Rue du Commerce','2020 – 2022','Funnel and retention analysis for the marketplace; built the churn early-warning report.']
         ],
-        skills:['SQL','Looker','Python','A/B testing','dbt'],
-        note:'Notice period comes from the cover letter, not the CV. Confirm which document is right.' },
+        edu:'MSc Statistics, ENSAE Paris',
+        skills:'SQL · Looker · Python · A/B testing · dbt',
+        note:'The notice period comes from the cover letter, not the CV. Confirm which document is right.' },
       { file:'cv-tomasz-kowal.pdf', pages:'1 page · read in 0.7s',
-        fields:[
-          ['Name','Tomasz Kowal',''],
-          ['Current title','DevOps Engineer',''],
-          ['Location','Warsaw · remote',''],
-          ['Experience','9 years',''],
-          ['Notice period','2 weeks','']
+        name:'Tomasz Kowal', title:'DevOps Engineer', loc:'Warsaw · remote',
+        years:'9 years', notice:'2 weeks',
+        summary:'Platform engineer who measures himself on other teams’ deploy frequency; runs infrastructure as a product with SLOs.',
+        exp:[
+          ['DevOps Engineer','Grid Systems','2019 – now','Runs 40 services on Kubernetes across 3 regions; deploys went from weekly to daily with ArgoCD.'],
+          ['Systems Engineer','PolCloud','2015 – 2019','Terraform for everything; cut environment build time from days to 40 minutes.']
         ],
-        skills:['Kubernetes','Terraform','AWS','Go','Prometheus','ArgoCD'] },
+        edu:'BSc Computer Science, Warsaw University of Technology',
+        skills:'Kubernetes · Terraform · AWS · Go · Prometheus · ArgoCD' },
       { file:'cv-lena-hoffmann.pdf', pages:'3 pages · read in 1.6s',
-        fields:[
-          ['Name','Lena Hoffmann',''],
-          ['Current title','ML Engineer',''],
-          ['Location','Munich',''],
-          ['Experience','5 years',''],
-          ['Notice period','~6 weeks','check']
+        name:'Lena Hoffmann', title:'ML Engineer', loc:'Munich',
+        years:'5 years', notice:'~6 weeks', flag:true,
+        summary:'ML engineer who ships models as services — versioned, monitored and cheap to retrain — and retires the ones nobody queries.',
+        exp:[
+          ['ML Engineer','Alpina Mobility','2022 – now','Demand forecasting in production: PyTorch models behind an API, retraining on MLflow, p95 under 80ms.'],
+          ['Data Scientist','Isar Health','2019 – 2022','Risk models for claims triage; moved the team from notebooks to a deployable pipeline.']
         ],
-        skills:['PyTorch','Python','MLflow','Spark','Docker'],
-        note:'"~6 weeks" was inferred from a start-date sentence. Confirm before it goes in an offer.' }
+        edu:'MSc Machine Learning, LMU Munich',
+        skills:'PyTorch · Python · MLflow · Spark · Docker',
+        note:'"~6 weeks" was inferred from a start-date sentence, not stated. Confirm before it goes in an offer.' }
     ] },
 
   /* The same tray as the CVs, with two ways in: a picture from disk or a

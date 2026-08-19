@@ -5747,13 +5747,12 @@ function appState(app){
       s.view = 'Week'; s.wk = 0; s.mo = 0; s.draft = null; s.edit = null;
     }
     if (p.s === 'cvx'){
-      const mk = c => ({ file:c.file, pages:c.pages, note:c.note, read:false,
-        fields:c.fields.map(x => x.slice()), skills:(c.skills || []).slice() });
-      /* The first CV ships read so the format is visible on arrival; the rest
-         wait in the pretend tray behind the upload box. */
+      const mk = c => Object.assign({}, c, { read:false, exp:c.exp.map(x => x.slice()) });
+      /* The first CV ships read so a resume is one click away on arrival; the
+         rest wait in the pretend tray behind the upload box. */
       s.cvs = [Object.assign(mk(p.cvs[0]), { read:true })];
       s.pool = p.cvs.slice(1).map(mk);
-      s.sel = 0;
+      s.open = null;               /* which resume is on screen; null = the list */
     }
     if (p.s === 'invx'){
       const mk = v => ({ file:v.file, src:v.src, pages:v.pages, check:v.check, note:v.note,
@@ -6049,14 +6048,16 @@ function appAgenda(app, p){
 }
 
 /* ----------------------------------------------------------------- cvx
-   The CV extractor is a tray, not a page-per-file: add CVs, press Extract,
-   and every one is read into the SAME five fields — the pre-set format is
-   the point, because five shaped records compare and five prose summaries
-   do not. The candidate list is the pivot: a row selects, and the cards
-   under it always describe the selected candidate. Uploads are simulated
-   from a fixed set, like every reply here, and the box says so. */
+   The CV extractor is a tray and a reading room, two screens deep: the list
+   (upload box, candidates, one Extract for everything waiting), and behind
+   each read candidate THE RESUME ITSELF — who they are, what they have done,
+   where — with one way back to the list. No extraction furniture between the
+   reader and the person: the digital version of a CV is a resume, not a
+   table of fields. Uploads are simulated from a fixed set, like every reply
+   here, and the box says so. */
 function appCvx(app, p){
   const st = appState(app);
+  if (st.open != null) return cvResume(app, st);
   const nodes = [];
 
   const up = appCard('Upload');
@@ -6073,7 +6074,6 @@ function appCvx(app, p){
       return toast('Nothing left to upload — the pretend tray is empty');
     const cv = st.pool.shift();
     st.cvs.push(cv);
-    st.sel = st.cvs.length - 1;
     repaintApp(app);
     toast(cv.file + ' uploaded — Extract reads it');
   };
@@ -6091,58 +6091,85 @@ function appCvx(app, p){
     lead.onclick = () => {
       st.cvs.forEach(c => c.read = true);
       repaintApp(app);
-      toast(plural(unread, 'CV') + ' read into the same 5 fields');
+      toast(plural(unread, 'resume') + ' ready to read');
     };
   } else lead = el('span','badge badge--ok','all read');
   const list = appCard('Candidates', lead);
   st.cvs.forEach((c, i) => {
     list.body.append(listRow({
       lead: dotLead(c.read ? 'ok' : ''),
-      title: c.read ? c.fields[0][1] : c.file,
-      sub: c.read ? c.fields[1][1] + ' · ' + c.pages : 'uploaded · not read yet',
-      current: i === st.sel,
-      onClick: () => { st.sel = i; repaintApp(app); }
+      title: c.read ? c.name : c.file,
+      sub: c.read ? c.title + ' · ' + c.loc : 'uploaded · not read yet',
+      onClick: () => {
+        if (!c.read) return toast(c.file + ' is not read yet — Extract turns it into a resume');
+        st.open = i;
+        repaintApp(app);
+        $('#appSheetBody').scrollTop = 0;
+      }
     }));
   });
-  nodes.push(list.card);
+  nodes.push(list.card, helpNote('Click a candidate to read the resume.'));
+  return nodes;
+}
 
-  const cv = st.cvs[st.sel];
-  if (!cv.read){
-    nodes.push(banner('info', esc(cv.file) + ' is uploaded and unread — Extract fills the five fields.'));
-    return nodes;
-  }
-  const f = appCard('Fields', el('span','badge badge--ok', String(cv.fields.length) + ' read'));
-  f.body.append(defList(cv.fields.map(([k, v, flag]) => [k,
-    esc(v) + (flag === 'check' ? ' <span class="badge badge--warn">check</span>' : '')])));
-  nodes.push(f.card);
+/* The resume, as a page: header, summary, experience, education. The one
+   control is the way back — everything else is the candidate. What the reader
+   inferred rather than read (a notice period written in prose) is the only
+   thing allowed to interrupt, because it is the only thing needing a human. */
+function cvResume(app, st){
+  const c = st.cvs[st.open];
+  const nodes = [];
 
-  if (cv.skills.length){
-    const sk = appCard('Skills found');
-    const wrap = el('div');
-    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:var(--s-2)';
-    cv.skills.forEach(s => wrap.append(el('span','chip','<span>' + esc(s) + '</span>')));
-    sk.body.append(wrap);
-    nodes.push(sk.card);
-  }
-  if (cv.note) nodes.push(banner('warn', esc(cv.note)));
+  const back = el('button','btn btn--ghost btn--sm', ic('chevL', 12) + 'Candidates');
+  back.type = 'button';
+  back.onclick = () => { st.open = null; repaintApp(app); };
+  const bar = el('div');
+  bar.append(back);
+  nodes.push(bar);
 
-  const acts = el('div','live__acts');
-  const save = el('button','btn btn--primary btn--sm', ic('check', 13) + 'Save to results');
-  save.type = 'button';
-  save.onclick = () => fileResult({
-    id:'r-' + app.id + '-' + slug(cv.fields[0][1]),
-    title:cv.fields[0][1] + ' — CV fields', from:app.name, shape:'list',
-    size:plural(cv.fields.length, 'field'),
-    rows:cv.fields.map(([k, v]) => [k, v])
+  const hd = el('div');
+  hd.innerHTML =
+    '<div style="font-size:var(--t-15);font-weight:var(--w-semi);letter-spacing:var(--ls-snug);color:var(--text)">' + esc(c.name) + '</div>' +
+    '<div style="margin-top:2px;font-size:var(--t-12);color:var(--text-2)">' + esc(c.title) + ' · ' + esc(c.loc) + '</div>' +
+    '<div class="field__help" style="margin-top:2px">' + esc(c.years) + ' of experience · notice period ' + esc(c.notice) +
+      (c.flag ? ' <span class="badge badge--warn">check</span>' : '') + '</div>';
+  nodes.push(hd);
+
+  const sum = el('p');
+  sum.style.cssText = 'margin:0;font-size:var(--t-12);line-height:var(--lh-prose);color:var(--text-2)';
+  sum.textContent = c.summary;
+  nodes.push(sum);
+
+  const ex = appCard('Experience');
+  c.exp.forEach(([role, org, span, did]) => {
+    const row = el('div');
+    row.style.cssText = 'padding:var(--s-2) 0';
+    row.innerHTML =
+      '<div style="display:flex;align-items:baseline;gap:var(--s-2)">' +
+        '<span style="font-size:var(--t-12);font-weight:var(--w-medium);color:var(--text)">' + esc(role) + '</span>' +
+        '<span style="font-size:var(--t-11);color:var(--text-3)">' + esc(org) + '</span>' +
+        '<span class="toolbar__spacer"></span>' +
+        '<span class="t-mono" style="font-size:var(--t-11);color:var(--text-4);flex:none">' + esc(span) + '</span>' +
+      '</div>' +
+      '<div style="margin-top:2px;font-size:var(--t-12);line-height:var(--lh-ui);color:var(--text-3)">' + esc(did) + '</div>';
+    ex.body.append(row);
   });
-  acts.append(save);
-  nodes.push(acts, helpNote('Every CV is read into the same five fields, so candidates compare.'));
+  nodes.push(ex.card);
+
+  const ed = appCard('Education');
+  ed.body.innerHTML =
+    '<div style="font-size:var(--t-12);color:var(--text-2)">' + esc(c.edu) + '</div>' +
+    '<div class="field__help" style="margin-top:var(--s-2)">Works with ' + esc(c.skills) + '</div>';
+  nodes.push(ed.card);
+
+  if (c.note) nodes.push(banner('warn', esc(c.note)));
+  nodes.push(helpNote('Read from ' + c.file + ' · ' + c.pages + '.'));
   return nodes;
 }
 
 /* ----------------------------------------------------------------- invx
    The invoice tray is the CV tray with two ways in: a picture from disk, or
-   a capture from the computer's camera â each fed by its own pretend pool,
+   a capture from the computer's camera — each fed by its own pretend pool,
    because the two buttons should keep meaning two different things. One
    Digitise reads everything waiting into the same seven fields, totals
    re-added rather than trusted, and a field the frame cropped out says so
