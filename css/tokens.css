@@ -224,3 +224,28 @@
   --shadow-md:0 4px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
   --shadow-lg:0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.07);
 }
+
+/* --------------------------------------------------------- accent schemes
+   The accent is one meaning worn everywhere, so a scheme redefines the four
+   accent tokens and nothing else — buttons, focus, links and live marks all
+   follow. Each scheme has a dark half, because an accent deep enough for
+   white text on a light page is too dark to sit on a dark one. `nebula`
+   restates the default so a swatch can show it while another scheme is
+   active. Custom hues are computed at runtime from this same recipe, in
+   Account → Appearance. */
+[data-accent="nebula"]{ --accent:#5b5bd6; --accent-hi:#4f4fc9; --accent-soft:rgba(91,91,214,.10); --accent-line:rgba(91,91,214,.28) }
+[data-accent="ocean"]{  --accent:#0673a8; --accent-hi:#055f8c; --accent-soft:rgba(6,115,168,.10);  --accent-line:rgba(6,115,168,.28) }
+[data-accent="forest"]{ --accent:#1f7a44; --accent-hi:#196838; --accent-soft:rgba(31,122,68,.10);  --accent-line:rgba(31,122,68,.28) }
+[data-accent="ember"]{  --accent:#c2410c; --accent-hi:#a83809; --accent-soft:rgba(194,65,12,.10);  --accent-line:rgba(194,65,12,.28) }
+[data-accent="plum"]{   --accent:#a21caf; --accent-hi:#8b1798; --accent-soft:rgba(162,28,175,.10); --accent-line:rgba(162,28,175,.28) }
+
+[data-theme="dark"][data-accent="nebula"], [data-theme="dark"] [data-accent="nebula"]{
+  --accent:#7c7cf0; --accent-hi:#8f8ff5; --accent-soft:rgba(124,124,240,.14); --accent-line:rgba(124,124,240,.34) }
+[data-theme="dark"][data-accent="ocean"], [data-theme="dark"] [data-accent="ocean"]{
+  --accent:#4db3e6; --accent-hi:#66c0ee; --accent-soft:rgba(77,179,230,.14); --accent-line:rgba(77,179,230,.34) }
+[data-theme="dark"][data-accent="forest"], [data-theme="dark"] [data-accent="forest"]{
+  --accent:#52c98a; --accent-hi:#6ad39b; --accent-soft:rgba(82,201,138,.14); --accent-line:rgba(82,201,138,.34) }
+[data-theme="dark"][data-accent="ember"], [data-theme="dark"] [data-accent="ember"]{
+  --accent:#f08a4b; --accent-hi:#f49d66; --accent-soft:rgba(240,138,75,.14); --accent-line:rgba(240,138,75,.34) }
+[data-theme="dark"][data-accent="plum"], [data-theme="dark"] [data-accent="plum"]{
+  --accent:#d97ee8; --accent-hi:#e196ec; --accent-soft:rgba(217,126,232,.14); --accent-line:rgba(217,126,232,.34) }

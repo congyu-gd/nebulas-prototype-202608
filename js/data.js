@@ -1523,6 +1523,10 @@ const CLOUD = [
 const ACCOUNT = {
   name:'Cong Yu', email:'cong.yu@gnomondigital.com', role:'Owner',
   org:'Gnomon Digital', plan:'Team', seats:'3 of 10 seats used',
+  /* Personal token spend, in thousands, newest first, starting YESTERDAY —
+     today is counted live by the session (the status bar's own number). */
+  usage:{ month:'2.41M tokens', cost:'$36.20',
+    days:[112, 96, 148, 131, 88, 42, 37, 150, 164, 129, 101, 58, 44, 121] },
   sessions:[
     ['This device','macOS · Chrome','now'],
     ['MacBook Pro','macOS · Safari','2 h ago'],

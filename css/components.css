@@ -938,6 +938,27 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .notebody hr{ border:0; border-top:var(--border) solid var(--line); margin:var(--s-4) 0 }
 
+/* ================================================================== swatch
+   A colour offered as a choice: the dot shows the scheme's own accent (it
+   carries the scheme's data-accent, so the token resolves inside it), and
+   the pressed ring is drawn in whatever accent is currently in force. */
+.swatch{
+  display:inline-flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-1) var(--s-3) var(--s-1) var(--s-2);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-full);
+  font-size:var(--t-12); color:var(--text-2);
+  transition:border-color var(--fast) var(--ease);
+}
+.swatch:hover{ border-color:var(--line-strong) }
+.swatch[aria-pressed="true"]{ border-color:var(--accent); color:var(--text) }
+.swatch__dot{
+  flex:none;
+  width:var(--s-3); height:var(--s-3);
+  border-radius:var(--r-full);
+  background:var(--accent);
+}
+
 /* ================================================================= dropbox
    An upload box: the dashed edge is the affordance, and the help line under
    the invitation is where the box stays honest about what an upload is in a

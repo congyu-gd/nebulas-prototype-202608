@@ -238,5 +238,14 @@ Usage is aggregate by default: individual rows sit behind a button, revealing
 them is not remembered, and the page reports counts and categories rather than
 anything anyone typed.
 
+**Account** (the person at the rail's foot) holds the personal pages: profile,
+members and sessions, plus **Usage** — today's tokens counted live from the
+session (the status bar reads the same number) over a fourteen-day history
+graded against the daily allowance — and **Appearance**: theme, density, and
+the **accent**. Five preset schemes recolour the one accent everywhere
+(buttons, focus, links, live marks), each with a dark half, and a custom hue
+slider runs any colour through the same recipe. All of it is remembered on
+the device.
+
 Responses in the workspace are simulated from a fixed script. Nothing leaves
 the page.

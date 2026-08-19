@@ -1154,6 +1154,22 @@ in a panel is filed, shareable and downloadable exactly like a table a thread
 produced. Its `from` is the app rather than a thread, which is why the detail
 footer only offers navigation when the origin *is* one.
 
+### The accent is configurable, because it is one token
+
+Account → Appearance offers five preset schemes and a custom hue. A scheme
+is honest about what it is: a redefinition of the four accent tokens and
+nothing else, declared in `tokens.css` as `data-accent` blocks — so colour
+never leaves the token file, and everything the accent means (the primary
+action, focus, links, live marks) recolours together. Each scheme has a dark
+half, because an accent deep enough to hold white text on a light page is
+too dark to sit on a dark one; a custom hue runs through the same recipe at
+runtime and is recomputed when the theme flips. The preset swatches show
+their own colour whichever scheme is in force — each dot carries its
+scheme's `data-accent`, so the token resolves inside it. Account → Usage is
+the personal ledger: today is the session's own live count (the status bar
+reads the same number), and fourteen days of history are graded against the
+daily allowance in flat bars, because a measurement is not an action.
+
 ### Which column yields
 
 Four columns can be open at once and only one of them is the conversation. On a

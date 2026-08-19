@@ -88,6 +88,7 @@ const state = {
   busy:false,
   model:D.MODELS[0],
   tokens:0, turns:0, tools:0,
+  accent:'',                   /* '' default · a preset name · a custom hue */
   /* The results column is one store for the whole workspace, so it has nothing
      to scope: `id` is the result being read, null the list itself. */
   art:{ id:null, pane:0 },
@@ -474,6 +475,8 @@ const SECTIONS = {
     label:'Account', icon:'user', listTitle:'Account',
     list(body){
       [['profile','Profile','Name, role and plan'],
+       ['usage','Usage','Tokens spent, today and before'],
+       ['appearance','Appearance','Theme, density and the accent'],
        ['members','Members','Who can see and act here'],
        ['sessions','Sessions','Where you are signed in']].forEach(([id, name, sub]) =>
         body.append(listRow({
@@ -483,7 +486,8 @@ const SECTIONS = {
     },
     head(){
       const a = D.ACCOUNT;
-      return { title:{ profile:'Profile', members:'Members', sessions:'Sessions' }[state.item.account], sub:a.email };
+      return { title:{ profile:'Profile', usage:'Usage', appearance:'Appearance',
+        members:'Members', sessions:'Sessions' }[state.item.account], sub:a.email };
     },
     main(body){ accountView(body, state.item.account); }
   }
@@ -4892,6 +4896,86 @@ function accountView(body, view){
     b.onclick = () => toast('Signed out other sessions — prototype');
     pad.append(b);
 
+  } else if (view === 'usage'){
+    pad.append(pageHead('Usage',
+      'What this account spends, in tokens. Today is the session\'s own live count — ' +
+      'the status bar reads the same number — and the history is example data, like every figure here.'));
+    const u = a.usage;
+    const week = u.days.slice(0, 6).reduce((s, v) => s + v, 0);
+    pad.append(statGrid([
+      ['Today', nf(state.tokens) + ' / 200k'],
+      ['Last 7 days', nf((week + Math.round(state.tokens / 1000)) * 1000)],
+      ['This month', u.month],
+      ['Cost this month', u.cost]
+    ]));
+    pad.lastChild.style.marginBottom = 'var(--s-8)';
+
+    const sec = el('section','section');
+    sec.append(sectionHead('Day by day',
+      '<span class="t-mono">against the 200k daily allowance</span>'));
+    const wrap = el('div','barlist barlist--flat');
+    const bar = (k, v, pct) => el('div','barlist__row',
+      '<span class="barlist__k">' + esc(k) + '</span>' +
+      '<span class="meter"><i style="width:' + Math.min(100, pct).toFixed(1) + '%"></i></span>' +
+      '<span class="barlist__v">' + esc(v) + '</span>');
+    wrap.append(bar('Today · live', nf(state.tokens), state.tokens / 2000));
+    u.days.forEach((v, i) => {
+      const d = new Date(T0);
+      d.setDate(d.getDate() - (i + 1));
+      const label = i === 0 ? 'Yesterday'
+        : DAYS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+      wrap.append(bar(label, v + 'k', v / 2));
+    });
+    sec.append(wrap);
+    pad.append(sec);
+
+  } else if (view === 'appearance'){
+    pad.append(pageHead('Appearance','Theme, density, and the accent every action wears. All three are remembered on this device.'));
+    const wrap = el('div');
+    wrap.style.cssText = 'display:grid;gap:var(--s-6);max-width:520px';
+    wrap.append(field('Theme', segCtl(['Light','Dark'],
+      document.documentElement.dataset.theme === 'dark' ? 'Dark' : 'Light',
+      v => setTheme(v.toLowerCase()))));
+    wrap.append(field('Density', segCtl(['Compact','Comfortable','Roomy'], densityLabel(),
+      v => setDensity(v.toLowerCase() === 'comfortable' ? '' : v.toLowerCase())),
+      'Density is a single token. Every gap in the interface derives from it.'));
+
+    /* Presets: each dot carries its scheme's data-accent, so it shows that
+       scheme's colour whichever one is in force. */
+    const sw = el('div');
+    sw.style.cssText = 'display:flex;flex-wrap:wrap;gap:var(--s-2)';
+    const presets = [['','Nebula'], ['ocean','Ocean'], ['forest','Forest'], ['ember','Ember'], ['plum','Plum']];
+    presets.forEach(([k, name]) => {
+      const b = el('button','swatch',
+        '<span class="swatch__dot" data-accent="' + (k || 'nebula') + '"></span><span>' + esc(name) + '</span>');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(state.accent === k));
+      b.onclick = () => { state.accent = k; applyAccent(); select('account','appearance'); };
+      sw.append(b);
+    });
+    wrap.append(field('Accent', sw,
+      'One accent, one meaning — a scheme recolours it everywhere: buttons, focus, links and live marks.'));
+
+    /* Custom: a hue, run through the same recipe the presets use. Sliding
+       repaints nothing but the tokens, so the drag never loses the thumb. */
+    const cust = el('div');
+    cust.style.cssText = 'display:flex;align-items:center;gap:var(--s-3)';
+    const r = el('input','range');
+    r.type = 'range'; r.min = 0; r.max = 359; r.step = 1;
+    r.value = typeof state.accent === 'number' ? state.accent : 245;
+    const dot = el('span','swatch__dot');
+    if (typeof state.accent !== 'number') dot.style.background = 'hsl(' + r.value + ' 55% 50%)';
+    r.oninput = () => {
+      state.accent = +r.value;
+      applyAccent();
+      dot.style.background = '';                       /* back to var(--accent), now custom */
+      $$('.swatch', sw).forEach(x => x.setAttribute('aria-pressed','false'));
+    };
+    cust.append(r, dot);
+    wrap.append(field('Custom', cust,
+      'Drag for your own hue. It follows light and dark like the presets do.'));
+    pad.append(wrap);
+
   } else {
     pad.append(pageHead(a.name, a.email, '<span class="badge">' + esc(a.role) + '</span>'));
     const card = el('div','card');
@@ -7255,6 +7339,8 @@ function setTheme(t){
   document.documentElement.dataset.theme = t;
   $('#stTheme').textContent = t === 'dark' ? 'Dark' : 'Light';
   store('theme', t);
+  /* A custom accent is computed per theme, so flipping recomputes it. */
+  applyAccent();
 }
 function densityLabel(){
   const d = document.documentElement.dataset.density;
@@ -7265,6 +7351,33 @@ function setDensity(d){
   else delete document.documentElement.dataset.density;
   store('density', d || '');
   $('#stDensity').textContent = densityLabel();
+}
+
+/* ------------------------------------------------------------ the accent
+   state.accent is '' (the default), a preset name, or a hue number. Presets
+   live in tokens.css as data-accent schemes; a custom hue is run through the
+   same recipe at runtime, and recomputed when the theme flips, because an
+   accent deep enough for a light page is too dark for a dark one. */
+function applyAccent(){
+  const root = document.documentElement;
+  const a = state.accent || '';
+  ['--accent','--accent-hi','--accent-soft','--accent-line']
+    .forEach(k => root.style.removeProperty(k));
+  if (typeof a === 'number'){
+    root.dataset.accent = 'custom';
+    const dark = root.dataset.theme === 'dark';
+    const s = dark ? ' 62% ' : ' 55% ';
+    const l = dark ? '68%' : '46%', hi = dark ? '75%' : '39%';
+    root.style.setProperty('--accent', 'hsl(' + a + s + l + ')');
+    root.style.setProperty('--accent-hi', 'hsl(' + a + s + hi + ')');
+    root.style.setProperty('--accent-soft', 'hsl(' + a + s + l + ' / ' + (dark ? '.14' : '.10') + ')');
+    root.style.setProperty('--accent-line', 'hsl(' + a + s + l + ' / ' + (dark ? '.34' : '.28') + ')');
+  } else if (a){
+    root.dataset.accent = a;
+  } else {
+    delete root.dataset.accent;
+  }
+  store('accent', String(a));
 }
 
 /* ---------------------------------------------------- panel management
@@ -7477,6 +7590,10 @@ function boot(){
 
   /* restore preferences */
   setTheme(load('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  /* The remembered accent: a preset's name, or a bare number for a hue. */
+  const acc = load('accent') || '';
+  state.accent = /^\d+$/.test(acc) ? +acc : acc;
+  applyAccent();
   setDensity(load('density') || '');
   state.appsWide = load('appswide') === '1';
 
