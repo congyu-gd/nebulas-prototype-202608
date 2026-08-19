@@ -1382,7 +1382,7 @@ function parseRoutine(text){
   /* The steps: drop the cadence clause — the words about WHEN, kept tight so a
      sentence with no comma after them ("every month prepare the summary") does
      not lose its work to the clause — then split on the joins people actually
-     say. Fragments too short to be work are noise from the split. */
+     say. */
   const body = text
     .replace(/\b(every|each)\s+(morning|day|evening|night|week|weekday|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b(\s+(morning|evening|night|afternoon))?\s*[,;]?\s*/i, '')
     /* One-time WHEN-words and bare cadence adverbs go the same way: they say
@@ -1390,30 +1390,66 @@ function parseRoutine(text){
     .replace(/\b(tomorrow|tonight|today|once|daily|weekly|monthly|hourly)\b(\s+(morning|evening|night|afternoon))?\s*[,;]?\s*/i, '')
     .replace(/\bon\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s*[,;]?\s*/i, '')
     .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/ig, '');
-  let steps = body.split(/\s*(?:;|,|\bthen\b|\band\b)\s*/i)
+  const steps = splitSteps(body, text);
+
+  const named = nameFromSteps(steps);
+  return { title:named.noun ? CADENCE_ADJ[every] + ' ' + named.noun : named.last,
+           every:every, cron:cron, steps:steps, out:named.out };
+}
+
+/* Split on the joins people actually say. Fragments too short to be work are
+   noise from the split; nothing splitting at all falls back to the whole
+   sentence as one step. Shared by every maker that reads steps out of prose. */
+function splitSteps(body, whole){
+  const steps = body.split(/\s*(?:;|,|\bthen\b|\band\b)\s*/i)
     .map(s => s.trim().replace(/^[-–—.\s]+|[.\s]+$/g, '').replace(/\s{2,}/g, ' '))
     .filter(s => s.length > 2)
     .slice(0, 5)
     .map(s => s.charAt(0).toUpperCase() + s.slice(1));
-  if (!steps.length) steps = [text.trim().charAt(0).toUpperCase() + text.trim().slice(1)];
+  if (!steps.length && whole && whole.trim())
+    steps.push(whole.trim().charAt(0).toUpperCase() + whole.trim().slice(1));
+  return steps;
+}
 
-  /* The name and the product both come from the last step — the thing the
-     routine exists to end on. A step that MAKES something ("write me a
-     briefing") names the routine after its artifact; a step that just does
-     something ("email my accountant") is already the best name it will get. */
-  const last = steps[steps.length - 1];
+/* The name and the product both come from the last step — the thing the work
+   exists to end on. A step that MAKES something ("write me a briefing") names
+   it after its artifact; a step that just does something ("email my
+   accountant") is already the best name it will get. */
+function nameFromSteps(steps){
+  const last = steps[steps.length - 1] || '';
   const made = last.match(/^(write|draft|make|prepare|plan|post|build|compose)\s+(?:me\s+|my\s+|us\s+|a\s+|an\s+|the\s+)*(.+)$/i);
   const noun = made ? made[2].trim().toLowerCase() : null;
-  return { title:noun ? CADENCE_ADJ[every] + ' ' + noun : last,
-           every:every, cron:cron, steps:steps,
+  return { last:last, noun:noun,
            out:noun ? (/^[aeiou]/i.test(noun) ? 'An ' : 'A ') + noun + ', in this chat'
                     : 'A note in this chat when it is done' };
 }
 
-/* The parse, wrapped as a scripted turn: a short trace that says what was
-   read, one honest paragraph, and the editable widget. No cites — a routine
-   reads no corpus, and inventing one would lie. */
+/* Which maker a sentence is asking for. The workflow clause is anchored at the
+   start, so "a widget…, updated whenever I walk" stays a widget; "script" is
+   explicit; "card" is deliberately NOT a widget word, because "card statement"
+   is in the expense starter's own vocabulary. Everything else is a routine. */
+function detectIntent(text){
+  if (/^\s*(when|whenever|each time|every time|as soon as)\b/i.test(text)) return 'workflow';
+  const low = ' ' + text.toLowerCase() + ' ';
+  if (/\b(script|bash|shell|python|\.sh|\.py|command line|cli)\b/.test(low)) return 'script';
+  if (/\b(widget|tile|dashboard|embed|kpi)\b/.test(low)) return 'element';
+  return 'program';
+}
+
+/* One sentence, four makers. autoScript is the dispatcher; each *Turn wraps
+   its parse as a scripted turn — a short trace that says what was read, one
+   honest paragraph, and a widget whose Create action writes into the thing's
+   own home. No cites anywhere — none of these read a corpus, and inventing
+   one would lie. */
 function autoScript(text){
+  const kind = detectIntent(text);
+  return kind === 'script' ? scriptTurn(text)
+       : kind === 'element' ? elementTurn(text)
+       : kind === 'workflow' ? workflowTurn(text)
+       : programTurn(text);
+}
+
+function programTurn(text){
   const r = parseRoutine(text);
   return {
     steps:[
@@ -1427,6 +1463,83 @@ function autoScript(text){
        'Nothing runs until you press **Create the program**; then it lives in Chat → Schedule with the rest of what runs by itself.',
     w:{ kind:'program', title:r.title, meta:plural(r.steps.length, 'step'),
         every:r.every, cron:r.cron, steps:r.steps, out:r.out }
+  };
+}
+
+/* ------------------------------------------------------------ the script maker
+   "A script that renames my photos by date" cannot be really written here —
+   every answer in this prototype is simulated — so what is generated is an
+   honest skeleton: each parsed step becomes a function whose body says TODO,
+   main() calls them in order, and the header quotes the ask so the file
+   remembers where it came from. Two runtimes, because the choice of Python or
+   Bash is the reader's, not the parser's. The code widget files it in the
+   results column by itself (liveResult's fallback), where it downloads as
+   .py or .sh — so the widget needs no Save button. */
+function parseScript(text){
+  const ask = text.trim();
+  const body = ask
+    .replace(/^\s*(?:write|make|build|create|give)?\s*(?:me\s+|us\s+)?(?:a|an|the)?\s*(?:\w+[- ])?script\s+(?:that|to|which)\s*/i, '')
+    .replace(/\b(every|each)\s+(morning|day|evening|night|week|weekday|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s*[,;]?\s*/i, '');
+  const steps = splitSteps(body, ask);
+  const r = parseRoutine(text);           /* for the scheduler comment only */
+  /* A script is named for what it chiefly does — its first step — where a
+     routine is named for what it ends on. */
+  const named = nameFromSteps(steps);
+  const title = (named.noun || steps[0] || 'automation')
+    .replace(/^./, c => c.toUpperCase());
+  return { ask:ask, title:title, steps:steps,
+           recurring:r.every !== 'One time', cron:r.cron || CRON_OF[r.every] };
+}
+
+const snakeCase = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'step';
+
+function buildScript(r){
+  const when = r.recurring
+    ? '# Meant to recur — ' + r.cron + '. Wire it into cron or launchd once it does something.'
+    : '# Run it by hand until it earns a schedule.';
+  const py =
+    '"""' + r.title + ' — a skeleton, not a program.\n\n' +
+    'Generated from: "' + r.ask + '"\n' +
+    'Each step is a named hole. Fill them in the order main() calls them.\n' +
+    '"""\n' + when + '\n\n' +
+    r.steps.map(s =>
+      'def ' + snakeCase(s) + '():\n' +
+      '    """' + s + '"""\n' +
+      '    # TODO: this is where "' + s.toLowerCase() + '" happens\n' +
+      '    pass\n').join('\n') +
+    '\ndef main():\n' +
+    r.steps.map(s => '    ' + snakeCase(s) + '()').join('\n') + '\n\n' +
+    'if __name__ == "__main__":\n    main()\n';
+  const sh =
+    '#!/usr/bin/env bash\n' +
+    '# ' + r.title + ' — a skeleton, not a program.\n' +
+    '# Generated from: "' + r.ask + '"\n' +
+    when + '\n' +
+    'set -euo pipefail\n\n' +
+    r.steps.map(s =>
+      snakeCase(s) + '() {\n' +
+      '  # TODO: this is where "' + s.toLowerCase() + '" happens\n' +
+      '  :\n' +
+      '}\n').join('\n') +
+    '\nmain() {\n' +
+    r.steps.map(s => '  ' + snakeCase(s)).join('\n') + '\n}\n\nmain "$@"\n';
+  return { Python:py, Bash:sh };
+}
+
+function scriptTurn(text){
+  const r = parseScript(text);
+  return {
+    steps:[
+      { n:'script.read',  d:plural(r.steps.length, 'step') + ' to automate', t:'0.6s' },
+      { n:'script.write', d:'2 runtimes · skeleton', t:'0.7s' }
+    ],
+    md:'Here is **' + r.title + '** as a script skeleton — Python and Bash, each parsed step a ' +
+       'named function with a TODO where the work goes, because a real run is more than this ' +
+       'prototype can honestly claim.\n\n' +
+       'It is already filed in the results column, where it downloads as `.py` or `.sh` depending ' +
+       'on the runtime showing. Copy takes the one on screen.',
+    w:{ kind:'code', title:r.title, meta:'2 runtimes', res:r.title + ' — skeleton',
+        variants:buildScript(r) }
   };
 }
 
