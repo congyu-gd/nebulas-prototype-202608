@@ -1656,12 +1656,15 @@ function parseElement(text){
               : 'kpi';
   /* The name: what follows the widget word — "a widget showing my daily step
      count" names itself. */
-  const m = text.match(/\b(?:widget|tile|dashboard|kpi|embed)\b\s*(?:showing|for|of|that shows|with|tracking)?\s*(?:my\s+|the\s+|our\s+)?([^,.;]+)/i);
+  const m = text.match(/\b(?:widget|tile|dashboard|kpi|embed)\b\s*([^,.;]+)/i);
   const name = (m && m[1] ? m[1].trim() : 'New widget')
+    /* "dashboard tile for open tickets" — a second widget word, connectors and
+       articles are all preamble; strip until the words are the subject's own. */
+    .replace(/^(?:(?:a|an|the|my|our)\s+|(?:widget|tile|dashboard|kpi|embed)\s+|(?:showing|for|of|that shows|with|tracking|to show|to)\s+)+/i, '')
     /* The thing measured, not the sentence about it: a comparison clause
        ("against a 10,000-step goal") belongs to the caption, not the name. */
     .replace(/\s+(against|versus|vs\.?|compared to|towards?)\b.*$/i, '')
-    .replace(/\s{2,}/g, ' ').replace(/^./, c => c.toUpperCase());
+    .replace(/\s{2,}/g, ' ').replace(/^./, c => c.toUpperCase()) || 'New widget';
 
   const cfg = { title:name, sub:'', accent:'Nebulas', radius:'Soft', theme:'Follow',
                 width:shape === 'kpi' ? 'Narrow' : 'Medium', header:true, credit:true };
