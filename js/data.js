@@ -1898,6 +1898,111 @@ const CASES = {
         steps:['Write the day’s LinkedIn post'],
         out:'A post draft in this chat' }
   },
+  'Photo tidy script':{
+    title:'A photo-tidy script',
+    ask:'A script that renames my photos by date, then moves them into folders by month.',
+    steps:[
+      { n:'script.read',  d:'2 steps to automate', t:'0.6s' },
+      { n:'script.write', d:'2 runtimes · skeleton', t:'0.7s' }
+    ],
+    md:[
+      'Here is **Renames my photos by date** as a script skeleton — Python and Bash, each parsed step a named function with a TODO where the work goes, because a real run is more than this prototype can honestly claim.',
+      '',
+      'It is already filed in the results column, where it downloads as `.py` or `.sh` depending on the runtime showing. Copy takes the one on screen.'
+    ].join('\n'),
+    /* The variants are the generator's own output for this ask, verbatim, so
+       the worked example and a typed sentence produce the same file. */
+    w:{ kind:'code', title:'Renames my photos by date', meta:'2 runtimes',
+        res:'Renames my photos by date — skeleton',
+        variants:{
+          Python:[
+      "\"\"\"Renames my photos by date \u2014 a skeleton, not a program.",
+      "",
+      "Generated from: \"A script that renames my photos by date, then moves them into folders by month.\"",
+      "Each step is a named hole. Fill them in the order main() calls them.",
+      "\"\"\"",
+      "# Run it by hand until it earns a schedule.",
+      "",
+      "def renames_my_photos_by_date():",
+      "    \"\"\"Renames my photos by date\"\"\"",
+      "    # TODO: this is where \"renames my photos by date\" happens",
+      "    pass",
+      "",
+      "def moves_them_into_folders_by_month():",
+      "    \"\"\"Moves them into folders by month\"\"\"",
+      "    # TODO: this is where \"moves them into folders by month\" happens",
+      "    pass",
+      "",
+      "def main():",
+      "    renames_my_photos_by_date()",
+      "    moves_them_into_folders_by_month()",
+      "",
+      "if __name__ == \"__main__\":",
+      "    main()",
+      ""
+    ].join('\n'),
+          Bash:[
+      "#!/usr/bin/env bash",
+      "# Renames my photos by date \u2014 a skeleton, not a program.",
+      "# Generated from: \"A script that renames my photos by date, then moves them into folders by month.\"",
+      "# Run it by hand until it earns a schedule.",
+      "set -euo pipefail",
+      "",
+      "renames_my_photos_by_date() {",
+      "  # TODO: this is where \"renames my photos by date\" happens",
+      "  :",
+      "}",
+      "",
+      "moves_them_into_folders_by_month() {",
+      "  # TODO: this is where \"moves them into folders by month\" happens",
+      "  :",
+      "}",
+      "",
+      "main() {",
+      "  renames_my_photos_by_date",
+      "  moves_them_into_folders_by_month",
+      "}",
+      "",
+      "main \"$@\"",
+      ""
+    ].join('\n')
+        } }
+  },
+  'Step-count widget':{
+    title:'A step-count widget',
+    ask:'A widget showing my daily step count against a 10,000-step goal.',
+    steps:[
+      { n:'element.read',  d:'kpi · daily step count', t:'0.6s' },
+      { n:'element.draft', d:'previewed with Build’s own canvas', t:'0.5s' }
+    ],
+    md:[
+      'Here is **Daily step count** as a kpi widget, previewed with the same canvas Build uses — the figure is a sample until it is bound to a source.',
+      '',
+      'Name it below and press **Create in Build**; everything else — accent, theme, width, the numbers — is set in Build’s inspector, because two editors of one element would drift.'
+    ].join('\n'),
+    w:{ kind:'element', title:'Daily step count', meta:'kpi widget', shape:'kpi',
+        name:'Daily step count',
+        cfg:{ title:'Daily step count', sub:'today', accent:'Nebulas', radius:'Soft',
+              theme:'Follow', width:'Narrow', header:true, credit:true,
+              value:'8,412', delta:'+12%', cap:'Against a 10,000-step goal' } }
+  },
+  'Ticket triage workflow':{
+    title:'Tickets, triaged as they arrive',
+    ask:'When a ticket arrives, triage it, then post the summary to #support.',
+    steps:[
+      { n:'routine.parse', d:'on a ticket arrives · 2 steps', t:'0.6s' },
+      { n:'program.draft', d:'Ticket triage', t:'0.5s' }
+    ],
+    md:[
+      'Here is your workflow: **Ticket triage**, running each time **a ticket arrives** — two steps, in order.',
+      '',
+      'The trigger and both steps are editable below. An event has no computable next run, so the schedule will say *when it fires* rather than guess a time. Nothing runs until you press **Create the program**.'
+    ].join('\n'),
+    w:{ kind:'program', title:'Ticket triage', meta:'2 steps',
+        trigger:'a ticket arrives',
+        steps:['Triage the ticket','Post the summary to #support'],
+        out:'A triage note in this chat' }
+  },
   'Sunday meal plan':{
     title:'Meals, planned on Sundays',
     ask:'Every Sunday evening, check what is in the fridge, plan seven dinners, and write the shopping list.',

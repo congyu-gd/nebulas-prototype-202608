@@ -1377,7 +1377,8 @@ function syncResult(w){
 const STARTERS = {
   'Work':['Documentation','Slide','Visualization','Explanation','Sales insight','CV filter'],
   'Data Discovery':['Profile a table','Find anomalies','Join two sources','Chart a trend','Explain a metric'],
-  'Auto program':['Morning briefing','Friday expense sweep','Daily LinkedIn post','Sunday meal plan']
+  'Auto program':['Morning briefing','Friday expense sweep','Daily LinkedIn post','Sunday meal plan',
+                 'Photo tidy script','Step-count widget','Ticket triage workflow']
 };
 let heroMode = 'Work';
 let heroNew = false;           /* the new-dashboard form is open */
@@ -1386,7 +1387,7 @@ let heroNew = false;           /* the new-dashboard form is open */
 const HERO_NOTE = {
   'Work':'Each one runs a worked example. Anything definite it produces is kept in the results column on the right.',
   'Data Discovery':'Each one runs a worked example. Anything definite it produces is kept in the results column on the right.',
-  'Auto program':'Describe a routine in plain words and it becomes a program — a row in Chat → Schedule that runs on a cadence. Nothing runs until you press Create.'
+  'Auto program':'Describe what should exist — a routine, a when-this-then-that workflow, a script, or a web widget. The reply drafts it: programs and workflows land in Chat → Schedule, scripts in the results column, widgets in Build. Nothing runs until you press Create.'
 };
 /* The best documentation of the grammar is an instance of it. */
 const AUTO_PH = 'Every morning, check the weather and my calendar, then write me a briefing';
