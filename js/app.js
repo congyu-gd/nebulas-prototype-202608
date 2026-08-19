@@ -906,7 +906,8 @@ function liveFoot(w){
   if (w.kind === 'code')  text = w.variant;
   if (w.kind === 'program') text = w.created
     ? 'created · in Chat → Schedule'
-    : (w.cron || CRON_OF[w.every]) + ' · not created yet — nothing runs until you press Create';
+    : (w.trigger ? 'on ' + w.trigger : (w.cron || CRON_OF[w.every])) +
+      ' · not created yet — nothing runs until you press Create';
   if (w.kind === 'element') text = w.created
     ? 'created · in Build → Design elements'
     : w.shape + ' widget · not created yet — nothing ships until you press Create';
@@ -1115,7 +1116,8 @@ const LIVE_KIND = {
   program(body, w){
     if (w.created){
       body.append(defList([
-        ['Cadence', esc(w.cron || CRON_OF[w.every])],
+        w.trigger ? ['Runs', 'on ' + esc(w.trigger)]
+                  : ['Cadence', esc(w.cron || CRON_OF[w.every])],
         ['Steps', w.steps.map(esc).join(' → ')],
         ['Produces', esc(w.out)]
       ]));
@@ -1129,19 +1131,27 @@ const LIVE_KIND = {
       return;
     }
 
-    const once = w.every === 'One time';
-    const cad = field('How often',
-      segCtl(PROG_CADENCE, w.every, v => {
-        w.every = v;
-        /* The parsed clock belonged to the sentence; picking a cadence by hand
-           makes the seg the truth, so the override goes. */
-        delete w.cron;
-        rerender(w);
-      }),
-      once
-        ? (w.cron || 'as soon as it is created') + ' · runs once, then it is done'
-        : (w.cron || CRON_OF[w.every]) + ' · first run ' + NEXT_OF[w.every]);
-    body.append(cad);
+    /* An event-driven workflow asks WHEN, not how often — the trigger is a
+       sentence fragment, editable like everything else here. A time-driven
+       program keeps the cadence seg. */
+    if (w.trigger){
+      body.append(field('When',
+        inputCtl(w.trigger, v => { if (v.trim()) w.trigger = v.trim(); rerender(w); }),
+        'on ' + (w.trigger || '…') + ' · runs each time it fires'));
+    } else {
+      const once = w.every === 'One time';
+      body.append(field('How often',
+        segCtl(PROG_CADENCE, w.every, v => {
+          w.every = v;
+          /* The parsed clock belonged to the sentence; picking a cadence by hand
+             makes the seg the truth, so the override goes. */
+          delete w.cron;
+          rerender(w);
+        }),
+        once
+          ? (w.cron || 'as soon as it is created') + ' · runs once, then it is done'
+          : (w.cron || CRON_OF[w.every]) + ' · first run ' + NEXT_OF[w.every]));
+    }
 
     const stepsWrap = el('div', null);
     stepsWrap.style.cssText = 'display:flex;flex-direction:column;gap:var(--s-2);margin-bottom:var(--s-3)';
@@ -1584,6 +1594,49 @@ function scriptTurn(text){
        'on the runtime showing. Copy takes the one on screen.',
     w:{ kind:'code', title:r.title, meta:'2 runtimes', res:r.title + ' — skeleton',
         variants:buildScript(r) }
+  };
+}
+
+/* ---------------------------------------------------------- the workflow maker
+   "When a ticket arrives, triage it, then post the summary to #support" — an
+   event, then work. The when-clause is consumed by the match, so it cannot
+   leak into the steps; what remains splits like any routine. The trigger is
+   free text because the schedule's cron column always was — a fixture has run
+   'on webhook' since before this mode existed. */
+function parseWorkflow(text){
+  const m = text.match(/^\s*(?:when|whenever|each time|every time|as soon as)\s+([^,;]+?)\s*(?:[,;]|\bthen\b)\s*(.*)$/i);
+  const trigger = m ? m[1].trim() : text.trim();
+  const rest = m ? m[2] : '';
+  const steps = splitSteps(rest, rest || text);
+  const named = nameFromSteps(steps);
+  /* Named for its artifact when a step makes one; else for its trigger — a
+     "ticket workflow" says more than the verb that handles it. A pronoun is
+     nobody's name, so "someone stars the repo" names itself after the repo. */
+  const trigWords = trigger.replace(/^(a|an|the|any|new|every)\s+/i, '').split(/\s+/);
+  const trigNoun = (/^(someone|somebody|anyone|anybody|i|we|you|it)$/i.test(trigWords[0])
+    ? trigWords[trigWords.length - 1].replace(/[^\w#-]/g, '')
+    : trigWords[0]) || 'event';
+  const title = named.noun
+    ? named.noun.replace(/^./, c => c.toUpperCase())
+    : trigNoun.replace(/^./, c => c.toUpperCase()) + ' workflow';
+  return { title:title, trigger:trigger, steps:steps,
+           out:named.noun ? named.out : 'A note in this chat each time it fires' };
+}
+
+function workflowTurn(text){
+  const r = parseWorkflow(text);
+  return {
+    steps:[
+      { n:'routine.parse', d:'on ' + r.trigger + ' · ' + plural(r.steps.length, 'step'), t:'0.6s' },
+      { n:'program.draft', d:r.title, t:'0.5s' }
+    ],
+    md:'Here is your workflow: **' + r.title + '**, running each time **' + r.trigger + '** — ' +
+       plural(r.steps.length, 'step') + ', in order.\n\n' +
+       'The trigger and every step are editable below. An event has no computable next run, so the ' +
+       'schedule will say *when it fires* rather than guess a time. Nothing runs until you press ' +
+       '**Create the program**.',
+    w:{ kind:'program', title:r.title, meta:plural(r.steps.length, 'step'),
+        trigger:r.trigger, steps:r.steps, out:r.out }
   };
 }
 
@@ -2996,10 +3049,14 @@ let schedN = 0;
 function createProgram(w){
   const steps = w.steps.map(s => s.trim()).filter(Boolean);
   if (!steps.length) return;
-  const once = w.every === 'One time';
+  const trig = w.trigger ? w.trigger.trim() : null;
+  const once = !trig && w.every === 'One time';
   const row = {
     id:'sc-n' + (++schedN), name:w.title,
-    cron:w.cron || CRON_OF[w.every], next:NEXT_OF[w.every],
+    /* An event row's next run is not a time anyone can compute — saying one
+       would be a guess wearing a clock. */
+    cron:trig ? 'on ' + trig : (w.cron || CRON_OF[w.every]),
+    next:trig ? 'when it fires' : NEXT_OF[w.every],
     once:once,
     state:'idle', last:'—', target:w.out, produces:w.out,
     thread:w.thread || null, assistant:'—',
@@ -3013,7 +3070,8 @@ function createProgram(w){
      rebuild under them. The sidebar count is the one thing that changed. */
   rerender(w);
   renderList();
-  toast('Created ' + w.title + (once ? ' — runs ' : ' — first run ') + NEXT_OF[w.every], {
+  toast('Created ' + w.title + (trig ? ' — runs each time ' + trig
+      : (once ? ' — runs ' : ' — first run ') + NEXT_OF[w.every]), {
     label:'Undo', icon:'clock',
     run:() => {
       const i = D.SCHEDULE.indexOf(row);
