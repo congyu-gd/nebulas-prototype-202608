@@ -1171,11 +1171,15 @@ Three decisions worth recording:
   routine a task, and the row's `thread` points back at the conversation that
   described it — the schedule's Chat cell is a door to where the words were
   said.
-- **Cadence stays a three-item choice.** The parser normalises everything to
-  Every day / week / month plus a free-text clock the schedule already accepts
-  (`daily 07:40`, `Fri 17:00`); picking a cadence by hand in the widget
-  discards the parsed clock, because the seg is now the truth. This is the
-  standing refusal of cron, kept.
+- **Cadence stays a short choice.** One time · Every day / week / month, plus a
+  free-text clock the schedule already accepts (`daily 07:40`, `once Fri
+  17:00`); picking a cadence by hand in the widget discards the parsed clock,
+  because the seg is now the truth. This is the standing refusal of cron, kept.
+  Recurrence has to be *said* — "every", "daily" — or the sentence reads as a
+  one-time ask: assuming daily would create work nobody ordered. A one-time row
+  that has run shows no next run; it stays, because its history is the record
+  of what it did. One time exists only here — a project that "runs by itself"
+  is recurring by definition, so the project surfaces keep the three.
 
 Created, the widget freezes into a record and a door — the row is the fact,
 and two editable copies of one program would drift. Undo removes the row *and*

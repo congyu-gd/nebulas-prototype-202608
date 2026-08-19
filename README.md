@@ -119,8 +119,9 @@ channel that is not connected rather than showing it as zero.
 The new-chat screen's third mode is **Auto program**: describe a routine for
 daily life in plain words — *"every morning, check the weather and my calendar,
 then write me a briefing"* — and the reply reads it back as a **program**: an
-editable widget with the cadence as a choice, every step as an input, and one
-action. The reading is a parse, not understanding, which is why everything in
+editable widget with the cadence as a choice (one time, or every day, week or
+month — recurrence has to be said, so a plain "water the plants" reads as a
+one-time ask), every step as an input, and one action. The reading is a parse, not understanding, which is why everything in
 it can be corrected before **Create the program** writes a real row into
 Chat → Schedule — a job with steps when the routine has several, a task when it
 has one — whose Chat cell points back at the conversation that described it.

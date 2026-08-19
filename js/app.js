@@ -1124,15 +1124,18 @@ const LIVE_KIND = {
       return;
     }
 
+    const once = w.every === 'One time';
     const cad = field('How often',
-      segCtl(CADENCE, w.every, v => {
+      segCtl(PROG_CADENCE, w.every, v => {
         w.every = v;
         /* The parsed clock belonged to the sentence; picking a cadence by hand
            makes the seg the truth, so the override goes. */
         delete w.cron;
         rerender(w);
       }),
-      (w.cron || CRON_OF[w.every]) + ' · first run ' + NEXT_OF[w.every]);
+      once
+        ? (w.cron || 'as soon as it is created') + ' · runs once, then it is done'
+        : (w.cron || CRON_OF[w.every]) + ' · first run ' + NEXT_OF[w.every]);
     body.append(cad);
 
     const stepsWrap = el('div', null);
@@ -1346,7 +1349,12 @@ const WEEKDAYS = ['monday','tuesday','wednesday','thursday','friday','saturday',
 function parseRoutine(text){
   const low = ' ' + text.toLowerCase() + ' ';
   const day = WEEKDAYS.filter(d => low.indexOf(d) > -1)[0];
-  const every = /month/.test(low) ? 'Every month'
+  /* Recurrence has to be said — "every", "each", "daily" and kin. A plain
+     imperative ("water the plants", "on friday email the landlord") is a
+     one-time ask, and assuming daily would create work nobody ordered. */
+  const recurring = /\b(every|each|daily|weekly|monthly|hourly)\b/.test(low);
+  const every = !recurring ? 'One time'
+              : /month/.test(low) ? 'Every month'
               : (day || /week/.test(low)) ? 'Every week'
               : 'Every day';
 
@@ -1363,8 +1371,11 @@ function parseRoutine(text){
   else if (/noon|lunch/.test(low)) clock = '12:00';
   else if (/evening|night/.test(low)) clock = '18:00';
   let cron = null;
-  if (day) cron = day.slice(0, 1).toUpperCase() + day.slice(1, 3) + ' ' + (clock || '07:00');
-  else if (clock) cron = (every === 'Every day' ? 'daily ' : every === 'Every week' ? 'Mon ' : '1st ') + clock;
+  const dayName = day ? day.slice(0, 1).toUpperCase() + day.slice(1, 3) : null;
+  if (day) cron = (every === 'One time' ? 'once ' : '') + dayName + ' ' + (clock || '07:00');
+  else if (clock) cron = (every === 'One time' ? 'once '
+                        : every === 'Every day' ? 'daily '
+                        : every === 'Every week' ? 'Mon ' : '1st ') + clock;
 
   /* The steps: drop the cadence clause — the words about WHEN, kept tight so a
      sentence with no comma after them ("every month prepare the summary") does
@@ -1372,9 +1383,13 @@ function parseRoutine(text){
      say. Fragments too short to be work are noise from the split. */
   const body = text
     .replace(/\b(every|each)\s+(morning|day|evening|night|week|weekday|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b(\s+(morning|evening|night|afternoon))?\s*[,;]?\s*/i, '')
+    /* One-time WHEN-words and bare cadence adverbs go the same way: they say
+       when, not what. */
+    .replace(/\b(tomorrow|tonight|today|once|daily|weekly|monthly|hourly)\b(\s+(morning|evening|night|afternoon))?\s*[,;]?\s*/i, '')
+    .replace(/\bon\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s*[,;]?\s*/i, '')
     .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/ig, '');
   let steps = body.split(/\s*(?:;|,|\bthen\b|\band\b)\s*/i)
-    .map(s => s.trim().replace(/^[-–—.\s]+|[.\s]+$/g, ''))
+    .map(s => s.trim().replace(/^[-–—.\s]+|[.\s]+$/g, '').replace(/\s{2,}/g, ' '))
     .filter(s => s.length > 2)
     .slice(0, 5)
     .map(s => s.charAt(0).toUpperCase() + s.slice(1));
@@ -2361,6 +2376,9 @@ function schedRunNow(s){
   if (s.steps) s.steps.forEach((st, i) => { st.state = 'ok'; st.last = '0:0' + ((i + 3) % 10); });
   s.state = 'ok';
   s.last = dur;
+  /* A one-time program that has run is done: there is no next. The row stays,
+     because its history is the record of what it did. */
+  if (s.once) s.next = '—';
   renderSched();
   render();
   toast(s.name + ' ran — its history has the product');
@@ -2393,10 +2411,15 @@ const VIS_HELP = {
 /* Three cadences. A fourth would be a cron expression, and something that
    needs cron is a scheduled task — Chat → Schedule already holds those. */
 const CADENCE = ['Every day','Every week','Every month'];
-const CRON_OF = { 'Every day':'daily 07:00', 'Every week':'Mon 07:00', 'Every month':'1st 07:00' };
-const NEXT_OF = { 'Every day':'in 14 h', 'Every week':'in 3 d', 'Every month':'in 12 d' };
+/* The program widget offers one more: a routine that is not a routine. Only
+   there — a project that "runs by itself" is recurring by definition, so the
+   project surfaces keep the three. The extra lookup keys are harmless to them,
+   since they iterate CADENCE. */
+const PROG_CADENCE = ['One time'].concat(CADENCE);
+const CRON_OF = { 'One time':'once', 'Every day':'daily 07:00', 'Every week':'Mon 07:00', 'Every month':'1st 07:00' };
+const NEXT_OF = { 'One time':'in 1 h', 'Every day':'in 14 h', 'Every week':'in 3 d', 'Every month':'in 12 d' };
 /* "Every week" is how it is chosen; "Weekly" is how a one-word stat reads. */
-const CADENCE_ADJ = { 'Every day':'Daily', 'Every week':'Weekly', 'Every month':'Monthly' };
+const CADENCE_ADJ = { 'One time':'One-time', 'Every day':'Daily', 'Every week':'Weekly', 'Every month':'Monthly' };
 const runLine = r => CRON_OF[r.every] + ' · next run ' + NEXT_OF[r.every];
 
 let projOn = null;                 /* the project being edited — null while creating */
@@ -2765,9 +2788,11 @@ let schedN = 0;
 function createProgram(w){
   const steps = w.steps.map(s => s.trim()).filter(Boolean);
   if (!steps.length) return;
+  const once = w.every === 'One time';
   const row = {
     id:'sc-n' + (++schedN), name:w.title,
     cron:w.cron || CRON_OF[w.every], next:NEXT_OF[w.every],
+    once:once,
     state:'idle', last:'—', target:w.out, produces:w.out,
     thread:w.thread || null, assistant:'—',
     history:[]
@@ -2780,7 +2805,7 @@ function createProgram(w){
      rebuild under them. The sidebar count is the one thing that changed. */
   rerender(w);
   renderList();
-  toast('Created ' + w.title + ' — first run ' + NEXT_OF[w.every], {
+  toast('Created ' + w.title + (once ? ' — runs ' : ' — first run ') + NEXT_OF[w.every], {
     label:'Undo', icon:'clock',
     run:() => {
       const i = D.SCHEDULE.indexOf(row);
