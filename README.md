@@ -146,7 +146,11 @@ thing lands in its existing home rather than a new store:
 Seven starters run worked examples of all four; free text goes through the
 same parsers; and nothing runs, ships or leaves until Create is pressed — each
 widget's footer says so out loud. The reading is a parse, not understanding,
-which is why everything is editable before anything exists.
+which is why everything is editable before anything exists. When a created
+program **runs** (Run now in its schedule overlay), the promise "in this chat"
+is kept literally: the product is posted into the authoring thread as a turn —
+the schedule's timeline quotes it, but the chat is where it is delivered — and
+the toast's `Open the chat` lands on it.
 
 **Chat → Schedule** is everything that runs without being asked, in two tables.
 **Jobs** lead: a job is the workflow of its schedule — named steps that run in

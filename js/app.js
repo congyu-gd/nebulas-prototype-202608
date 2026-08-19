@@ -2628,17 +2628,25 @@ function schedFoot(s){
   }
 }
 
-/* A manual run of a chat-authored program: the history entry is the fact, the
-   product is one honest simulated line — the run itself is simulated, as every
-   answer in this prototype is — and it lands in the row's chat, not the
-   results store, which is where the program said its output goes. */
+/* A manual run of a chat-authored program. The program promised its product
+   "in this chat", so a run KEEPS that promise: the product is posted into the
+   thread the row points at, as a turn — the schedule's history quotes it, but
+   the chat is where it is delivered. Simulated, as every answer in this
+   prototype is, and the turn says so. */
 function schedRunNow(s){
   const dur = '0:' + String(10 + ((s.history || []).length * 7) % 40).padStart(2, '0');
+  const product =
+    '**' + s.name + '** — run on request, ' + dur + '.\n\n' +
+    (s.steps && s.steps.length
+      ? s.steps.map((st, i) => '- **' + st.name + '** — done, 0:0' + ((i + 3) % 10)).join('\n') + '\n\n'
+      : '') +
+    (s.produces || 'The result') + ' would follow here: the run is simulated, as every ' +
+    'answer in this prototype is — a real one would leave its product in this turn.';
+
   (s.history || (s.history = [])).unshift({
     when:'Just now', dur:dur, state:'ok', manual:true,
-    out:(s.produces || 'Run complete') + ' → this chat',
-    md:'**' + s.name + '** ran on request. The run is simulated, as every answer in this ' +
-       'prototype is: a real one would leave its product here, the way the fixture rows above show.',
+    out:(s.produces || 'Run complete') + ' → ' + (s.thread ? 'its chat' : 'this chat'),
+    md:product,
     steps:s.steps && s.steps.map((st, i) => ['0:0' + ((i + 3) % 10), 'ok'])
   });
   if (s.steps) s.steps.forEach((st, i) => { st.state = 'ok'; st.last = '0:0' + ((i + 3) % 10); });
@@ -2647,9 +2655,22 @@ function schedRunNow(s){
   /* A one-time program that has run is done: there is no next. The row stays,
      because its history is the record of what it did. */
   if (s.once) s.next = '—';
+
+  /* The delivery. The thread keeps the turn, so it is there whenever the chat
+     is opened — the run happened whether or not anyone was watching. */
+  const t = s.thread ? byId(D.THREADS, s.thread) : null;
+  if (t){
+    t.msgs.push({ role:'ai', dur:dur, md:product });
+    t.when = 'now';
+    renderList();
+  }
+
   renderSched();
   render();
-  toast(s.name + ' ran — its history has the product');
+  toast(s.name + ' ran' + (t ? ' — the result is in ' + t.title : ' — its history has the product'),
+    t ? { label:'Open the chat', icon:'chat',
+          run:() => { closeSched(); select('chat', t.id); } }
+      : undefined);
 }
 
 /* ================================================== making a project
