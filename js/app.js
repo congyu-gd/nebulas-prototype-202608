@@ -5744,7 +5744,7 @@ function appState(app){
     if (p.notes){ s.notes = p.notes.slice(); s.note = 0; }
     if (p.events){
       s.events = p.events.map(e => ({ off:e[0], at:e[1], min:e[2], t:e[3], sub:e[4] }));
-      s.view = 'Week'; s.wk = 0; s.mo = 0; s.adding = false;
+      s.view = 'Week'; s.wk = 0; s.mo = 0; s.draft = null; s.edit = null;
     }
     if (p.s === 'news') s.read = p.rows.map(r => !r[3]);
     APP_STATE[app.id] = s;
@@ -5792,15 +5792,31 @@ function calDay(off){ const d = new Date(T0); d.setDate(d.getDate() + off); retu
 /* Monday of the week `wk` weeks away, as an offset from today. */
 function calMonday(wk){ return wk * 7 - ((new Date(T0).getDay() + 6) % 7); }
 const calMins = at => { const p = String(at).split(':'); return (+p[0]) * 60 + (+p[1] || 0); };
-/* "Today 14:00" · "Tomorrow 10:00" · "Thu 27 11:00" — the day the way somebody
-   would say it, then the clock. */
-function calWhen(e){
-  const day = e.off === 0 ? 'Today' : e.off === 1 ? 'Tomorrow'
-    : DAYS[calDay(e.off).getDay()].slice(0, 3) + ' ' + calDay(e.off).getDate();
-  return day + ' ' + e.at;
+/* "Today" · "Tomorrow" · "Thu 27" — the day the way somebody would say it,
+   with the month only once it stops being obvious. */
+function calDayLabel(off){
+  if (off === 0) return 'Today';
+  if (off === 1) return 'Tomorrow';
+  const d = calDay(off), now = new Date(T0);
+  return DAYS[d.getDay()].slice(0, 3) + ' ' + d.getDate() +
+    (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      ? '' : ' ' + MONTHS[d.getMonth()]);
+}
+function calWhen(e){ return calDayLabel(e.off) + ' ' + e.at; }
+/* Every door into the form goes through these two, so a slot click, an event
+   click and the New event button cannot drift apart. */
+function calAdd(app, st, off, at){
+  st.edit = null;
+  st.draft = { t:'', off:off, at:at, min:'30m' };
+  repaintApp(app);
+}
+function calEdit(app, st, e){
+  st.edit = e;
+  st.draft = { t:e.t, off:e.off, at:e.at, min:{ 30:'30m', 45:'45m', 60:'1h' }[e.min] || '30m' };
+  repaintApp(app);
 }
 
-function calWeekGrid(st){
+function calWeekGrid(app, st){
   const mon = calMonday(st.wk);
   const grid = el('div','week');
   grid.append(el('div','week__hd'));           /* over the hour gutter */
@@ -5816,12 +5832,20 @@ function calWeekGrid(st){
   for (let i = 0; i < 7; i++){
     const off = mon + i;
     const col = el('div','week__day' + (off === 0 ? ' week__day--today' : ''));
+    col.title = 'Add an event — ' + calDayLabel(off);
+    /* An empty slot is an invitation: the clicked hour becomes the draft. */
+    col.onclick = ev => {
+      const r = col.getBoundingClientRect();
+      const h = WEEK_H0 + Math.floor((ev.clientY - r.top) / (r.height / (WEEK_H1 - WEEK_H0)));
+      calAdd(app, st, off, pad2(Math.max(WEEK_H0, Math.min(WEEK_H1 - 1, h))) + ':00');
+    };
     st.events.filter(e => e.off === off).forEach(e => {
       const b = el('div','week__evt', esc(e.t));
       b.style.top = 'calc(var(--week-hour) * ' +
         (Math.max(calMins(e.at) - WEEK_H0 * 60, 0) / 60).toFixed(3) + ')';
       b.style.height = 'calc(var(--week-hour) * ' + (e.min / 60).toFixed(3) + ')';
-      b.title = e.at + ' · ' + e.t + ' — ' + e.sub + ' · ' + e.min + 'm';
+      b.title = e.at + ' · ' + e.t + ' — ' + e.sub + ' · ' + e.min + 'm. Click to edit.';
+      b.onclick = ev => { ev.stopPropagation(); calEdit(app, st, e); };
       col.append(b);
     });
     grid.append(col);
@@ -5829,7 +5853,7 @@ function calWeekGrid(st){
   return grid;
 }
 
-function calMonthGrid(st){
+function calMonthGrid(app, st){
   const now = new Date(T0);
   const first = new Date(now.getFullYear(), now.getMonth() + st.mo, 1);
   const y = first.getFullYear(), m = first.getMonth();
@@ -5850,7 +5874,11 @@ function calMonthGrid(st){
   for (let d = 1; d <= days; d++){
     const cls = 'cal__d' + (byDay[d] ? ' cal__d--mark' : '') + (d === today ? ' cal__d--today' : '');
     const cell = el('div', cls, String(d));
-    if (byDay[d]) cell.title = MONTHS[m] + ' ' + d + ' — ' + byDay[d].join(' · ');
+    const off = Math.round((new Date(y, m, d).getTime() - startOfDay(T0)) / 864e5);
+    cell.title = byDay[d]
+      ? MONTHS[m] + ' ' + d + ' — ' + byDay[d].join(' · ') + '. Click to add here.'
+      : 'Add an event — ' + calDayLabel(off);
+    cell.onclick = () => calAdd(app, st, off, '09:00');
     grid.append(cell);
   }
   return grid;
@@ -5865,51 +5893,79 @@ function calLabel(st){
   return MONTHS[d.getMonth()] + ' ' + d.getFullYear();
 }
 
-/* Three answers make an event: what, when, how long. */
-function calNewEvent(app, st){
-  const d = st.draft || (st.draft = { t:'', day:'Today', at:'09:00', min:'30m' });
-  const days = [];
-  for (let i = 0; i < 7; i++)
-    days.push(i === 0 ? 'Today' : i === 1 ? 'Tomorrow'
-      : DAYS[calDay(i).getDay()].slice(0, 3) + ' ' + calDay(i).getDate());
-  const c = appCard('New event');
+/* Three answers make an event: what, when, how long. One form for both making
+   and changing one — the only differences are what the fields start as and
+   whether Remove is on the table. */
+function calEventForm(app, st){
+  const d = st.draft, edit = st.edit;
+  /* The next seven days cover almost every event; a day clicked further out
+     joins the list rather than being unpickable. */
+  const offs = [0, 1, 2, 3, 4, 5, 6];
+  if (offs.indexOf(d.off) < 0) offs.unshift(d.off);
+  const labels = offs.map(calDayLabel);
+  const close = () => { st.draft = null; st.edit = null; };
+  /* Land where the event did, so saving is never followed by hunting for it. */
+  const land = off => {
+    st.wk = Math.floor((off - calMonday(0)) / 7);
+    st.mo = (calDay(off).getFullYear() * 12 + calDay(off).getMonth())
+          - (new Date(T0).getFullYear() * 12 + new Date(T0).getMonth());
+  };
+
+  const c = appCard(edit ? 'Edit event' : 'New event');
   const form = el('div');
   form.style.cssText = 'display:grid;gap:var(--s-3)';
   form.append(
     field('Title', inputCtl(d.t, v => d.t = v, 'Renewal review')),
-    field('Day', selectCtl(days, d.day, v => d.day = v)),
+    field('Day', selectCtl(labels, calDayLabel(d.off), v => d.off = offs[labels.indexOf(v)])),
     field('Starts', inputCtl(d.at, v => d.at = v, '09:00'), 'The grid draws 08:00 – 18:00.'),
     field('Length', segCtl(['30m','45m','1h'], d.min, v => d.min = v))
   );
+
   const acts = el('div','live__acts');
-  const add = el('button','btn btn--primary btn--sm', ic('check',13) + 'Add event');
-  add.type = 'button';
-  add.onclick = () => {
-    const off = Math.max(days.indexOf(d.day), 0);
+  const save = el('button','btn btn--primary btn--sm',
+    ic('check', 13) + (edit ? 'Save' : 'Add event'));
+  save.type = 'button';
+  save.onclick = () => {
     const at = /^([01]?\d|2[0-3]):[0-5]\d$/.test(d.at.trim())
       ? (d.at.trim().length < 5 ? '0' : '') + d.at.trim() : '09:00';
-    const e = { off:off, at:at, min:{ '30m':30, '45m':45, '1h':60 }[d.min],
-                t:d.t.trim() || 'Untitled event', sub:'Added here' };
-    st.events.push(e);
-    st.adding = false; st.draft = null;
-    /* Land where the event did, so Add is never followed by hunting for it. */
-    st.wk = Math.floor((off - calMonday(0)) / 7);
-    st.mo = (calDay(off).getFullYear() * 12 + calDay(off).getMonth())
-          - (new Date(T0).getFullYear() * 12 + new Date(T0).getMonth());
-    repaintApp(app);
-    toast(e.t + ' — ' + calWhen(e) + ', only in this workspace', {
-      label:'Undo',
-      run:() => {
-        const i = st.events.indexOf(e);
-        if (i >= 0) st.events.splice(i, 1);
-        if (state.app === app.id) repaintApp(app);
-      }
-    });
+    const min = { '30m':30, '45m':45, '1h':60 }[d.min];
+    if (edit){
+      Object.assign(edit, { off:d.off, at:at, min:min, t:d.t.trim() || edit.t });
+      close(); land(edit.off); repaintApp(app);
+      toast(edit.t + ' — ' + calWhen(edit));
+    } else {
+      const e = { off:d.off, at:at, min:min, t:d.t.trim() || 'Untitled event', sub:'Added here' };
+      st.events.push(e);
+      close(); land(e.off); repaintApp(app);
+      toast(e.t + ' — ' + calWhen(e) + ', only in this workspace', {
+        label:'Undo',
+        run:() => {
+          const i = st.events.indexOf(e);
+          if (i >= 0) st.events.splice(i, 1);
+          if (state.app === app.id) repaintApp(app);
+        }
+      });
+    }
   };
+  acts.append(save);
+  if (edit){
+    const rm = el('button','btn btn--ghost btn--sm', ic('trash', 12) + 'Remove');
+    rm.type = 'button';
+    rm.onclick = () => {
+      const i = st.events.indexOf(edit);
+      if (i >= 0) st.events.splice(i, 1);
+      close(); repaintApp(app);
+      toast(edit.t + ' removed', {
+        label:'Undo',
+        run:() => { st.events.push(edit); if (state.app === app.id) repaintApp(app); }
+      });
+    };
+    acts.append(rm);
+  }
   const cancel = el('button','btn btn--ghost btn--sm','Cancel');
   cancel.type = 'button';
-  cancel.onclick = () => { st.adding = false; st.draft = null; repaintApp(app); };
-  acts.append(add, cancel);
+  cancel.onclick = () => { close(); repaintApp(app); };
+  acts.append(cancel);
   c.body.append(form, acts);
   return c.card;
 }
@@ -5939,14 +5995,17 @@ function appAgenda(app, p){
   ctls.append(segCtl(['Week','Month'], st.view, v => { st.view = v; repaintApp(app); }));
 
   const c = appCard(calLabel(st), ctls);
-  c.body.append(week ? calWeekGrid(st) : calMonthGrid(st));
+  c.body.append(week ? calWeekGrid(app, st) : calMonthGrid(app, st));
   const nodes = [c.card];
 
-  if (st.adding) nodes.push(calNewEvent(app, st));
+  if (st.draft) nodes.push(calEventForm(app, st));
 
   const add = el('button','btn btn--ghost btn--sm', ic('plus', 12) + 'New event');
   add.type = 'button';
-  add.onclick = () => { st.adding = !st.adding; repaintApp(app); };
+  add.onclick = () => {
+    if (st.draft && !st.edit){ st.draft = null; repaintApp(app); }
+    else calAdd(app, st, 0, '09:00');
+  };
   const up = appCard('Upcoming', add);
   const soon = st.events.filter(e => e.off >= 0)
     .sort((a, b) => a.off - b.off || calMins(a.at) - calMins(b.at)).slice(0, 6);
@@ -5963,6 +6022,9 @@ function appAgenda(app, p){
           '<span class="row__title">' + esc(e.t) + '</span>' +
           '<span class="row__sub">' + esc(e.sub) + ' · ' + e.min + 'm</span>' +
         '</span>';
+      r.title = 'Click to edit';
+      r.style.cursor = 'pointer';
+      r.onclick = () => calEdit(app, st, e);
       up.body.append(r);
     });
   }

@@ -1056,12 +1056,18 @@ busy*; the **Upcoming** list under it answers *what*, and each block carries
 its full fact in its tooltip. The calendar is also where the colour rule gets
 tested: an event is a surface step with a strong leading edge, a marked day a
 neutral dot, today a tinted column or an inset hairline. None of it is the
-accent, because **a date is not an action**. `New event` asks the three things
-that make one — what, when, how long — and the row it adds lands in the
-panel's own list and nowhere else, which the footer says out loud: the panel
-mirrors a work calendar this prototype cannot write to. Sync says the same
-thing when clicked — nothing upstream to fetch, so it reports being a mirror
-instead of pretending.
+accent, because **a date is not an action**. The grids themselves are doors:
+an empty week slot drafts an event on that day at the clicked hour, a month
+day drafts on that day, and an event — a block in the grid or a row in
+Upcoming — opens for editing. All of them land in **one form** asking the
+three things that make an event — what, when, how long — differing only in
+what the fields start as and whether `Remove` (undoable) is on the table;
+`New event` in the Upcoming header is the same form for a day you would
+rather name than click. Whatever is added or changed lands in the panel's own
+list and nowhere else, which the footer says out loud: the panel mirrors a
+work calendar this prototype cannot write to. Sync says the same thing when
+clicked — nothing upstream to fetch, so it reports being a mirror instead of
+pretending.
 
 **Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
 once and owned in JS after that — the same rule as a chat widget's state. A

@@ -812,6 +812,9 @@ button.chip--plain:hover{ background:var(--raised) }
   background:var(--text-4);
 }
 .cal__d--today{ box-shadow:inset 0 0 0 1px var(--line-strong) }
+/* Every real day is a door into the event form, and says so on approach. */
+.cal__d:not(.cal__d--pad){ cursor:pointer }
+.cal__d:not(.cal__d--pad):hover{ background:var(--raised-2) }
 
 /* The same month at hour resolution: seven day columns against an hour ruler.
    An event is a surface step with a strong leading edge — like the month's
@@ -837,12 +840,15 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .week__day{
   position:relative;
+  cursor:pointer;                     /* an empty slot drafts an event there */
   border-left:var(--border) solid var(--line);
   background-image:repeating-linear-gradient(to bottom,
     var(--line) 0, var(--line) var(--border),
     transparent var(--border), transparent var(--week-hour));
 }
-.week__day--today{ background-color:var(--raised) }
+.week__day:hover{ background-color:var(--surface) }
+/* Today keeps its step under the cursor: hover must not un-mark the day. */
+.week__day--today, .week__day--today:hover{ background-color:var(--raised) }
 .week__evt{
   position:absolute; left:var(--s-1); right:var(--s-1);
   overflow:hidden;
@@ -853,6 +859,7 @@ button.chip--plain:hover{ background:var(--raised) }
   font-size:var(--t-11); line-height:var(--lh-tight); color:var(--text-2);
   white-space:nowrap; text-overflow:ellipsis;
 }
+.week__evt:hover{ border-left-color:var(--text-4); color:var(--text) }
 
 /* ============================================================ definitions */
 .deflist{

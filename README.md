@@ -192,8 +192,10 @@ message, a headline writes the question into the composer, an extraction is file
 in the results column, and a ticked box or a typed note survives switching apps
 and sections. The calendar reads a week as a time grid or a month as a day grid
 — arrows move whichever is on screen — with an Upcoming list naming what the
-blocks can only place, and `New event` adds to the panel's own list: it mirrors
-a work calendar it cannot write to, and says so.
+blocks can only place. The grids are doors: an empty slot drafts an event at
+that day and hour, and an existing event opens for editing, with an undoable
+remove. Everything lands in the panel's own list — it mirrors a work calendar
+it cannot write to, and says so.
 
 The workspace's **Build** section is the maker's half, and it has three groups:
 **assistants**, **solutions** (with a publish checklist that says what is still
