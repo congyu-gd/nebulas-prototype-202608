@@ -922,11 +922,13 @@ Build** button, and the builder's **Open in a thread** binds the assistant and
 opens a new one. The palette lands on the definition, because that is the
 address that can do both.
 
-### The assistant page reads first, tests beside, edits behind a dialog
+### The assistant and project pages read first, test beside, edit behind a dialog
 
-The other lanes keep the form-plus-inspector shape. The assistant page
-inverted it, because its owner's loop is *read the setup → try it → adjust*,
-in that order:
+Widgets and templates keep the form-plus-inspector shape — their preview IS
+the canvas. The assistant page inverted it, because its owner's loop is
+*read the setup → try it → adjust*, in that order — and the project page
+followed, since a project is the same loop over a bigger binding (assistant +
+shelf + grants + program):
 
 - **The page is pinned to the pane** (`pane__body--split`, the project page's
   move): the two panels share the full height and scroll their own content, so
@@ -1569,10 +1571,10 @@ harder to find, which is why the green came back out again after the first pass.
   is a store that stops being read.
 - Keyboard traversal of the sidebar, and focus management when the palette
   closes.
-- Build has no version history. Outside the assistant page — whose dialogs
-  stage a copy and commit on Save — edits apply as you make them, which is
-  honest for a prototype and wrong for a product: publishing should promote a
-  draft, not mutate the live thing.
+- Build has no version history. Outside the assistant and project pages —
+  whose dialogs stage a copy and commit on Save — edits apply as you make
+  them, which is honest for a prototype and wrong for a product: publishing
+  should promote a draft, not mutate the live thing.
 - A widget cannot yet be previewed against real data from the assistant or
   project that would feed it — the values are typed (or said in the maker), so
   a widget can claim a number its assistant could not produce.

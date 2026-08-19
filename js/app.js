@@ -4280,6 +4280,76 @@ function testScript(text, a){
   return reply;
 }
 
+/* The bench itself, shared by the assistant and project pages — the same
+   pane parameterised, the way runTurn is one engine with many hosts. Returns
+   {try} so the page's own example chips can run a prompt in it. */
+function testBench(side, cfg){
+  const th = cfg.th;
+  const bh = el('div','build__sidehead',
+    '<span class="t-eyebrow">Try it</span>' +
+    '<span class="t-mono">' + (th.msgs.length ? plural(th.msgs.length / 2, 'turn') : '') + '</span>');
+  if (th.msgs.length){
+    const reset = el('button','iconbtn iconbtn--xs tip', ic('undo',12));
+    reset.setAttribute('data-tip','Start over');
+    reset.onclick = () => { th.msgs.length = 0; render(); };
+    bh.append(reset);
+  }
+  side.append(bh);
+
+  const log = el('div','testbench__log');
+  log.id = 'testLog';
+  const submit = () => {
+    const v = input.value.trim();
+    if (!v || state.busy) return;
+    input.value = '';
+    runTurn(v, cfg.script(v), {
+      host:log, thread:th, who:cfg.who,
+      scroll:() => log.scrollTo({ top:log.scrollHeight, behavior:'instant' }),
+      busy:on => {
+        send.disabled = on; input.disabled = on;
+        if (!on){
+          input.focus();
+          /* The head's count is drawn at render; keep it true between them. */
+          $('.t-mono', bh).textContent = plural(th.msgs.length / 2, 'turn');
+        }
+      }
+    });
+  };
+  if (!th.msgs.length){
+    const hint = emptyState('play','Try it before you ship it', cfg.hint);
+    const chips = el('div');
+    chips.style.cssText = 'display:flex;flex-direction:column;gap:var(--s-2);margin-top:var(--s-4);align-items:center';
+    cfg.starters.forEach(t => {
+      const c = el('button','chip','<span>' + esc(t) + '</span>');
+      c.type = 'button';
+      c.onclick = () => { input.value = t; submit(); };
+      chips.append(c);
+    });
+    hint.append(chips);
+    log.append(hint);
+  } else {
+    th.msgs.forEach(m => log.append(msgNode(m)));
+    log.scrollTop = log.scrollHeight;
+  }
+  side.append(log);
+
+  const ask = el('div','testbench__ask');
+  const input = el('textarea','textarea');
+  input.id = 'testInput';
+  input.rows = 2;
+  input.placeholder = cfg.placeholder;
+  const send = el('button','btn btn--primary btn--sm','Send');
+  send.type = 'button';
+  send.onclick = submit;
+  input.onkeydown = e => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+  };
+  ask.append(input, send);
+  side.append(ask);
+  side.append(noteP('A test stays here — it never enters History, and it never edits the record.'));
+  return { try:t => { input.value = t; submit(); } };
+}
+
 /* ------------------------------------------------------- assistant builder
    The same record the chat sidebar lists. Read first, test beside, edit
    through a dialog: the left column states the configuration as facts, the
@@ -4349,7 +4419,7 @@ function assistantBuildView(body, a){
       exs.forEach(t => {
         const c = el('button','chip','<span>' + esc(t) + '</span>');
         c.type = 'button';
-        c.onclick = () => { input.value = t; submit(); };
+        c.onclick = () => bench.try(t);
         chips.append(c);
       });
       wrap.append(chips);
@@ -4410,70 +4480,13 @@ function assistantBuildView(body, a){
   s.main.append(acts);
 
   /* ------------------------------------------------------------ the bench */
-  const th = testThread(a);
-  const bh = el('div','build__sidehead',
-    '<span class="t-eyebrow">Try it</span>' +
-    '<span class="t-mono">' + (th.msgs.length ? plural(th.msgs.length / 2, 'turn') : '') + '</span>');
-  if (th.msgs.length){
-    const reset = el('button','iconbtn iconbtn--xs tip', ic('undo',12));
-    reset.setAttribute('data-tip','Start over');
-    reset.onclick = () => { th.msgs.length = 0; render(); };
-    bh.append(reset);
-  }
-  s.side.append(bh);
-
-  const log = el('div','testbench__log');
-  log.id = 'testLog';
-  const submit = () => {
-    const v = input.value.trim();
-    if (!v || state.busy) return;
-    input.value = '';
-    runTurn(v, testScript(v, a), {
-      host:log, thread:th, who:a.name,
-      scroll:() => log.scrollTo({ top:log.scrollHeight, behavior:'instant' }),
-      busy:on => {
-        send.disabled = on; input.disabled = on;
-        if (!on){
-          input.focus();
-          /* The head's count is drawn at render; keep it true between them. */
-          $('.t-mono', bh).textContent = plural(th.msgs.length / 2, 'turn');
-        }
-      }
-    });
-  };
-  if (!th.msgs.length){
-    const hint = emptyState('play','Try it before you ship it',
-      'Ask what a user would ask. The reply runs through the configuration on the left — change a setting and the next answer changes with it.');
-    const chips = el('div');
-    chips.style.cssText = 'display:flex;flex-direction:column;gap:var(--s-2);margin-top:var(--s-4);align-items:center';
-    asstPrompts(a).slice(0, 2).forEach(t => {
-      const c = el('button','chip','<span>' + esc(t) + '</span>');
-      c.type = 'button';
-      c.onclick = () => { input.value = t; submit(); };
-      chips.append(c);
-    });
-    hint.append(chips);
-    log.append(hint);
-  } else {
-    th.msgs.forEach(m => log.append(msgNode(m)));
-    log.scrollTop = log.scrollHeight;
-  }
-  s.side.append(log);
-
-  const ask = el('div','testbench__ask');
-  const input = el('textarea','textarea');
-  input.id = 'testInput';
-  input.rows = 2;
-  input.placeholder = 'Ask ' + a.name + '…';
-  const send = el('button','btn btn--primary btn--sm','Send');
-  send.type = 'button';
-  send.onclick = submit;
-  input.onkeydown = e => {
-    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
-  };
-  ask.append(input, send);
-  s.side.append(ask);
-  s.side.append(noteP('A test stays here — it never enters History, and it never edits the record.'));
+  const bench = testBench(s.side, {
+    th:testThread(a), who:a.name,
+    placeholder:'Ask ' + a.name + '…',
+    hint:'Ask what a user would ask. The reply runs through the configuration on the left — change a setting and the next answer changes with it.',
+    starters:asstPrompts(a).slice(0, 2),
+    script:v => testScript(v, a)
+  });
 
   body.append(s.wrap);
 }
@@ -4538,76 +4551,186 @@ function draftProject(){
    (the project dialog's convention, kept rather than doubled), and external
    systems by connector id — the same grant-not-connection language an
    assistant uses. */
-function projectBuildView(body, p){
-  const pad = el('div','pane__pad');
-  pad.append(pageHead(p.name, p.desc,
-    '<span class="badge badge--mono">' + (p.shared ? 'You · Shared' : 'You · Personal') + '</span>' +
-    (p.run ? '<span class="badge badge--info">' + esc(p.run.every.toLowerCase()) + '</span>' : '')));
-  const s = buildSplit();
-
-  const pair = el('div','build__pair');
-  pair.append(field('Name', inputCtl(p.name, v => {
-    const nm = v.trim() || p.name;
-    /* The schedule row keeps its own name, but it targets this project. */
-    const row = p.run && p.run.sched && find(D.SCHEDULE, p.run.sched);
-    if (row) row.target = nm;
-    p.name = nm;
-    render();
-  })));
-  const vis = el('div');
-  vis.append(segCtl(PROJ_VIS, p.shared ? 'Shared' : 'Personal', v => {
-    p.shared = v === 'Shared'; render();
-  }));
-  pair.append(field('Who can see it', vis));
-  s.main.append(pair);
-
-  const pair2 = el('div','build__pair');
+/* --------------------------------------------------- project as facts too
+   The assistant page's structure, applied: facts on the left, the bench on
+   the right, dialogs that stage and Save. The record is still the sidebar's
+   own project — one store, no twin. */
+function editPjAbout(p){
+  openEdit({ title:'About', sub:p.name, ico:'folder',
+    staged:{ name:p.name, shared:p.shared, icon:p.icon },
+    build(body, st){
+      body.append(field('Name', inputCtl(st.name, v => { st.name = v; })));
+      const vis = el('div');
+      vis.append(segCtl(PROJ_VIS, st.shared ? 'Shared' : 'Personal', v => { st.shared = v === 'Shared'; }));
+      body.append(field('Who can see it', vis));
+      body.append(field('Icon', selectCtl(PROJ_ICONS, st.icon, v => { st.icon = v; }),
+        'Named after the kind of work, in the sidebar.'));
+    },
+    apply(st){
+      const nm = st.name.trim() || p.name;
+      /* The schedule row keeps its own name, but it targets this project. */
+      const row = p.run && p.run.sched && find(D.SCHEDULE, p.run.sched);
+      if (row) row.target = nm;
+      p.name = nm; p.shared = st.shared; p.icon = st.icon;
+    } });
+}
+function editPjAsst(p){
   const asstNames = ['— none —'].concat(D.ASSISTANTS.map(a => a.name));
-  pair2.append(field('Assistant', selectCtl(asstNames, p.assistant || '— none —', v => {
-    p.assistant = v === '— none —' ? null : v; render();
-  }), 'Answers every thread opened inside the project.'));
-  pair2.append(field('Icon', selectCtl(PROJ_ICONS, p.icon, v => { p.icon = v; render(); }),
-    'Named after the kind of work, in the sidebar.'));
-  s.main.append(pair2);
+  openEdit({ title:'Assistant', sub:p.name, ico:'agent',
+    staged:{ assistant:p.assistant },
+    build(body, st){
+      body.append(field('Assistant', selectCtl(asstNames, st.assistant || '— none —', v => {
+        st.assistant = v === '— none —' ? null : v;
+      }), 'Answers every thread opened inside the project.'));
+    },
+    apply(st){
+      p.assistant = st.assistant;
+      /* The schedule row names its assistant; keep it true. */
+      if (p.run) syncProjectRun(p, p.run.sched);
+    } });
+}
+function editPjKnow(p){
+  openEdit({ title:'Knowledge', sub:p.name, ico:'library',
+    staged:{ kbs:(p.kbs || []).slice(), sources:(p.sources || []).slice() },
+    build(body, st){
+      body.append(pickList(
+        D.KBS.map(k => ({ nm:k.name, sub:k.docs + ' documents', meta:'docs', id:k.name }))
+          .concat(D.DATASETS.map(t => ({ nm:t.name, sub:t.desc, meta:'table', id:t.name }))),
+        it => st.kbs.indexOf(it.id) > -1 || st.sources.indexOf(it.id) > -1,
+        (it, on) => {
+          const list = D.KBS.some(k => k.name === it.id) ? st.kbs : st.sources;
+          const i = list.indexOf(it.id);
+          if (on && i < 0) list.push(it.id);
+          if (!on && i > -1) list.splice(i, 1);
+        }));
+      body.append(noteP('Bases it cites and tables it reads, both by name.'));
+    },
+    apply(st){ p.kbs = st.kbs; p.sources = st.sources; } });
+}
+function editPjConn(p){
+  openEdit({ title:'Connections', sub:p.name, ico:'plug',
+    staged:{ conn:(p.conn || []).slice() },
+    build(body, st){
+      body.append(pickList(
+        D.CONNECTORS.map(c => ({
+          nm:c.name, sub:c.state === 'off' ? 'not connected — grant it here, connect it in Cloud' : c.scope,
+          meta:c.kind, id:c.id
+        })),
+        it => st.conn.indexOf(it.id) > -1,
+        (it, on) => {
+          const i = st.conn.indexOf(it.id);
+          if (on && i < 0) st.conn.push(it.id);
+          if (!on && i > -1) st.conn.splice(i, 1);
+        }));
+      body.append(noteP('A grant is not a connection. Granting one that is not connected is allowed — ' +
+        'it states what this project will need. Connecting it is done in Cloud → Connections.'));
+    },
+    apply(st){ p.conn = st.conn; } });
+}
+function editPjRun(p){
+  openEdit({ title:'Auto program', sub:p.name, ico:'clock',
+    staged:{ on:!!p.run, every:(p.run && p.run.every) || 'Every week',
+             ask:(p.run && p.run.ask) || 'Summarise what changed in ' + p.name + '.' },
+    build(body, st){
+      const sw = switchCtl('Produce a result on a schedule', st.on);
+      $('input', sw).onchange = e => { st.on = e.target.checked; };
+      body.append(sw);
+      const cad = el('div');
+      cad.append(segCtl(CADENCE, st.every, v => { st.every = v; }));
+      body.append(field('How often', cad));
+      body.append(field('What it produces', textareaCtl(st.ask, v => { st.ask = v; },
+        'What should each run make?')));
+      body.append(noteP('Each run files its result in the results column and appears in Chat → Schedule.'));
+    },
+    apply(st){
+      const prev = p.run && p.run.sched;
+      p.run = st.on ? { every:st.every, ask:st.ask, sched:prev } : null;
+      syncProjectRun(p, prev);
+    } });
+}
 
-  /* Knowledge: bases it cites and tables it reads, both by name. */
-  const knowSec = el('section','section');
-  knowSec.append(sectionHead('Knowledge',
-    '<span class="t-mono">' + ((p.kbs || []).length + (p.sources || []).length) + '</span>'));
-  knowSec.append(pickList(
-    D.KBS.map(k => ({ nm:k.name, sub:k.docs + ' documents', meta:'docs', id:k.name }))
-      .concat(D.DATASETS.map(t => ({ nm:t.name, sub:t.desc, meta:'table', id:t.name }))),
-    it => (p.kbs || []).indexOf(it.id) > -1 || (p.sources || []).indexOf(it.id) > -1,
-    (it, on) => {
-      const isBase = D.KBS.some(k => k.name === it.id);
-      const list = isBase ? (p.kbs = p.kbs || []) : (p.sources = p.sources || []);
-      const i = list.indexOf(it.id);
-      if (on && i < 0) list.push(it.id);
-      if (!on && i > -1) list.splice(i, 1);
-      render();
-    }));
-  s.main.append(knowSec);
+/* The bench's reply for a project runs the question through what is bound —
+   the assistant, the shelf, the grants — so the page's facts are the answer's
+   ingredients, visibly. */
+function pjTestScript(text, p){
+  const reads = (p.kbs || []).concat(p.sources || []);
+  const steps = [];
+  if (p.assistant) steps.push({ n:'inst.read', d:'reading ' + p.assistant + '’s instructions', t:'0.3s' });
+  if (reads.length) steps.push({ n:'kb.search', d:'searching ' + reads.join(', '), t:'0.9s' });
+  (p.conn || []).slice(0, 1).forEach(id => {
+    const cn = find(D.CONNECTORS, id);
+    steps.push({ n:cn.kind + '.read', d:'through the ' + cn.name + ' grant', t:'0.8s' });
+  });
+  steps.push({ n:'compose', d:'drafting the answer', t:'0.4s' });
 
-  /* Connections: the external systems this project reaches — its data in and
-     its posts out. A grant is not a connection, same as on an assistant. */
-  const connSec = el('section','section');
-  connSec.append(sectionHead('Connections', '<span class="t-mono">' + (p.conn || []).length + '</span>'));
-  connSec.append(pickList(
-    D.CONNECTORS.map(c => ({
-      nm:c.name, sub:c.state === 'off' ? 'not connected — grant it here, connect it in Cloud' : c.scope,
-      meta:c.kind, id:c.id
-    })),
-    it => (p.conn || []).indexOf(it.id) > -1,
-    (it, on) => {
-      p.conn = p.conn || [];
-      const i = p.conn.indexOf(it.id);
-      if (on && i < 0) p.conn.push(it.id);
-      if (!on && i > -1) p.conn.splice(i, 1);
-      render();
-    }));
-  connSec.append(noteP('A grant is not a connection. Granting one that is not connected is allowed — ' +
-    'it states what this project will need. Connecting it is done in Cloud → Connections.'));
-  s.main.append(connSec);
+  const lines = ['Answering inside **' + p.name + '** — ' +
+    (p.assistant ? '**' + p.assistant + '** takes every thread here'
+                 : 'no assistant is bound, so the workspace model answers') + '. Simulated output.', ''];
+  lines.push(reads.length
+    ? '- Read from ' + reads.map(n => '**' + n + '**').join(', ') + ' — the project’s own shelf.'
+    : '- Nothing is on the project’s shelf yet — bind knowledge on the left and answers start citing it.');
+  if ((p.conn || []).length){
+    lines.push('- ' + p.conn.map(id => '**' + find(D.CONNECTORS, id).name + '**').join(', ') +
+      ' reached through ' + (p.conn.length === 1 ? 'its grant' : 'their grants') + '.');
+  }
+  if (p.run) lines.push('- The program files this kind of answer ' + p.run.every.toLowerCase() + ' without being asked.');
+  const reply = { steps:steps, md:lines.join('\n') };
+  if (reads.length) reply.cites = [{ n:reads[0], s:'knowledge' }];
+  return reply;
+}
+
+function projectBuildView(body, p){
+  body.classList.add('pane__body--split');
+  const s = buildSplit();
+  s.wrap.classList.add('build--test');
+
+  const connName = id => find(D.CONNECTORS, id).name;
+  const threads = D.THREADS.filter(t => t.project === p.id);
+
+  const about = el('section','section');
+  about.append(sectionHead('About', '<span class="t-mono">' + plural(threads.length, 'thread') + '</span>'));
+  const l1 = el('div','setlist');
+  l1.append(setRow('Name', esc(p.name), () => editPjAbout(p)));
+  l1.append(setRow('Who can see it', p.shared ? 'Shared — the workspace works here' : 'Personal', () => editPjAbout(p)));
+  l1.append(setRow('Icon', esc(p.icon), () => editPjAbout(p)));
+  about.append(l1);
+  s.main.append(about);
+
+  const work = el('section','section');
+  work.append(sectionHead('The work'));
+  const l2 = el('div','setlist');
+  l2.append(setRow('Assistant',
+    p.assistant ? esc(p.assistant) : 'none — threads here use the workspace model',
+    () => editPjAsst(p)));
+  const reads = (p.kbs || []).concat(p.sources || []);
+  l2.append(setRow('Knowledge',
+    reads.length ? esc(reads.join(' · ')) : 'nothing on the shelf yet',
+    () => editPjKnow(p)));
+  l2.append(setRow('Connections',
+    (p.conn || []).length ? esc(p.conn.map(connName).join(' · ')) : 'none granted',
+    () => editPjConn(p)));
+  work.append(l2);
+  /* A granted connector that is not connected is stated, not hidden. */
+  const cold = (p.conn || []).map(id => find(D.CONNECTORS, id)).filter(c => c.state === 'off');
+  if (cold.length){
+    const b = banner('warn', '<strong>' + esc(cold.map(c => c.name).join(', ')) +
+      '</strong> ' + (cold.length === 1 ? 'is granted but not connected' : 'are granted but not connected') +
+      '. The grant states the need; the connection is made in Cloud → Connections.');
+    b.style.margin = 'var(--s-3) 0 0';
+    work.append(b);
+  }
+  s.main.append(work);
+
+  const prog = el('section','section');
+  prog.append(sectionHead('Auto program'));
+  const l3 = el('div','setlist');
+  l3.append(setRow('Program',
+    p.run ? esc(p.run.every.toLowerCase() + ' — files a result in the results column')
+          : 'off — nothing runs by itself',
+    () => editPjRun(p)));
+  if (p.run) l3.append(setRow('What it produces', esc(p.run.ask), () => editPjRun(p)));
+  prog.append(l3);
+  s.main.append(prog);
 
   if (p.channels && p.channels.length){
     const chSec = el('section','section');
@@ -4624,58 +4747,27 @@ function projectBuildView(body, p){
     s.main.append(chSec);
   }
 
-  /* The program: what makes a folder a small application. */
-  const runSec = el('section','section');
-  runSec.append(sectionHead('Auto program'));
-  const sw = switchCtl('Produce a result on a schedule', !!p.run);
-  $('input', sw).onchange = e => {
-    const prev = p.run && p.run.sched;
-    p.run = e.target.checked
-      ? { every:'Every week', ask:p.run && p.run.ask || 'Summarise what changed in ' + p.name + '.' }
-      : null;
-    syncProjectRun(p, prev);
-    render();
-  };
-  runSec.append(sw);
-  if (p.run){
-    const cad = el('div');
-    cad.style.marginTop = 'var(--s-3)';
-    cad.append(segCtl(CADENCE, p.run.every, v => {
-      const prev = p.run.sched;
-      p.run.every = v;
-      syncProjectRun(p, prev);
-      render();
-    }));
-    runSec.append(cad);
-    runSec.append(field('What it produces', textareaCtl(p.run.ask, v => { p.run.ask = v; },
-      'What should each run make?')));
-    runSec.append(noteP('Each run files its result in the results column and appears in Chat → Schedule.'));
-  }
-  s.main.append(runSec);
-
-  /* ------------------------------------------------------------ inspector */
-  const threads = D.THREADS.filter(t => t.project === p.id);
-  inspectorHead(s.side, 'Holds', plural(threads.length, 'thread'));
-  s.side.append(defList([
-    ['Visibility', p.shared ? 'shared' : 'personal'],
-    ['Assistant', esc(p.assistant || 'none')],
-    ['Knowledge', esc(String((p.kbs || []).length + (p.sources || []).length))],
-    ['Connections', esc(String((p.conn || []).length))],
-    ['Schedule', p.run ? esc(p.run.every.toLowerCase()) : '—'],
-    ['Threads', esc(String(threads.length))]
-  ]));
-  s.side.append(noteP('Edits apply as you make them — the project page and the sidebar read this same record.'));
-
-  const open = el('button','btn btn--primary', ic('open',13) + 'Open the project');
+  const open = el('button','btn btn--secondary', ic('open',13) + 'Open the project');
   open.onclick = () => select('chat', key('p', p.id));
   const opt = el('button','btn btn--secondary', ic('spark',13) + 'Optimize in chat');
   opt.onclick = () => openMaker('pj', p);
   const del = el('button','btn btn--ghost', ic('trash',13) + 'Delete');
   del.onclick = () => deleteProject(p);
-  inspectorActs(s.side, [open, opt, del]);
+  const acts = el('div');
+  acts.style.cssText = 'display:flex;gap:var(--s-2);flex-wrap:wrap;margin-top:var(--s-6)';
+  acts.append(open, opt, del);
+  s.main.append(acts);
 
-  pad.append(s.wrap);
-  body.append(pad);
+  /* ------------------------------------------------------------ the bench */
+  testBench(s.side, {
+    th:testThread(p), who:p.assistant || state.model,
+    placeholder:'Ask inside ' + p.name + '…',
+    hint:'Ask what you would ask in the project. The reply runs through what is bound on the left — the assistant, the shelf, the grants.',
+    starters:(p.run ? [p.run.ask] : []).concat(['What changed in ' + p.name + ' this week?']).slice(0, 2),
+    script:v => pjTestScript(v, p)
+  });
+
+  body.append(s.wrap);
 }
 
 /* ==================================================================== maker
