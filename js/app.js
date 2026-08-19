@@ -6551,6 +6551,20 @@ function noteEditor(app, st){
     tags.append(addTag);
   }
   nodes.push(tags);
+
+  /* The note saves as you type; Save is the door that says so — it names
+     what was kept and puts you back on the list. */
+  const acts = el('div','live__acts');
+  const save = el('button','btn btn--primary btn--sm', ic('check', 13) + 'Save');
+  save.type = 'button';
+  save.onclick = () => {
+    note.html = ed.innerHTML;
+    st.open = null; st.tagging = false;
+    repaintApp(app);
+    toast('Saved — ' + noteTitle(note));
+  };
+  acts.append(save);
+  nodes.push(acts);
   return nodes;
 }
 
@@ -6564,7 +6578,7 @@ function appTodo(app){
   const c = appCard('Items', el('span','badge' + (done === st.items.length ? ' badge--ok' : ''),
     done + ' of ' + st.items.length + ' done'));
 
-  const meter = el('span','meter');
+  const meter = el('span','meter meter--ink');
   meter.style.margin = 'var(--s-3) var(--s-3) var(--s-2)';
   meter.innerHTML = '<i style="width:' + Math.round(done / st.items.length * 100) + '%"></i>';
   c.body.append(meter);
@@ -6574,7 +6588,7 @@ function appTodo(app){
   st.items.forEach(it => {
     const row = el('label','picklist__row');
     row.dataset.done = String(it.done);
-    const box = el('input','check');
+    const box = el('input','check check--ink');
     box.type = 'checkbox';
     box.checked = it.done;
     box.onchange = () => { it.done = box.checked; repaintApp(app); };
@@ -6585,19 +6599,30 @@ function appTodo(app){
   });
   c.body.append(list);
 
+  /* The add row takes the item and, if asked, when it is due — the same next
+     seven days the calendar offers, since nobody dates a todo by typing. */
   const add = el('form');
-  add.style.cssText = 'display:flex;gap:var(--s-2)';
+  add.style.cssText = 'display:flex;gap:var(--s-2);flex-wrap:wrap';
   const input = el('input','input');
   input.type = 'text';
   input.placeholder = 'Add an item…';
+  input.style.cssText = 'flex:1;min-width:0';
+  const whens = ['No due','Today','Tomorrow'];
+  for (let i = 2; i < 7; i++) whens.push(calDayLabel(i));
+  let due = 'No due';
+  const sel = selectCtl(whens, due, v => due = v);
+  sel.style.width = 'auto';
   const go = el('button','btn btn--secondary btn--sm','Add');
   go.type = 'submit';
-  add.append(input, go);
+  add.append(input, sel, go);
   add.onsubmit = e => {
     e.preventDefault();
     const v = input.value.trim();
     if (!v) return;
-    st.items.unshift({ t:v, due:'', done:false });
+    /* 'Today' and 'Tomorrow' are stored the way the fixture says them. */
+    const when = due === 'No due' ? ''
+      : (due === 'Today' || due === 'Tomorrow') ? due.toLowerCase() : due;
+    st.items.unshift({ t:v, due:when, done:false });
     repaintApp(app);
   };
   return [c.card, add];

@@ -382,6 +382,10 @@ button.chip--plain:hover{ background:var(--raised) }
 .check:indeterminate{
   --tick:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.4' stroke-linecap='round'><path d='M6 12h12'/></svg>");
 }
+/* --ink: for the todo. A thing done is a fact written down, not an action,
+   so its mark is ink — the text colour — and both halves flip with theme. */
+.check--ink:checked{ background:var(--text); border-color:var(--text) }
+.check--ink:checked::after{ background:var(--bg) }
 /* Same control, round, for a choice that excludes the others — a checkbox
    where only one may be ticked lies about what will happen. */
 .check--radio{ border-radius:var(--r-full) }
@@ -402,6 +406,7 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .meter--warn > i{ background:var(--warn) }
 .meter--err > i{ background:var(--err) }
+.meter--ink > i{ background:var(--text) }
 
 
 /* ============================================================== rows/list

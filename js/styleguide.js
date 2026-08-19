@@ -29,7 +29,7 @@ const TOKENS = [
   { g:'Accent', kind:'swatch', note:'One accent. It means "the model acted" or "you can act" — never decoration. --accent-fg-soft is for the one thing that sits on the accent and still needs a surface: the ⌘↵ badge.',
     items:['--accent','--accent-hi','--accent-fg','--accent-soft','--accent-line','--accent-fg-soft'] },
   { g:'App identity', kind:'swatch', note:'An identity channel, not emphasis: it answers "which app", never "act here", which is why it appears on a tile and nowhere else.',
-    items:['--app-1','--app-2','--app-3','--app-4','--app-5','--app-fg'] },
+    items:['--app-1','--app-2','--app-3','--app-4','--app-5','--app-6','--app-fg'] },
   { g:'Status', kind:'swatch', note:'Dull on purpose. These carry meaning in data — a variance column, a run state, a value past its limit — and never appear in chrome.',
     items:['--ok','--ok-soft','--warn','--warn-soft','--err','--err-soft'] },
   { g:'Scrim', kind:'swatch', items:['--scrim'] },

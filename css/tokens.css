@@ -44,8 +44,10 @@
   --app-1:#6366f1;  /* time      — Calendar */
   --app-2:#10b981;  /* documents — CV extractor, My files */
   --app-3:#f59e0b;  /* money     — Invoice extractor */
-  --app-4:#3b82f6;  /* the day   — News, Todo */
+  --app-4:#3b82f6;  /* the day   — News */
   --app-5:#ef4444;  /* authoring — Note */
+  --app-6:#18181b;  /* ink       — Todo. Dark redefines it lighter so a
+                       near-black tile does not vanish into a dark rail. */
   --app-fg:#ffffff;
 
   /* ---------------------------------------------------- semantic · accent
@@ -217,6 +219,8 @@
   --ok:#3fbd8b;   --ok-soft:rgba(63,189,139,.13);
   --warn:#d99b28; --warn-soft:rgba(217,155,40,.14);
   --err:#ef6b5e;  --err-soft:rgba(239,107,94,.13);
+
+  --app-6:#3f3f46;  /* ink, kept visible against the dark rail */
 
   --scrim:rgba(0,0,0,.6);
 
