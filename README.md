@@ -116,19 +116,37 @@ writes, Data mode asks the three insight tables what happened, and the Monday
 program files the weekly channel report — which says `not measured` for the
 channel that is not connected rather than showing it as zero.
 
-The new-chat screen's third mode is **Auto program**: describe a routine for
-daily life in plain words — *"every morning, check the weather and my calendar,
-then write me a briefing"* — and the reply reads it back as a **program**: an
-editable widget with the cadence as a choice (one time, or every day, week or
-month — recurrence has to be said, so a plain "water the plants" reads as a
-one-time ask), every step as an input, and one action. The reading is a parse, not understanding, which is why everything in
-it can be corrected before **Create the program** writes a real row into
-Chat → Schedule — a job with steps when the routine has several, a task when it
-has one — whose Chat cell points back at the conversation that described it.
-Four starters run worked routines (a morning briefing, a Friday expense sweep,
-a daily LinkedIn post, a Sunday meal plan), free text goes through the same
-parser, and nothing runs until Create is pressed — the widget's footer says so
-out loud.
+The new-chat screen's third mode is **Auto program**: describe what should
+exist, in plain words, and the reply drafts it. **Intent is detected, not
+asked** — one parser reads which of four makers the sentence wants, and each
+thing lands in its existing home rather than a new store:
+
+- *"Every morning, check the weather and my calendar, then write me a
+  briefing"* → a **program**: an editable widget with the cadence as a choice
+  (one time, or every day, week or month — recurrence has to be said, so a
+  plain "water the plants" reads as a one-time ask), every step as an input,
+  and one action. Create writes a real row into Chat → Schedule — a job with
+  steps when the routine has several, a task when it has one — whose Chat cell
+  points back at the conversation that described it.
+- *"When a ticket arrives, triage it, then post the summary to #support"* → a
+  **workflow**: the same widget asking *When* instead of how often. The row's
+  cron is the trigger (`on a ticket arrives`) and its next run says *when it
+  fires* — an event's next run is not a time anyone can compute.
+- *"A script that renames my photos by date, then moves them into folders"* →
+  an **executable script**: an honest skeleton in Python and Bash — each step
+  a named function with a TODO where the work goes, the header quoting the
+  ask — filed in the results column, where it downloads as `.py` or `.sh` and
+  Copy takes the runtime on screen.
+- *"A widget showing my daily step count"* → a **web widget**: a design
+  element drafted with Build's own canvas as the preview. The chat edits one
+  thing — its name — because Build's inspector already edits everything else,
+  and two editors of one element would drift. Create files a draft in Build →
+  Design elements, embed snippet included.
+
+Seven starters run worked examples of all four; free text goes through the
+same parsers; and nothing runs, ships or leaves until Create is pressed — each
+widget's footer says so out loud. The reading is a parse, not understanding,
+which is why everything is editable before anything exists.
 
 **Chat → Schedule** is everything that runs without being asked, in two tables.
 **Jobs** lead: a job is the workflow of its schedule — named steps that run in

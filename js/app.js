@@ -1658,6 +1658,9 @@ function parseElement(text){
      count" names itself. */
   const m = text.match(/\b(?:widget|tile|dashboard|kpi|embed)\b\s*(?:showing|for|of|that shows|with|tracking)?\s*(?:my\s+|the\s+|our\s+)?([^,.;]+)/i);
   const name = (m && m[1] ? m[1].trim() : 'New widget')
+    /* The thing measured, not the sentence about it: a comparison clause
+       ("against a 10,000-step goal") belongs to the caption, not the name. */
+    .replace(/\s+(against|versus|vs\.?|compared to|towards?)\b.*$/i, '')
     .replace(/\s{2,}/g, ' ').replace(/^./, c => c.toUpperCase());
 
   const cfg = { title:name, sub:'', accent:'Nebulas', radius:'Soft', theme:'Follow',

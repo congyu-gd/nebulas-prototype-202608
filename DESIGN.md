@@ -1135,8 +1135,9 @@ two things to act on in one answer means neither gets acted on.
 | `quiz` | choose an answer; the outcome is built from what was chosen | Slide, CV filter, Explain a metric |
 | `chart` | switch series; negative bars take the loss colour | Visualization, Chart a trend |
 | `table` | sort any column, numerically where the column is numeric | Explanation, Profile a table, Find anomalies |
-| `code` | switch runtime or dialect, copy | Documentation, Join two sources |
-| `program` | edit the cadence and the steps, then create it | Auto program — every routine, worked or typed |
+| `code` | switch runtime or dialect, copy | Documentation, Join two sources, generated scripts |
+| `program` | edit the cadence — or the trigger — and the steps, then create it | Auto program — routines and workflows |
+| `element` | preview with Build's own canvas, name it, create it | Auto program — "a widget showing…" |
 
 **Answering has to change something**, or a questionnaire is a form nobody
 completes. The outcome block appears when the last question is answered and is
@@ -1184,6 +1185,39 @@ Three decisions worth recording:
 Created, the widget freezes into a record and a door — the row is the fact,
 and two editable copies of one program would drift. Undo removes the row *and*
 re-arms the draft: one fact, both halves together.
+
+### Scripts, widgets, workflows — same door, three more makers
+
+One sentence, four possible things. **Intent is detected, not asked** — a
+when-clause anchored at the start is a workflow, "script" is explicit, widget
+words pick the element maker, and everything else is the routine it always
+was. A kind picker would put one more question between the sentence and the
+draft; the parse is cheap to correct because every draft is editable.
+
+**No new stores.** Each maker writes into the home its thing already had:
+
+- A **script** is what a simulated prototype can honestly generate — a
+  *skeleton*, each parsed step a named function with a TODO body, `main()` in
+  order, the header quoting the ask so the file remembers where it came from.
+  It rides the existing code widget, which already files itself in the results
+  column; `CODE_EXT` turns the visible runtime into `.py` or `.sh`. No Save
+  button, because that would file the same fact twice.
+- A **web widget** becomes a design element in Build, previewed in the turn
+  with `designCanvas` itself — the preview *is* the element, not a picture of
+  one. The chat widget edits exactly one thing, the name: Build's inspector
+  already edits everything else, and two editors of one element drift. Its
+  placeholder values say they are placeholders ("Bound to a source in Build").
+- A **workflow** is an event-triggered job: the program widget asks *When*
+  instead of how often, and the row's cron is the trigger as free text
+  (`on a ticket arrives`) — legal since before this mode existed, a fixture
+  has run `on webhook` all along. Its next run says *when it fires*, because
+  an event's next run is not a time anyone can compute, and saying one would
+  be a guess wearing a clock.
+
+The element widget returns `null` from `liveResult` for the same reason the
+program does: the design record is the outcome, and the fallback branch reads
+`w.variants`, which neither has — the same shipped crash the program's guard
+was built for.
 
 ### The widget stays; its outcome is what leaves
 
