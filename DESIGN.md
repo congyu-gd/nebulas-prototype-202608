@@ -451,7 +451,7 @@ should land next to the thing it affects.
 | Copy artifact | gone — the Source pane is selectable text |
 | "Nothing here yet" empty thread | the hero: a question, two modes, and starters |
 | Cloud → Connections as its own fixture | derived from `CONNECTORS`. Configured in Build, reported in Cloud — one object, two views, because two lists of the same endpoints drift on the second edit |
-| Solution "Composition" read-out | the solution builder: the same facts, but editable, plus the checklist that says whether they add up to something shippable |
+| Solution "Composition" read-out | retired with solutions themselves — the packaged-unit role passed to projects, which bind an assistant, knowledge, connections and a schedule and already have a home on both sides of the app |
 | Build → Skills, Build → Agents | gone. A skill is chosen inside an assistant; scheduled runs are Chat → Schedule. Neither needed a page of its own, and six flat groups made the sidebar unnavigable |
 | Build's folding groups | Miller columns. An accordion asks you to manage what is open; columns just show the path you are on |
 | Build → Connectors | Cloud → Connections, as an index whose rows open the connector. Build grants one; Cloud connects it |
@@ -841,17 +841,20 @@ Every assistant has them, written per assistant. "Run a query" is not an example
 
 ## Build is where things are made, and it has one shape
 
-Build holds **three** kinds of thing: the **assistant** that answers, the
-**solution** that ships it, and the **design setting** it renders as. The first
-cut of this section had six, and six flat lists came to forty-six rows — a
-sidebar you scroll to navigate is not a sidebar. What went, and why it did not
-need a page:
+Build holds **four** kinds of thing — the **assistant** that answers, the
+**project** that organises work (and what it reaches outside), the **widget**
+that embeds, and the **template** a page or a PDF is laid out by. The first
+cut of this section had six groups, and six flat lists came to forty-six
+rows — a sidebar you scroll to navigate is not a sidebar. What went, and why
+it did not need a page:
 
 | Was a group | Now |
 |---|---|
 | Skills | chosen inside an assistant, never authored. A skill's signature and body are platform facts, not something a builder edits, so the pick list is the whole interaction. |
 | Agents | scheduled runs are already visible in Chat → Schedule. Two lists of "things that run on a clock" was one too many. |
 | Connectors | Cloud → Connections. Connecting a system is an administrative act, usually by a different person than the one composing an assistant. Build *grants* a connector; Cloud makes the grant mean something. |
+| Solutions | retired. A solution duplicated what a project already is — an assistant, knowledge, connections and a place results land — behind a second linking convention and a publish ceremony. Projects took the role; the checklist went with it. |
+| "Design settings" | split into **Widgets** and **Templates**. One label had been holding two genuinely different artifacts (an embeddable widget, a hosted page or a PDF layout) with one creation path that could only ever make a KPI tile. |
 
 ### The sidebar is Miller columns
 
@@ -860,10 +863,10 @@ thing itself:
 
 ```
 ┌──────────────────┬───────────────────────┬──────────────────────────┐
-│ ◈ Assistants   › │ ASSISTANTS      16  + │  Revenue analyst         │
-│ ▣ Solutions    › │ ┌ Mine ┬ Teams ┬ All┐ │  ┌ form ────┬ inspector ┐│
-│ ▤ Design set…  › │  Revenue analyst      │  │ name…    │ becomes   ││
-│                  │  Code reviewer        │  │ skills…  │ test      ││
+│ ◈ Assistants   › │ ASSISTANTS      17  + │  Revenue analyst         │
+│ ▤ Projects     › │ ┌ Mine ┬ Teams ┬ All┐ │  ┌ form ────┬ inspector ┐│
+│ ▣ Widgets      › │  Revenue analyst      │  │ name…    │ becomes   ││
+│ ▦ Templates    › │  Code reviewer        │  │ skills…  │ test      ││
 │                  │  Support triage   Ana │  └──────────┴───────────┘│
 └──────────────────┴───────────────────────┴──────────────────────────┘
    --mill-w 176      the rest of --list-w      the pane = last column
@@ -942,7 +945,7 @@ Two gaps are shown rather than hidden:
 
 So the page has no preview — there is nothing to look at, only what it may
 reach and who reaches through it. `usedBy` is **derived** (assistants whose
-`conn` contains it, solutions that require it), never stored: the builder mutates
+`conn` contains it, projects granted it), never stored: the builder mutates
 these objects, so a cached list of dependents would be wrong by the second edit.
 The same connector is *reported* in Cloud → Connections and *configured* here;
 two fixtures for one endpoint would have drifted immediately.
@@ -950,10 +953,11 @@ two fixtures for one endpoint would have drifted immediately.
 Disconnecting leaves every grant in place, and the toast says how many just
 stopped working. Grants do not disappear when the connection does.
 
-### Design elements: two kinds, one canvas
+### Widgets and templates: two lanes, one canvas
 
-A **widget** is embedded in a page someone else owns; a **website template** is
-the page. `shape` picks the renderer, `cfg` is what the inspector edits.
+A **widget** is embedded in a page someone else owns; a **template** is the
+page — or, for the `pdf` shape, the printed one. `shape` picks the renderer,
+`cfg` is what the inspector edits.
 
 | Shape | Reads as |
 |---|---|
@@ -964,6 +968,7 @@ the page. `shape` picks the renderer, `cfg` is what the inspector edits.
 | `portal` | signed-in page: side nav, card grid |
 | `landing` | public page: one claim, three supports, one action |
 | `docs` | three columns — what exists, what you are reading, where you are |
+| `pdf` | a portrait page: brand header, sections in reading order, a footer opposite the page number |
 
 **A template preview is a wireframe, not a mockup.** Bars stand in where text
 goes, so the reader judges the layout instead of reading placeholder prose. Only
@@ -975,28 +980,41 @@ page; `Light` and `Dark` stamp `data-theme` on the frame and fix it. The widget
 ships its own tokens, which is why it can look like itself inside a page whose
 CSS we have never seen — and why the scoped palette in `tokens.css` had to exist.
 
-### A solution is publishable, or it says why not
+### A project is defined in Build and worked in Chat
 
-The checklist is the substantive part. A solution binds an assistant, the skills
-it may call, the knowledge it may cite, the connectors it needs, what it renders
-as, and where it reaches — all by id, so it cannot claim a part that does not
-exist. Publish is disabled until every line is met, and the button's tooltip
-names the first gap.
+The fourth lane lists the chat sidebar's own `D.PROJECTS` — one store, two
+addresses, the same rule assistants follow. The builder edits what the dialog
+edits (name, visibility, assistant, knowledge, the program) plus one thing the
+dialog never had room for: **Connections**, the external systems a project is
+granted, in the same grant-not-connection language an assistant uses. Projects
+keep their name-based references (assistant and knowledge by name — the
+dialog's convention) rather than gaining a second convention; the asymmetry is
+documented where it lives.
 
-Two of the six checks are conditional, which is the whole point:
+### The maker: create is optimize on a fresh draft
 
-- **Design element** is required only if a chosen surface *renders*. `App rail`,
-  `Embedded widget` and `Public website` need one; `Webhook` and
-  `Scheduled digest` answer in JSON and do not. That is why `SURFACES` carries a
-  `renders` flag rather than a description.
-- **Skills** must be a subset of the bound assistant's. One it does not have
-  would ship a call that cannot resolve, so the row reads *not on Revenue
-  analyst* rather than being quietly droppable.
+Every lane's `+` and every builder page's `Optimize in chat` open the same
+overlay: the conversation on the left, the record live on the right. There is
+no separate create flow — Build's `+` always made a draft record instantly, so
+the maker keeps that and makes the first sentence the first optimization. The
+same verbs serve both, which is why there is no Create button to forget.
 
-The chosen design element is previewed inside the solution, because that page
-is where someone decides what the answer looks like and a name is not enough to
-decide from. Publishing bumps the minor version and states every surface it went
-to.
+- **The conversation is a real thread**, tagged `build:` the way project
+  threads are tagged `project:`. History lists it, opening it from History
+  replays it, and optimizing the same record later resumes it — a record's
+  chat is one conversation, not an archaeology of little ones.
+- **The reading is a parse, not understanding.** Skills, corpora, connectors,
+  models, teams, accents and assistants are matched **by name**; a small verb
+  table covers rename, add/remove, cadence words and behaviour phrases. Every
+  reply names exactly what was applied, and one line defers the remainder to
+  the inspector — which stays the editor of everything, so the chat never has
+  to pretend.
+- **The turn engine is the chat's own**, parameterised rather than duplicated:
+  `runTurn(text, script, opts)` streams into the overlay's log, writes into
+  the overlay's thread, and leaves the page behind it alone. With no opts it
+  is byte-for-byte the chat pane's behaviour.
+- **Closing an untouched fresh draft removes it silently** — nothing was said,
+  so nothing was made. `Discard` on a touched one is undoable.
 
 ## An app is a column, not a layer
 
@@ -1026,9 +1044,7 @@ conversation instead of covering it:
 
 Seven of them, and deliberately ordinary: a calendar, two extractors, files,
 news, a note, a todo list. These are the things worth having open *beside* a
-conversation. (Published solutions reach this rail through the App-rail surface;
-none of the fixtures is installed, which is what the builder's `Open` button
-says when it is disabled.)
+conversation.
 
 **Flat inside the column.** The panel is already the container, so the cards
 inside it go flat: no border, no tinted head, no inset body — a section is a
@@ -1417,7 +1433,7 @@ reach open space.
 **Keyboard.** `⌘K` palette · `⌘↵` send · `⌘\` sidebar · `⌘.` results column ·
 `⌘]` app panel · `⌘J` theme · `/` focus composer · `Esc` dismiss. The palette
 merges threads, apps, projects, assistants, knowledge, sources, results,
-solutions and commands into one ranked list.
+widgets, templates and commands into one ranked list.
 
 ## The cloud page has two kinds of page
 
@@ -1526,9 +1542,9 @@ harder to find, which is why the green came back out again after the first pass.
   is a store that stops being read.
 - Keyboard traversal of the sidebar, and focus management when the palette
   closes.
-- Build has no draft state and no version history. Edits apply as you make them,
-  which is honest for a prototype and wrong for a product: publishing a solution
-  should promote a draft, not mutate the live thing in place.
-- A design element cannot yet be previewed against real data from the solution
-  that renders it — the fixture values are typed into the inspector, so a widget
-  can claim a number its assistant could not produce.
+- Build has no draft state and no version history. Edits apply as you make them
+  — the maker says so out loud — which is honest for a prototype and wrong for
+  a product: publishing should promote a draft, not mutate the live thing.
+- A widget cannot yet be previewed against real data from the assistant or
+  project that would feed it — the values are typed (or said in the maker), so
+  a widget can claim a number its assistant could not produce.

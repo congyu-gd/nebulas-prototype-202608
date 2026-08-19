@@ -207,15 +207,27 @@ that day and hour, and an existing event opens for editing, with an undoable
 remove. Everything lands in the panel's own list — it mirrors a work calendar
 it cannot write to, and says so.
 
-The workspace's **Build** section is the maker's half, and it has three groups:
-**assistants**, **solutions** (with a publish checklist that says what is still
-missing), and **design settings** — widgets and website templates, previewed
-live as you configure them. Its sidebar is **Miller columns** — kind, then item,
-with the builder itself as the last column — filtered on ownership
-(`Mine · Teams · All`). Connectors live in Cloud → Connections, since
-connecting a system is an administrative act; Build only grants one. Everything
-references everything else by id, so a solution cannot claim a part that does
-not exist.
+The workspace's **Build** section is the maker's half, and it has four lanes:
+**assistants**, **projects** (the chat sidebar's own, defined here too — with
+the external systems they reach granted as connections), **widgets**, and
+**templates** — web pages and PDF layouts, previewed live as you configure
+them. Its sidebar is **Miller columns** — kind, then item, with the builder
+itself as the last column — filtered on ownership (`Mine · Teams · All`).
+Connectors live in Cloud → Connections, since connecting a system is an
+administrative act; Build only grants one.
+
+Every lane is also **built by chat, without leaving Build**: the lane's `+`
+opens **the maker** — an overlay with the conversation on the left and the
+record live on the right. Create is optimize on a fresh draft: the first
+sentence names and fills it ("a KPI tile for open tickets, 47 against a 100
+goal" is a widget; "a churn watch project reading the Support corpus and
+HubSpot, reporting every week" is a project with a schedule row), and every
+later sentence is a delta — rename it, make it amber and wide, drop the
+warehouse skill, always confirm before writing. Each reply names exactly what
+was applied and defers the rest to the inspector, which stays the editor of
+everything. `Optimize in chat` on any builder page opens the same overlay on
+that record, its conversation resumed — the maker's chat is a real thread,
+tagged to the record, so History holds and replays it.
 
 The **cloud page** is twelve deployment modules in four menu groups, and the
 first one — **Platform Usage Monitoring** — is a different kind of page. It
