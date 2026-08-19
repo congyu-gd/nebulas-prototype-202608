@@ -948,6 +948,12 @@ in that order:
   Escape and the scrim all discard — the one place in Build where an edit
   waits for confirmation, because a page whose job is reading should not be
   a form armed to fire.
+- **A capability is stated with its worked examples** (`.caprow`): the skill's
+  name, what it does, and the record's own example prompts (`a.ex`) as chips —
+  and a chip is a button that runs in the bench, because an example next to a
+  test bench is for trying, not reading. **Temperature** sits under Model as a
+  fact (`a.temp`, already derived for every fixture) and is edited in the
+  Model dialog with a slider.
 - The old inspector died of redundancy. Its summary repeated, narrowly, facts
   the wide column now states — and its title, **Becomes** (shorthand for
   "what this configuration becomes at run time"), explained itself to nobody.

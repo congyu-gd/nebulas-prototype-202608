@@ -993,7 +993,7 @@ button.chip--plain:hover{ background:var(--raised) }
    opens a dialog, and the record only moves when the dialog saves. The value
    truncates; the dialog holds the full text. */
 .setlist{ display:flex; flex-direction:column }
-.setlist > .setrow + .setrow{ border-top:var(--border) solid var(--line) }
+.setlist > * + *{ border-top:var(--border) solid var(--line) }
 .setrow{
   display:grid; grid-template-columns:calc(var(--u) * 28) minmax(0,1fr) auto;
   gap:var(--s-3); align-items:center;
@@ -1006,6 +1006,28 @@ button.chip--plain:hover{ background:var(--raised) }
 .setrow__k{ color:var(--text-4); font-size:var(--t-11) }
 .setrow__v{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
 .setrow__go{ display:flex; color:var(--text-4) }
+
+/* A capability, stated with its worked examples: the name, what it does, and
+   prompts that run in the bench beside it — an example you can click beats
+   one you can only read. The head edits, like any setrow. */
+.caprow__head{
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+  gap:var(--s-3); align-items:baseline;
+  width:100%; padding:var(--s-2);
+  border:0; background:none; text-align:left;
+  font:inherit; cursor:pointer;
+}
+.caprow__head:hover{ background:var(--raised) }
+.caprow__head .setrow__go{ align-self:center }
+.caprow__nm{ font-family:var(--mono); font-size:var(--t-11); color:var(--text-2); white-space:nowrap }
+.caprow__desc{
+  font-size:var(--t-11); color:var(--text-4);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.caprow__chips{
+  display:flex; flex-wrap:wrap; gap:var(--s-2);
+  padding:0 var(--s-2) var(--s-3);
+}
 
 /* ============================================================== timeline
    A run log read downward, newest first: one dot per entry coloured by how the

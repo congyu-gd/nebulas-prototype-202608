@@ -4136,12 +4136,25 @@ function editModel(a){
      the first option. */
   const models = D.MODELS.indexOf(a.model) > -1 ? D.MODELS : D.MODELS.concat([a.model]);
   openEdit({ title:'Model', sub:a.name, ico:'cube',
-    staged:{ model:a.model },
+    staged:{ model:a.model, temp:a.temp },
     build(body, st){
       body.append(field('Model', selectCtl(models, st.model, v => { st.model = v; }),
         'A thread can still route a single turn elsewhere.'));
+      const row = el('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:var(--s-3)';
+      const r = el('input','range');
+      r.type = 'range'; r.min = '0'; r.max = '1'; r.step = '0.1';
+      r.value = String(st.temp);
+      const v = el('span','t-mono', st.temp.toFixed(1));
+      r.oninput = () => { st.temp = parseFloat(r.value); v.textContent = st.temp.toFixed(1); };
+      row.append(r, v);
+      body.append(field('Temperature', row,
+        'Low repeats itself, high explores. Analysis wants it cold.'));
     },
-    apply(st){ a.model = st.model; a.opts.think = st.model.indexOf('extended') > -1; } });
+    apply(st){
+      a.model = st.model; a.temp = st.temp;
+      a.opts.think = st.model.indexOf('extended') > -1;
+    } });
 }
 function editKb(a){
   const kbNames = ['— none —'].concat(D.KBS.map(k => k.name));
@@ -4299,6 +4312,9 @@ function assistantBuildView(body, a){
   engine.append(sectionHead('Model & knowledge'));
   const l2 = el('div','setlist');
   l2.append(setRow('Model', esc(a.model), () => editModel(a)));
+  l2.append(setRow('Temperature',
+    a.temp.toFixed(1) + (a.temp <= 0.1 ? ' — deterministic' : a.temp >= 0.5 ? ' — exploratory' : ' — steady'),
+    () => editModel(a)));
   l2.append(setRow('Knowledge base',
     a.kb ? esc(a.kb) : '<span style="color:var(--warn)">none — it answers from the model alone</span>',
     () => editKb(a)));
@@ -4306,13 +4322,40 @@ function assistantBuildView(body, a){
   engine.append(l2);
   s.main.append(engine);
 
+  /* Each skill is stated with what it does and its worked examples — and an
+     example is a button: it runs in the bench, because trying the capability
+     is what an example next to a test bench is for. */
   const caps = el('section','section');
   caps.append(sectionHead('Capabilities'));
   const l3 = el('div','setlist');
-  l3.append(setRow('Skills',
-    a.skills.length ? esc(a.skills.join(' · '))
-                    : '<span style="color:var(--warn)">none — it can only talk</span>',
-    () => editSkills(a)));
+  if (!a.skills.length){
+    l3.append(setRow('Skills',
+      '<span style="color:var(--warn)">none — it can only talk</span>', () => editSkills(a)));
+  }
+  a.skills.forEach(n => {
+    const sk = D.SKILLS.filter(x => x.name === n)[0];
+    const wrap = el('div','caprow');
+    const head = el('button','caprow__head');
+    head.type = 'button';
+    head.innerHTML =
+      '<span class="caprow__nm">' + esc(n) + '</span>' +
+      '<span class="caprow__desc">' + esc(sk ? sk.desc : 'not defined in this workspace') + '</span>' +
+      '<span class="setrow__go">' + ic('chevR',13) + '</span>';
+    head.onclick = () => editSkills(a);
+    wrap.append(head);
+    const exs = (a.ex && a.ex[n]) || [];
+    if (exs.length){
+      const chips = el('div','caprow__chips');
+      exs.forEach(t => {
+        const c = el('button','chip','<span>' + esc(t) + '</span>');
+        c.type = 'button';
+        c.onclick = () => { input.value = t; submit(); };
+        chips.append(c);
+      });
+      wrap.append(chips);
+    }
+    l3.append(wrap);
+  });
   l3.append(setRow('Connectors',
     a.conn.length ? esc(a.conn.map(connName).join(' · ')) : 'none granted',
     () => editConn(a)));
@@ -4441,7 +4484,7 @@ function assistantBuildView(body, a){
 function draftAssistant(){
   const a = {
     id:'as-n' + (++madeN), name:'Untitled assistant', state:'draft', model:D.MODELS[0],
-    team:D.ASSISTANT_TEAMS[0], fav:false, threads:0,
+    team:D.ASSISTANT_TEAMS[0], fav:false, threads:0, temp:0.2,
     desc:'No description yet.', skills:[], kb:null, conn:[],
     opts:{ cite:true, confirm:true, think:false }, inst:''
   };
