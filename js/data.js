@@ -1309,7 +1309,8 @@ const APPS = [
      invx     an invoice tray: a picture or a camera capture, a ledger of
               what came in, each row opening as the invoice itself
      files    what has been uploaded, attachable to the next message
-     news     headlines, unread first, askable about in the thread
+     news     headline cards with token-drawn pictures, topic tabs, a
+              summary read in place, askable about in the thread
      note     an editable scratchpad
      todo     items you can tick
 
@@ -1442,14 +1443,23 @@ const APP_PANELS = {
     ] },
 
   /* The fourth value is 1 for unread. Marking one read is app state. */
-  ap5:{ s:'news', foot:'Reuters · Bloomberg · Handelsblatt · Politico · WSJ',
-    rows:[
-      ['Northwind Traders names a new CFO','Reuters','34m',1],
-      ['ECB holds rates, signals one cut before year end','Bloomberg','1h',1],
-      ['Contoso Retail closes 40 stores in the DACH region','Handelsblatt','3h',0],
-      ['EU AI Act: first conformity deadlines land in September','Politico','6h',0],
-      ['Fabrikam raises a $120M Series D','TechCrunch','1d',0],
-      ['Snowflake lifts FY guidance on data-sharing revenue','WSJ','1d',0]
+  /* A headline is a card: its picture (drawn in app.js from the tokens),
+     the title, where and when, and a summary that Summarize reveals in
+     place. `topic` is what the tabs filter on; `unread` seeds the dot. */
+  ap5:{ s:'news', foot:'Reuters · Bloomberg · Handelsblatt · Politico · WSJ. The feed is simulated.',
+    items:[
+      { t:'Northwind Traders names a new CFO', src:'Reuters', when:'34m', topic:'Markets', unread:1,
+        sum:'Elena Vasquez moves up from group controller after four years; the outgoing CFO stays through the Q3 close. The street reads it as pre-IPO housekeeping — the release leans on "audit readiness" twice.' },
+      { t:'ECB holds rates, signals one cut before year end', src:'Bloomberg', when:'1h', topic:'Markets', unread:1,
+        sum:'Rates stay at 3.25%. The statement drops "persistent" before inflation and adds "confidence is firming" — the phrase watchers wanted. Futures now price one cut in December, two by March.' },
+      { t:'Contoso Retail closes 40 stores in the DACH region', src:'Handelsblatt', when:'3h', topic:'Retail',
+        sum:'A fifth of the estate, framed as a shift to "fewer, larger, digital-first" flagships. 1,200 roles affected, half offered relocation. Online now carries 38% of DACH revenue, up from 24% two years ago.' },
+      { t:'EU AI Act: first conformity deadlines land in September', src:'Politico', when:'6h', topic:'AI',
+        sum:'Providers of general-purpose models face the first documentation deadlines on 2 September. The codes of practice are still drafts, so counsel is advising conformity files against the Act itself — slower, safer.' },
+      { t:'Fabrikam raises a $120M Series D', src:'TechCrunch', when:'1d', topic:'AI',
+        sum:'Led by Meridian Growth at a $1.4B valuation, doubling the round before it. The money goes to the agent platform and an EU data-residency build-out; revenue is disclosed only as "north of $60M ARR".' },
+      { t:'Snowflake lifts FY guidance on data-sharing revenue', src:'WSJ', when:'1d', topic:'Markets',
+        sum:'Product revenue guidance rises 2 points on the back of data-sharing and marketplace consumption, now 11% of revenue. The quarter beat on both lines; NRR steadies at 127%.' }
     ] },
 
   /* A note is one string and its FIRST LINE is its title — the same rule every

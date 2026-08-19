@@ -188,9 +188,11 @@ shell, so the chat compresses instead of being covered, and the composer stays o
 screen. Seven apps: **Calendar**, **CV extractor**, **Invoice extractor**, **My
 files**, **News**, **Note**, **Todo**. They are wired into the rest of the
 workspace rather than being pictures of apps — a file attaches to your next
-message, a headline writes the question into the composer, an extraction is filed
-in the results column, and a ticked box or a typed note survives switching apps
-and sections. The CV extractor is a tray: upload several CVs, press one
+message, an extraction is filed in the results column, and a ticked box or a
+typed note survives switching apps and sections. News is headline cards with
+pictures drawn from the design tokens (nothing is fetched): topic tabs filter
+the feed, `Summarize` opens the summary in the card, `Ask in chat` writes the
+question into the composer, and `Save` files the summary as a result. The CV extractor is a tray: upload several CVs, press one
 `Extract`, and each becomes a candidate in a list — clicking a candidate
 opens the resume itself, read from the file, with one way back. The
 invoice extractor works the same way with a second way in — a picture from

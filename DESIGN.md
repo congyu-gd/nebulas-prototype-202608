@@ -1048,7 +1048,7 @@ exist elsewhere — an app is a new arrangement, not a new vocabulary:
 | `cvx` | an upload box, a candidate list, and behind each candidate the resume itself | CV extractor |
 | `invx` | the same two screens with a second way in — the camera — and the list as a ledger | Invoice extractor |
 | `files` | rows that attach to the next message | My files |
-| `news` | rows that wrap, unread marked, that ask the thread about themselves | News |
+| `news` | headline cards — token-drawn picture, topic tabs, summary in place, three verbs | News |
 | `note` | a list plus a `textarea`, first line as title | Note |
 | `todo` | `.picklist` rows with real checkboxes, a count and a meter | Todo |
 
@@ -1107,6 +1107,17 @@ adds them, the total ruled off — with one way back to the ledger. A due date
 the frame cropped out reads `—` with a `check` badge and a note saying
 retake or fill it by hand: a guess would be worse than a gap. Neither the
 upload nor the capture is real, and both say so where they happen.
+
+**News is cards, and the pictures are drawn, not fetched.** A headline card
+is the picture, the title (wrapping — the headline is the content), where
+and when with the unread dot, and three verbs: `Summarize` opens the summary
+right in the card (quoted with the timeline's strong leading edge) and marks
+it read, `Ask in chat` writes the question into the composer, `Save` files
+the summary in the results column as a document. Topic tabs filter the feed;
+`Refresh` answers honestly that nothing is upstream. The six images are
+inline SVGs drawn from the design tokens — abstract editorial marks, cycled —
+because a card without a picture is a list row, and a fetched picture would
+be the page's only network call.
 
 **Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
 once and owned in JS after that — the same rule as a chat widget's state. A

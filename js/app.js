@@ -5762,7 +5762,11 @@ function appState(app){
       s.shots = p.invs.filter(v => v.src === 'camera').map(mk);
       s.open = null;               /* which invoice is on screen; null = the ledger */
     }
-    if (p.s === 'news') s.read = p.rows.map(r => !r[3]);
+    if (p.s === 'news'){
+      s.read = p.items.map(it => !it.unread);
+      s.sum = p.items.map(() => false);
+      s.topic = 'All';
+    }
     APP_STATE[app.id] = s;
   }
   return APP_STATE[app.id];
@@ -6321,28 +6325,73 @@ function appFiles(app, p){
 }
 
 /* ---------------------------------------------------------------- news
-   Headlines wrap rather than truncate: the headline IS the content. Clicking
-   one marks it read and asks the thread about it. */
+   A headline is a card: its picture, the title (wrapping — the headline IS
+   the content), where and when, and three verbs. Summarize opens the summary
+   right here and marks it read; Ask in chat writes the question into the
+   composer; Save files the summary in the results column. Topics filter the
+   feed, Refresh is honest about being a fixture, and the pictures are inline
+   SVGs drawn from the tokens — six abstract editorial marks, cycled, because
+   fetching real ones would be the page's only network call. */
+const NEWS_ART = [
+  '<svg viewBox="0 0 600 240"><circle cx="430" cy="118" r="150" fill="var(--accent-soft)"/><circle cx="430" cy="118" r="92" fill="none" stroke="var(--accent-line)" stroke-width="2"/><circle cx="430" cy="118" r="16" fill="var(--accent)"/><rect x="56" y="114" width="230" height="4" rx="2" fill="var(--line-strong)"/><rect x="56" y="132" width="140" height="4" rx="2" fill="var(--line)"/></svg>',
+  '<svg viewBox="0 0 600 240"><rect x="70" y="150" width="52" height="50" rx="4" fill="var(--line-strong)"/><rect x="150" y="120" width="52" height="80" rx="4" fill="var(--line-strong)"/><rect x="230" y="132" width="52" height="68" rx="4" fill="var(--line-strong)"/><rect x="310" y="88" width="52" height="112" rx="4" fill="var(--accent)"/><rect x="390" y="64" width="52" height="136" rx="4" fill="var(--accent-soft)"/><rect x="470" y="104" width="52" height="96" rx="4" fill="var(--line)"/><rect x="56" y="208" width="488" height="3" rx="1.5" fill="var(--line-strong)"/></svg>',
+  '<svg viewBox="0 0 600 240"><path d="M0 190 L180 70 L340 150 L600 30 L600 240 L0 240 Z" fill="var(--warn-soft)"/><path d="M0 190 L180 70 L340 150 L600 30" fill="none" stroke="var(--warn)" stroke-width="3"/><circle cx="340" cy="150" r="7" fill="var(--warn)"/></svg>',
+  '<svg viewBox="0 0 600 240"><rect x="120" y="30" width="360" height="180" rx="10" fill="none" stroke="var(--accent-line)" stroke-width="2"/><rect x="150" y="62" width="130" height="10" rx="5" fill="var(--accent)"/><rect x="150" y="92" width="300" height="6" rx="3" fill="var(--line-strong)"/><rect x="150" y="112" width="300" height="6" rx="3" fill="var(--line)"/><rect x="150" y="132" width="240" height="6" rx="3" fill="var(--line)"/><rect x="150" y="164" width="90" height="18" rx="9" fill="var(--accent-soft)"/></svg>',
+  '<svg viewBox="0 0 600 240"><circle cx="240" cy="120" r="95" fill="var(--ok-soft)"/><circle cx="360" cy="120" r="95" fill="var(--accent-soft)"/><path d="M300 46 a95 95 0 0 1 0 148 a95 95 0 0 1 0 -148" fill="var(--raised-2)"/><circle cx="300" cy="120" r="10" fill="var(--ok)"/></svg>',
+  '<svg viewBox="0 0 600 240"><path d="M140 190 a160 160 0 0 1 320 0" fill="none" stroke="var(--line)" stroke-width="16"/><path d="M140 190 a160 160 0 0 1 214 -150" fill="none" stroke="var(--accent)" stroke-width="16" stroke-linecap="round"/><circle cx="300" cy="190" r="8" fill="var(--text-4)"/><rect x="290" y="110" width="20" height="80" rx="8" fill="var(--raised-2)"/></svg>'
+];
 function appNews(app, p){
   const st = appState(app);
-  const unread = st.read.filter(x => !x).length;
-  const c = appCard('Feed', el('span','badge' + (unread ? ' badge--info' : ''),
-    unread ? unread + ' unread' : 'all read'));
-  p.rows.forEach(([title, src, when], i) => {
-    const row = listRow({
-      lead:'<span class="dot ' + (st.read[i] ? 'dot--read' : 'dot--unread') + '"></span>',
-      title:title, sub:src, meta:when,
-      onClick:() => {
-        st.read[i] = true;
+  const nodes = [];
+
+  /* one toolbar: the topics, then how fresh it is */
+  const topics = ['All'].concat(p.items.map(x => x.topic)
+    .filter((t, i, a) => a.indexOf(t) === i));
+  const bar = el('div');
+  bar.style.cssText = 'display:flex;align-items:center;gap:var(--s-2)';
+  bar.append(segCtl(topics, st.topic, v => { st.topic = v; repaintApp(app); }));
+  bar.append(el('span','toolbar__spacer'));
+  const refresh = el('button','iconbtn iconbtn--xs', ic('retry', 12));
+  refresh.type = 'button';
+  refresh.title = 'Refresh the feed';
+  refresh.onclick = () => toast('Refreshed — nothing new upstream, the feed is simulated');
+  bar.append(refresh);
+  nodes.push(bar);
+
+  p.items.forEach((it, i) => {
+    if (st.topic !== 'All' && it.topic !== st.topic) return;
+    const card = el('article','newscard');
+    card.innerHTML =
+      '<figure class="newscard__img" aria-hidden="true">' + NEWS_ART[i % NEWS_ART.length] + '</figure>' +
+      '<h3 class="newscard__title">' + esc(it.t) + '</h3>' +
+      '<div class="newscard__meta">' +
+        (st.read[i] ? '' : '<span class="dot dot--unread"></span>') +
+        '<span>' + esc(it.src) + ' · ' + esc(it.when) + ' · ' + esc(it.topic) + '</span>' +
+      '</div>' +
+      (st.sum[i] ? '<p class="newscard__sum">' + esc(it.sum) + '</p>' : '');
+    const acts = el('div','newscard__acts');
+    const verb = (label, run) => {
+      const b = el('button','linkbtn', label);
+      b.type = 'button';
+      b.onclick = () => { st.read[i] = true; run(); };
+      return b;
+    };
+    acts.append(
+      verb(st.sum[i] ? 'Hide the summary' : 'Summarize',
+        () => { st.sum[i] = !st.sum[i]; repaintApp(app); }),
+      verb('Ask in chat', () => { repaintApp(app); askAbout(it.t, it.src); }),
+      verb('Save', () => {
         repaintApp(app);
-        askAbout(title, src);
-      }
-    });
-    row.classList.add('row--wrap');
-    row.title = 'Ask about this in the thread';
-    c.body.append(row);
+        fileResult({ id:'r-news-' + i, title:it.t, from:app.name, shape:'doc', size:'summary',
+          md:'# ' + it.t + '\n\n' + it.src + ' · ' + it.when + '\n\n' + it.sum });
+      })
+    );
+    card.append(acts);
+    nodes.push(card);
   });
-  return [c.card, helpNote('Clicking a headline marks it read and writes the question into the composer.')];
+
+  nodes.push(helpNote('Summarize reads it here; Ask in chat writes the question into the composer; Save files the summary in the results column.'));
+  return nodes;
 }
 
 /* ---------------------------------------------------------------- note

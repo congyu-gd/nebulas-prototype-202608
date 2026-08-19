@@ -861,6 +861,39 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .week__evt:hover{ border-left-color:var(--text-4); color:var(--text) }
 
+/* ================================================================ newscard
+   A headline with its picture. The image is an inline SVG drawn from the
+   design tokens, so it follows theme and density and fetches nothing — a
+   news card without a picture is a list row, and a fetched picture would be
+   the page's one network call. Cards divide with the hairline rather than
+   boxing themselves; the summary, when opened, quotes the way a timeline
+   product does — a strong leading edge, no box. */
+.newscard{ display:grid; gap:var(--s-2) }
+.newscard + .newscard{ border-top:var(--border) solid var(--line); padding-top:var(--s-4) }
+.newscard__img{
+  margin:0;
+  border-radius:var(--r-md); overflow:hidden;
+  background:var(--raised);
+}
+.newscard__img svg{ display:block; width:100%; height:auto }
+.newscard__title{
+  margin:0;
+  font-size:var(--t-13); font-weight:var(--w-medium);
+  line-height:var(--lh-tight); letter-spacing:var(--ls-snug);
+  color:var(--text);
+}
+.newscard__meta{
+  display:flex; align-items:center; gap:var(--s-2);
+  font-size:var(--t-11); color:var(--text-4);
+}
+.newscard__sum{
+  margin:0;
+  padding-left:var(--s-3);
+  border-left:var(--ring) solid var(--line-strong);
+  font-size:var(--t-12); line-height:var(--lh-prose); color:var(--text-2);
+}
+.newscard__acts{ display:flex; gap:var(--s-4) }
+
 /* ================================================================= dropbox
    An upload box: the dashed edge is the affordance, and the help line under
    the invitation is where the box stays honest about what an upload is in a
