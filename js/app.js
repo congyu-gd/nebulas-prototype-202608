@@ -858,7 +858,7 @@ function msgNode(m){
    results column under a name (see syncResult). */
 const LIVE = {};
 let liveN = 0;
-const WIDGET_ICON = { form:'filetext', quiz:'checksq', chart:'chart', table:'table', code:'code', program:'clock' };
+const WIDGET_ICON = { form:'filetext', quiz:'checksq', chart:'chart', table:'table', code:'code', program:'clock', element:'widget' };
 
 function makeLive(spec, from){
   const w = Object.assign({}, spec, {
@@ -907,6 +907,9 @@ function liveFoot(w){
   if (w.kind === 'program') text = w.created
     ? 'created · in Chat → Schedule'
     : (w.cron || CRON_OF[w.every]) + ' · not created yet — nothing runs until you press Create';
+  if (w.kind === 'element') text = w.created
+    ? 'created · in Build → Design elements'
+    : w.shape + ' widget · not created yet — nothing ships until you press Create';
   return text ? el('div','live__foot', esc(text)) : null;
 }
 
@@ -1178,6 +1181,46 @@ const LIVE_KIND = {
     make.onclick = () => createProgram(w);
     row.append(make);
     body.append(row);
+  },
+
+  /* A web widget, drafted where it was asked for and previewed with the same
+     canvas Build uses — the preview IS the element, not a picture of it. The
+     one editable thing here is the name: Build's inspector already edits
+     everything else, and two editors of one element would drift. Created, the
+     door leads there. */
+  element(body, w){
+    const stage = designCanvas({ kind:'widget', shape:w.shape, cfg:w.cfg,
+                                 bars:w.bars, rows:w.rows });
+    stage.style.marginBottom = 'var(--s-3)';
+    body.append(stage);
+
+    if (w.created){
+      body.append(defList([
+        ['Shape', esc(w.shape)],
+        ['Lives in', 'Build → Design elements, as a draft'],
+        ['Embed', 'the snippet is on its Build page']
+      ]));
+      const row = el('div','live__acts');
+      const go = el('button','btn btn--secondary btn--sm',
+        '<span style="display:flex">' + ic('widget',13) + '</span>Open in Build');
+      go.type = 'button';
+      go.onclick = () => select('build', key('de', w.created));
+      row.append(go);
+      body.append(row);
+      return;
+    }
+
+    body.append(field('Name', inputCtl(w.name, v => {
+      if (v.trim()){ w.name = v.trim(); w.cfg.title = w.name; }
+      rerender(w);
+    }), 'Everything else — accent, theme, width, the values — is set in Build’s inspector.'));
+
+    const row = el('div','live__acts');
+    const make = el('button','btn btn--primary btn--sm','Create in Build');
+    make.type = 'button';
+    make.onclick = () => createElement(w);
+    row.append(make);
+    body.append(row);
   }
 };
 
@@ -1220,10 +1263,11 @@ const RESULT_TYPE = { list:'Form', grid:'Table', bars:'Chart', doc:'Document', c
 const KIND_TYPE   = { table:'Table', chart:'Chart', doc:'Document', diff:'Diff' };
 
 function liveResult(w){
-  /* A program's outcome is the schedule row it creates, not a document about
-     itself — filing one would put the same fact in two stores. (Also a crash
-     guard: the fallback below reads w.variants, which a program lacks.) */
-  if (w.kind === 'program') return null;
+  /* A program's outcome is the schedule row it creates, and an element's is
+     the design record in Build — filing a document about either would put the
+     same fact in two stores. (Also a crash guard: the fallback below reads
+     w.variants, which neither has.) */
+  if (w.kind === 'program' || w.kind === 'element') return null;
   if (w.kind === 'form'){
     if (!w.added.length) return null;
     return { shape:'list', size:plural(w.added.length, 'row'),
@@ -1540,6 +1584,55 @@ function scriptTurn(text){
        'on the runtime showing. Copy takes the one on screen.',
     w:{ kind:'code', title:r.title, meta:'2 runtimes', res:r.title + ' — skeleton',
         variants:buildScript(r) }
+  };
+}
+
+/* ----------------------------------------------------------- the element maker
+   "A widget showing my daily step count" becomes a design element draft: shape
+   read from the words (a trend is a chart, a question is an ask box, a list is
+   rows, a number is a tile), a cfg seeded with exactly the keys Build's
+   inspector edits, and placeholder values that say they are placeholders. The
+   sample series exists so the preview has a body — the inspector is where it
+   becomes real. */
+function parseElement(text){
+  const low = ' ' + text.toLowerCase() + ' ';
+  const shape = /\b(trend|chart|graph|over time|history|by (day|week|month))\b/.test(low) ? 'chart'
+              : /\b(ask|search|question|answer)\b/.test(low) ? 'ask'
+              : /\b(list|watch|top|ranked|queue|feed)\b/.test(low) ? 'rows'
+              : 'kpi';
+  /* The name: what follows the widget word — "a widget showing my daily step
+     count" names itself. */
+  const m = text.match(/\b(?:widget|tile|dashboard|kpi|embed)\b\s*(?:showing|for|of|that shows|with|tracking)?\s*(?:my\s+|the\s+|our\s+)?([^,.;]+)/i);
+  const name = (m && m[1] ? m[1].trim() : 'New widget')
+    .replace(/\s{2,}/g, ' ').replace(/^./, c => c.toUpperCase());
+
+  const cfg = { title:name, sub:'', accent:'Nebulas', radius:'Soft', theme:'Follow',
+                width:shape === 'kpi' ? 'Narrow' : 'Medium', header:true, credit:true };
+  const w = { kind:'element', title:name, meta:shape + ' widget', shape:shape, name:name, cfg:cfg };
+  if (shape === 'kpi' || shape === 'chart'){
+    cfg.value = '—'; cfg.delta = ''; cfg.cap = 'Bound to a source in Build';
+  }
+  if (shape === 'chart') w.bars = [35, 52, 44, 60, 48, 66, 58, 72];
+  if (shape === 'ask'){ cfg.placeholder = 'Ask about ' + name.toLowerCase() + '…'; cfg.starters = ''; }
+  if (shape === 'rows'){
+    cfg.cap = 'Bound to a source in Build';
+    w.rows = [['Item one','—',70],['Item two','—',45],['Item three','—',20]];
+  }
+  return w;
+}
+
+function elementTurn(text){
+  const w = parseElement(text);
+  return {
+    steps:[
+      { n:'element.read',  d:w.shape + ' · ' + w.name.toLowerCase(), t:'0.6s' },
+      { n:'element.draft', d:'previewed with Build’s own canvas', t:'0.5s' }
+    ],
+    md:'Here is **' + w.name + '** as a ' + w.shape + ' widget, previewed with the same canvas ' +
+       'Build uses — the values are placeholders until it is bound to a source.\n\n' +
+       'Name it below and press **Create in Build**; everything else — accent, theme, width, the ' +
+       'numbers — is set in Build’s inspector, because two editors of one element would drift.',
+    w:w
   };
 }
 
@@ -2929,6 +3022,35 @@ function createProgram(w){
       rerender(w);
       renderList();
       toast('Removed ' + w.title + ' — the draft is back');
+    }
+  });
+}
+
+/* The element widget's one action: the draft becomes a design record in Build,
+   under the same id scheme and Mine scope as one made in Build itself
+   (newDesign is the precedent). No navigation — the reader is mid-thread and
+   the widget now carries the door. Undo takes the record back and re-arms the
+   draft: one fact, both halves together. */
+function createElement(w){
+  const d = {
+    id:'de-n' + (++madeN), name:w.name, kind:'widget', shape:w.shape,
+    state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
+    desc:'Drafted in chat. Everything about it is set in the inspector.',
+    cfg:Object.assign({}, w.cfg, { title:w.name })
+  };
+  if (w.bars) d.bars = w.bars.slice();
+  if (w.rows) d.rows = w.rows.map(r => r.slice());
+  D.DESIGNS.push(d);
+  w.created = d.id;
+  rerender(w);
+  toast('Created ' + w.name + ' — a draft in Build → Design elements', {
+    label:'Undo', icon:'widget',
+    run:() => {
+      const i = D.DESIGNS.indexOf(d);
+      if (i > -1) D.DESIGNS.splice(i, 1);
+      w.created = null;
+      rerender(w);
+      toast('Removed ' + w.name + ' — the draft is back');
     }
   });
 }
