@@ -928,6 +928,11 @@ The other lanes keep the form-plus-inspector shape. The assistant page
 inverted it, because its owner's loop is *read the setup → try it → adjust*,
 in that order:
 
+- **The page is pinned to the pane** (`pane__body--split`, the project page's
+  move): the two panels share the full height and scroll their own content, so
+  the bench never leaves the screen while the facts are read to the bottom.
+  There is no page head — the name and description are facts like the rest,
+  carried by the About rows, and the topbar already says where you are.
 - **The left column states the configuration as facts** — `.setrow` rows:
   label, current value, chevron. Nothing on the page is a live control, so
   reading the record cannot accidentally edit it.

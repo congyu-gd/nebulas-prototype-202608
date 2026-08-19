@@ -505,12 +505,26 @@
   gap:var(--s-3);
 }
 /* The assistant page's right column is the test bench — a conversation, not an
-   inspector — so the split gives it a chat's width rather than a summary's. */
-.build--test{ grid-template-columns:minmax(0,1fr) minmax(0, calc(var(--list-w) * 1.5)) }
+   inspector — so the split gives it a chat's width rather than a summary's.
+   The page is pinned to the pane (its body carries pane__body--split): both
+   panels take the full height and scroll their own content, so the bench never
+   leaves the screen while the facts are read to the bottom. */
+.build--test{
+  grid-template-columns:minmax(0,1fr) minmax(0, calc(var(--list-w) * 1.5));
+  align-items:stretch;
+  height:100%; min-height:0;
+  padding:var(--s-6);
+}
+.build--test .build__main{ min-height:0; overflow:hidden auto; padding-right:var(--s-4) }
+.build--test .build__side{
+  position:static;
+  display:flex; flex-direction:column;
+  min-height:0;
+}
 .testbench__log{
+  flex:1 1 0; min-height:0;
   display:flex; flex-direction:column; gap:var(--s-5);
   overflow:auto; overscroll-behavior:contain;
-  height:min(60vh, calc(var(--measure) * 0.85));
   padding:var(--s-2) 0;
 }
 /* The bench's own composer: one box, one send, nothing of the page composer. */
@@ -524,6 +538,8 @@
   .build{ grid-template-columns:minmax(0,1fr) }
   .build__side{ position:static }
   .build__pair{ grid-template-columns:minmax(0,1fr) }
+  /* Stacked, the two panels split the pinned height instead of sharing a row. */
+  .build--test{ grid-template-rows:minmax(0,1.2fr) minmax(0,1fr) }
 }
 
 /* ================================================================ messages */

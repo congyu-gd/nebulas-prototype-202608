@@ -4273,18 +4273,21 @@ function testScript(text, a){
    right column talks to it, and a row's dialog is where changes wait for
    Save. */
 function assistantBuildView(body, a){
-  const pad = el('div','pane__pad');
-  pad.append(pageHead(a.name, a.desc, stateBadge(a.state)));
+  /* Pinned to the pane like the project page: the panels scroll, the page
+     does not, and the bench keeps the screen while the facts are read. */
+  body.classList.add('pane__body--split');
   const s = buildSplit();
   s.wrap.classList.add('build--test');
 
-  /* ------------------------------------------------ the record, as facts */
+  /* ------------------------------------------------ the record, as facts
+     No page head — the name and description are facts like the rest, so the
+     About rows carry them and the topbar already says where you are. */
   const connName = id => find(D.CONNECTORS, id).name;
   const onSwitches = [a.opts.cite && 'cites sources', a.opts.confirm && 'confirms writes',
                       a.opts.think && 'extended thinking'].filter(Boolean).join(' · ');
 
   const about = el('section','section');
-  about.append(sectionHead('About'));
+  about.append(sectionHead('About', stateBadge(a.state)));
   const l1 = el('div','setlist');
   l1.append(setRow('Name', esc(a.name), () => editAbout(a)));
   l1.append(setRow('Team', esc(a.team), () => editAbout(a)));
@@ -4429,8 +4432,7 @@ function assistantBuildView(body, a){
   s.side.append(ask);
   s.side.append(noteP('A test stays here — it never enters History, and it never edits the record.'));
 
-  pad.append(s.wrap);
-  body.append(pad);
+  body.append(s.wrap);
 }
 
 /* The draft* functions make the record and nothing else — the maker overlay
