@@ -2332,6 +2332,38 @@ function schedFoot(s){
   };
 
   foot.append(del, el('div','dialog__spacer'), stop);
+
+  /* Chat-authored programs get a Run now, because a fresh one's overlay would
+     otherwise say "No runs yet" until the cron fires — which, in a prototype,
+     is never. Fixture rows keep their authored histories instead. */
+  if (s.id.slice(0, 4) === 'sc-n' && s.state !== 'off'){
+    const now = el('button','btn btn--secondary',
+      '<span style="display:flex">' + ic('play',13) + '</span>Run now');
+    now.type = 'button';
+    now.onclick = () => schedRunNow(s);
+    foot.append(now);
+  }
+}
+
+/* A manual run of a chat-authored program: the history entry is the fact, the
+   product is one honest simulated line — the run itself is simulated, as every
+   answer in this prototype is — and it lands in the row's chat, not the
+   results store, which is where the program said its output goes. */
+function schedRunNow(s){
+  const dur = '0:' + String(10 + ((s.history || []).length * 7) % 40).padStart(2, '0');
+  (s.history || (s.history = [])).unshift({
+    when:'Just now', dur:dur, state:'ok', manual:true,
+    out:(s.produces || 'Run complete') + ' → this chat',
+    md:'**' + s.name + '** ran on request. The run is simulated, as every answer in this ' +
+       'prototype is: a real one would leave its product here, the way the fixture rows above show.',
+    steps:s.steps && s.steps.map((st, i) => ['0:0' + ((i + 3) % 10), 'ok'])
+  });
+  if (s.steps) s.steps.forEach((st, i) => { st.state = 'ok'; st.last = '0:0' + ((i + 3) % 10); });
+  s.state = 'ok';
+  s.last = dur;
+  renderSched();
+  render();
+  toast(s.name + ' ran — its history has the product');
 }
 
 /* ================================================== making a project
