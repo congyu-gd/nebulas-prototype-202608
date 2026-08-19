@@ -1306,8 +1306,8 @@ const APPS = [
 
      agenda   a week at hour resolution, a month, and what is coming up
      cvx      a CV tray: upload, extract, then read each one as a resume
-     invx     an invoice tray: a picture or a camera capture, digitised into
-              one format, totals re-added
+     invx     an invoice tray: a picture or a camera capture, a ledger of
+              what came in, each row opening as the invoice itself
      files    what has been uploaded, attachable to the next message
      news     headlines, unread first, askable about in the thread
      note     an editable scratchpad
@@ -1399,67 +1399,34 @@ const APP_PANELS = {
         note:'"~6 weeks" was inferred from a start-date sentence, not stated. Confirm before it goes in an offer.' }
     ] },
 
-  /* The same tray as the CVs, with two ways in: a picture from disk or a
-     capture from the computer's camera — both simulated, and each pretend
-     source has its own pool so the two buttons stay distinct. Every invoice
-     is digitised into the same seven fields, totals re-added rather than
-     trusted, and a field the camera missed says so instead of guessing. */
+  /* The same two screens as the CVs — the tray, and behind each row the
+     invoice itself — with two ways in: a picture from disk or a capture from
+     the computer's camera, each fed by its own pretend pool so the two
+     buttons stay distinct. The list is a ledger: vendor, date, amount line
+     up as columns, because ten invoices are compared by their numbers.
+     Totals are re-added rather than trusted, and a figure the frame cropped
+     out says so instead of guessing. */
   ap3:{ s:'invx', sub:'1 of 5 digitised · totals re-added', foot:'Totals are re-added here rather than trusted. Uploads and captures are simulated, like every reply.',
     invs:[
       { file:'northwind-inv-0841.pdf', src:'upload', pages:'1 page · read in 0.9s',
-        fields:[
-          ['Vendor','Northwind Traders',''],
-          ['Invoice no.','INV-2026-0841',''],
-          ['Issued','2 Aug 2026',''],
-          ['Due','1 Sep 2026',''],
-          ['Subtotal','€18,400.00',''],
-          ['VAT 19%','€3,496.00',''],
-          ['Total','€21,896.00','']
-        ],
+        vendor:'Northwind Traders', no:'INV-2026-0841', issued:'2 Aug 2026', due:'1 Sep 2026',
+        amounts:[['Subtotal','€18,400.00'],['VAT 19%','€3,496.00'],['Total','€21,896.00']],
         check:'Subtotal + VAT adds up to the total, and the subtotal matches PO-3391.' },
       { file:'IMG_4218.jpg', src:'photo', pages:'photo · read in 1.2s',
-        fields:[
-          ['Vendor','Café Lumière',''],
-          ['Invoice no.','B-118',''],
-          ['Issued','11 Aug 2026',''],
-          ['Due','paid on the spot',''],
-          ['Subtotal','€38.50',''],
-          ['VAT 10%','€3.85',''],
-          ['Total','€42.35','']
-        ],
+        vendor:'Café Lumière', no:'B-118', issued:'11 Aug 2026', due:'paid on the spot',
+        amounts:[['Subtotal','€38.50'],['VAT 10%','€3.85'],['Total','€42.35']],
         check:'Subtotal + VAT adds up to the total.' },
       { file:'IMG_4222.jpg', src:'photo', pages:'photo · read in 1.4s',
-        fields:[
-          ['Vendor','Acme Supplies',''],
-          ['Invoice no.','INV-2211',''],
-          ['Issued','9 Aug 2026',''],
-          ['Due','8 Sep 2026',''],
-          ['Subtotal','€2,140.00',''],
-          ['VAT','—','check'],
-          ['Total','€2,140.00','']
-        ],
+        vendor:'Acme Supplies', no:'INV-2211', issued:'9 Aug 2026', due:'8 Sep 2026',
+        amounts:[['Subtotal','€2,140.00'],['VAT','—','check'],['Total','€2,140.00']],
         note:'No VAT line on the page. The total is booked as exempt — confirm before it goes to accounting.' },
       { file:'capture-01.png', src:'camera', pages:'camera capture · read in 1.1s',
-        fields:[
-          ['Vendor','Contoso GmbH',''],
-          ['Invoice no.','INV-2026-9004',''],
-          ['Issued','5 Aug 2026',''],
-          ['Due','—','check'],
-          ['Subtotal','€7,200.00',''],
-          ['VAT 19%','€1,368.00',''],
-          ['Total','€8,568.00','']
-        ],
+        vendor:'Contoso GmbH', no:'INV-2026-9004', issued:'5 Aug 2026', due:'—', flag:true,
+        amounts:[['Subtotal','€7,200.00'],['VAT 19%','€1,368.00'],['Total','€8,568.00']],
         note:'The due date was cropped out of the frame — retake the capture, or fill it in by hand.' },
       { file:'capture-02.png', src:'camera', pages:'camera capture · read in 0.8s',
-        fields:[
-          ['Vendor','Maersk Logistics',''],
-          ['Invoice no.','ML-88412',''],
-          ['Issued','12 Aug 2026',''],
-          ['Due','11 Sep 2026',''],
-          ['Subtotal','€12,650.00',''],
-          ['VAT 0% (reverse charge)','€0.00',''],
-          ['Total','€12,650.00','']
-        ],
+        vendor:'Maersk Logistics', no:'ML-88412', issued:'12 Aug 2026', due:'11 Sep 2026',
+        amounts:[['Subtotal','€12,650.00'],['VAT 0% (reverse charge)','€0.00'],['Total','€12,650.00']],
         check:'Reverse-charge VAT: €0.00 is correct on the invoice, and the total matches the subtotal.' }
     ] },
 
