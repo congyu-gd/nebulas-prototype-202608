@@ -801,13 +801,31 @@
 }
 .appsheet__body{ flex:1 1 0; min-height:0; overflow-y:auto; padding:var(--s-4) }
 .appsheet__body > * + *{ margin-top:var(--s-4) }
+/* Sections, not boxes. The panel is already the container: a card inside it
+   brought a border, a tinted head and an inset body, and the sum was three
+   edges saying "here is a thing" once each. In this column the card goes
+   flat — the title is a heading on the panel's own background, rows bleed
+   their hover inset so their text lines up with the headings, and one
+   hairline, the same line every column boundary uses, separates a section
+   from the next. The panel's left edge is that hairline too (.appsheet
+   above), not a shadow. */
+.appsheet__body .card{ border:0; border-radius:0; background:none; overflow:visible }
+.appsheet__body .card__head{
+  height:auto; padding:0 0 var(--s-2);
+  border-bottom:0; background:none;
+}
+.appsheet__body .card__body{ padding:0 }
+.appsheet__body > * + .card{
+  border-top:var(--border) solid var(--line);
+  padding-top:var(--s-3);
+}
+.appsheet__body .card__body .row{ width:auto; margin-inline:calc(var(--s-3) * -1) }
 .appsheet__foot{
   flex:none;
   display:flex; align-items:center; gap:var(--s-2);
   height:var(--ctl-lg);
   padding:0 var(--s-2) 0 var(--s-3);
   border-top:var(--border) solid var(--line);
-  background:var(--surface);
   font-size:var(--t-11); color:var(--text-4);
 }
 

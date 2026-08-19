@@ -6028,10 +6028,8 @@ function appAgenda(app, p){
   const soon = st.events.filter(e => e.off >= 0)
     .sort((a, b) => a.off - b.off || calMins(a.at) - calMins(b.at)).slice(0, 6);
   if (!soon.length){
-    up.body.style.padding = 'var(--s-3)';
     up.body.append(el('div','field__help','No upcoming events.'));
   } else {
-    up.body.style.padding = '0 var(--s-3)';
     soon.forEach(e => {
       const r = el('div','artlist__row');
       r.innerHTML =
@@ -6097,7 +6095,6 @@ function appCvx(app, p){
     };
   } else lead = el('span','badge badge--ok','all read');
   const list = appCard('Candidates', lead);
-  list.body.style.padding = 'var(--s-1) var(--s-2)';
   st.cvs.forEach((c, i) => {
     list.body.append(listRow({
       lead: dotLead(c.read ? 'ok' : ''),
@@ -6202,7 +6199,6 @@ function appInvx(app, p){
     };
   } else lead = el('span','badge badge--ok','all digitised');
   const list = appCard('Invoices', lead);
-  list.body.style.padding = 'var(--s-1) var(--s-2)';
   st.invs.forEach((v, i) => {
     list.body.append(listRow({
       lead: dotLead(v.read ? 'ok' : ''),
@@ -6222,7 +6218,6 @@ function appInvx(app, p){
     return nodes;
   }
   const src = appCard('Source');
-  src.body.style.padding = 'var(--s-3)';
   src.body.append(el('div', null,
     '<span style="display:flex;align-items:center;gap:var(--s-2)">' +
       '<span style="display:flex;color:var(--text-4)">' + ic(inv.src === 'camera' ? 'camera' : 'doc', 14) + '</span>' +
@@ -6260,7 +6255,6 @@ function appInvx(app, p){
    this app is beside the composer rather than a page of its own. */
 function appFiles(app, p){
   const c = appCard('Uploads');
-  c.body.style.padding = 'var(--s-1) var(--s-2)';
   p.rows.forEach(([nm, kind, size, when]) => {
     const row = listRow({
       lead:'<span class="row__icon">' + ic(FILE_ICON[kind] || 'file',14) + '</span>',
@@ -6281,7 +6275,6 @@ function appNews(app, p){
   const unread = st.read.filter(x => !x).length;
   const c = appCard('Feed', el('span','badge' + (unread ? ' badge--info' : ''),
     unread ? unread + ' unread' : 'all read'));
-  c.body.style.padding = 'var(--s-1) var(--s-2)';
   p.rows.forEach(([title, src, when], i) => {
     const row = listRow({
       lead:'<span class="dot ' + (st.read[i] ? 'dot--read' : 'dot--unread') + '"></span>',
@@ -6316,7 +6309,6 @@ function appNoteSurface(app){
   add.type = 'button';
   add.onclick = () => { st.notes.unshift(''); st.note = 0; repaintApp(app); };
   const c = appCard('Notes', add);
-  c.body.style.padding = 'var(--s-1) var(--s-2)';
 
   let open = null;                  /* the row of the note being edited */
   st.notes.forEach((b, i) => {
@@ -6354,7 +6346,6 @@ function appTodo(app){
   const done = st.items.filter(i => i.done).length;
   const c = appCard('Items', el('span','badge' + (done === st.items.length ? ' badge--ok' : ''),
     done + ' of ' + st.items.length + ' done'));
-  c.body.style.padding = '0';
 
   const meter = el('span','meter');
   meter.style.margin = 'var(--s-3) var(--s-3) var(--s-2)';

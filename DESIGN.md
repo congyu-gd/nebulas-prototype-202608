@@ -1030,6 +1030,15 @@ conversation. (Published solutions reach this rail through the App-rail surface;
 none of the fixtures is installed, which is what the builder's `Open` button
 says when it is disabled.)
 
+**Flat inside the column.** The panel is already the container, so the cards
+inside it go flat: no border, no tinted head, no inset body — a section is a
+heading on the panel's own background, rows bleed their hover inset so their
+text lines up with the headings, and one hairline (the same `--line` every
+column boundary uses, including the panel's own left edge) separates a
+section from the next. A box inside a box inside a column was three edges
+saying "here is a thing" once each; the only boxes that remain are the ones
+that mean something — a dashed upload target, a tinted banner, an input.
+
 Seven surfaces cover the seven, each assembled from components that already
 exist elsewhere — an app is a new arrangement, not a new vocabulary:
 
