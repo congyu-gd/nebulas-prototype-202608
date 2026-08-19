@@ -1840,6 +1840,80 @@ const CASES = {
               ['Watch','drops sharply in November as terms roll']
             ] }
         } }
+  },
+
+  /* ------------------------------------------------------- auto program
+     The hero's third mode. Each case ends in an editable program widget whose
+     one action writes a row into Chat → Schedule — the reply drafts, the
+     person decides. Daily-life routines on purpose: the mode's claim is that
+     automation is not only for revenue pipelines. */
+  'Morning briefing':{
+    title:'Morning briefing, every day',
+    ask:'Every morning, check the weather and my calendar, then write me a briefing.',
+    steps:[
+      { n:'routine.parse', d:'every day · 3 steps', t:'0.6s' },
+      { n:'program.draft', d:'Daily briefing · 07:40', t:'0.5s' }
+    ],
+    md:[
+      'Read as a program: **Daily briefing**, every day at 07:40, in three steps — the weather, the calendar, then the briefing written from both.',
+      '',
+      'The steps below are editable, and the cadence is a choice rather than something I extracted. Nothing runs until you press **Create the program**; then it lives in Chat → Schedule, and each morning\'s briefing lands here, in this chat.'
+    ].join('\n'),
+    w:{ kind:'program', title:'Daily briefing', meta:'3 steps',
+        every:'Every day', cron:'daily 07:40',
+        steps:['Check the weather','Read the day’s calendar','Write the briefing'],
+        out:'A short briefing in this chat' }
+  },
+  'Friday expense sweep':{
+    title:'Expenses, swept on Fridays',
+    ask:'Every Friday afternoon, collect the week’s receipts, match them against the card statement, and flag what is missing.',
+    steps:[
+      { n:'routine.parse', d:'every week · 3 steps', t:'0.6s' },
+      { n:'program.draft', d:'Weekly expense sweep · Fri 17:00', t:'0.5s' }
+    ],
+    md:[
+      'Read as a program: **Weekly expense sweep**, Fridays at 17:00 — collect, match, and flag, so the missing receipt is found while the week is still fresh enough to remember.',
+      '',
+      'Edit any step below, then press **Create the program**. The flag list lands in this chat each Friday; nothing is filed anywhere else.'
+    ].join('\n'),
+    w:{ kind:'program', title:'Weekly expense sweep', meta:'3 steps',
+        every:'Every week', cron:'Fri 17:00',
+        steps:['Collect the week’s receipts','Match them against the card statement','Flag what is missing'],
+        out:'A flag list in this chat' }
+  },
+  'Daily LinkedIn post':{
+    title:'A LinkedIn post, every morning',
+    ask:'Every day at 08:30, write my LinkedIn post for the day.',
+    steps:[
+      { n:'routine.parse', d:'every day · 1 step', t:'0.6s' },
+      { n:'program.draft', d:'Daily LinkedIn post · 08:30', t:'0.5s' }
+    ],
+    md:[
+      'Read as a program: **Daily LinkedIn post**, every day at 08:30, one step — so it files as a task rather than a job.',
+      '',
+      'Chat → Schedule already holds a *Morning LinkedIn post* row whose history shows what this one’s will look like once it has run: each morning’s post, written in full, with a copy button under it. Press **Create the program** and this one starts its own history.'
+    ].join('\n'),
+    w:{ kind:'program', title:'Daily LinkedIn post', meta:'1 step',
+        every:'Every day', cron:'daily 08:30',
+        steps:['Write the day’s LinkedIn post'],
+        out:'A post draft in this chat' }
+  },
+  'Sunday meal plan':{
+    title:'Meals, planned on Sundays',
+    ask:'Every Sunday evening, check what is in the fridge, plan seven dinners, and write the shopping list.',
+    steps:[
+      { n:'routine.parse', d:'every week · 3 steps', t:'0.6s' },
+      { n:'program.draft', d:'Weekly meal plan · Sun 17:00', t:'0.5s' }
+    ],
+    md:[
+      'Read as a program: **Weekly meal plan**, Sundays at 17:00 — what is there, what to cook, what to buy, in that order, because the list only makes sense after the plan.',
+      '',
+      'Adjust the steps below and press **Create the program**. The plan and the list land here every Sunday, ready for the shop.'
+    ].join('\n'),
+    w:{ kind:'program', title:'Weekly meal plan', meta:'3 steps',
+        every:'Every week', cron:'Sun 17:00',
+        steps:['Check what is in the fridge','Plan seven dinners','Write the shopping list'],
+        out:'A meal plan and shopping list in this chat' }
   }
 };
 
