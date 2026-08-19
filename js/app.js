@@ -1317,10 +1317,101 @@ function syncResult(w){
    Mode is view state, not app state: it dies with the empty thread. */
 const STARTERS = {
   'Work':['Documentation','Slide','Visualization','Explanation','Sales insight','CV filter'],
-  'Data Discovery':['Profile a table','Find anomalies','Join two sources','Chart a trend','Explain a metric']
+  'Data Discovery':['Profile a table','Find anomalies','Join two sources','Chart a trend','Explain a metric'],
+  'Auto program':['Morning briefing','Friday expense sweep','Daily LinkedIn post','Sunday meal plan']
 };
 let heroMode = 'Work';
 let heroNew = false;           /* the new-dashboard form is open */
+
+/* What each mode is for, said once under its starters. */
+const HERO_NOTE = {
+  'Work':'Each one runs a worked example. Anything definite it produces is kept in the results column on the right.',
+  'Data Discovery':'Each one runs a worked example. Anything definite it produces is kept in the results column on the right.',
+  'Auto program':'Describe a routine in plain words and it becomes a program — a row in Chat → Schedule that runs on a cadence. Nothing runs until you press Create.'
+};
+/* The best documentation of the grammar is an instance of it. */
+const AUTO_PH = 'Every morning, check the weather and my calendar, then write me a briefing';
+
+/* ------------------------------------------------------------ the parser
+   A routine, read out of a sentence. Heuristics, not understanding — which is
+   fine, because the widget it feeds is editable and nothing runs until the
+   person who wrote the sentence approves the reading of it.
+
+   Cadence: a month word beats a week word beats the default of daily, because
+   "every monday morning" is a weekly routine that happens to name a morning.
+   The clock is kept separately as a free-text cron override — the schedule
+   already accepts those — and is discarded the moment the cadence is chosen
+   by hand in the widget. */
+const WEEKDAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+function parseRoutine(text){
+  const low = ' ' + text.toLowerCase() + ' ';
+  const day = WEEKDAYS.filter(d => low.indexOf(d) > -1)[0];
+  const every = /month/.test(low) ? 'Every month'
+              : (day || /week/.test(low)) ? 'Every week'
+              : 'Every day';
+
+  /* The clock: a stated time wins; a time of day is read as one; a weekday
+     carries its name into the cron so "every friday" does not print Mon. */
+  const tm = low.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/);
+  let clock = null;
+  if (tm){
+    let hh = Number(tm[1]) % 24;
+    if (tm[3] === 'pm' && hh < 12) hh += 12;
+    if (hh < 24) clock = String(hh).padStart(2, '0') + ':' + (tm[2] || '00');
+  }
+  else if (/morning/.test(low)) clock = '08:00';
+  else if (/noon|lunch/.test(low)) clock = '12:00';
+  else if (/evening|night/.test(low)) clock = '18:00';
+  let cron = null;
+  if (day) cron = day.slice(0, 1).toUpperCase() + day.slice(1, 3) + ' ' + (clock || '07:00');
+  else if (clock) cron = (every === 'Every day' ? 'daily ' : every === 'Every week' ? 'Mon ' : '1st ') + clock;
+
+  /* The steps: drop the cadence clause — the words about WHEN, kept tight so a
+     sentence with no comma after them ("every month prepare the summary") does
+     not lose its work to the clause — then split on the joins people actually
+     say. Fragments too short to be work are noise from the split. */
+  const body = text
+    .replace(/\b(every|each)\s+(morning|day|evening|night|week|weekday|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b(\s+(morning|evening|night|afternoon))?\s*[,;]?\s*/i, '')
+    .replace(/\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b/ig, '');
+  let steps = body.split(/\s*(?:;|,|\bthen\b|\band\b)\s*/i)
+    .map(s => s.trim().replace(/^[-–—.\s]+|[.\s]+$/g, ''))
+    .filter(s => s.length > 2)
+    .slice(0, 5)
+    .map(s => s.charAt(0).toUpperCase() + s.slice(1));
+  if (!steps.length) steps = [text.trim().charAt(0).toUpperCase() + text.trim().slice(1)];
+
+  /* The name and the product both come from the last step — the thing the
+     routine exists to end on. A step that MAKES something ("write me a
+     briefing") names the routine after its artifact; a step that just does
+     something ("email my accountant") is already the best name it will get. */
+  const last = steps[steps.length - 1];
+  const made = last.match(/^(write|draft|make|prepare|plan|post|build|compose)\s+(?:me\s+|my\s+|us\s+|a\s+|an\s+|the\s+)*(.+)$/i);
+  const noun = made ? made[2].trim().toLowerCase() : null;
+  return { title:noun ? CADENCE_ADJ[every] + ' ' + noun : last,
+           every:every, cron:cron, steps:steps,
+           out:noun ? (/^[aeiou]/i.test(noun) ? 'An ' : 'A ') + noun + ', in this chat'
+                    : 'A note in this chat when it is done' };
+}
+
+/* The parse, wrapped as a scripted turn: a short trace that says what was
+   read, one honest paragraph, and the editable widget. No cites — a routine
+   reads no corpus, and inventing one would lie. */
+function autoScript(text){
+  const r = parseRoutine(text);
+  return {
+    steps:[
+      { n:'routine.parse', d:r.every.toLowerCase() + ' · ' + plural(r.steps.length, 'step'), t:'0.6s' },
+      { n:'program.draft', d:r.title, t:'0.5s' }
+    ],
+    md:'Here is your routine, read as a program: **' + r.title + '**, ' +
+       r.every.toLowerCase() + (r.cron ? ' at ' + r.cron.replace(/^\S+\s*/, '') : '') +
+       ', in ' + plural(r.steps.length, 'step') + '.\n\n' +
+       'Check the reading below — every step is editable, and the cadence is a choice, not a fact I extracted. ' +
+       'Nothing runs until you press **Create the program**; then it lives in Chat → Schedule with the rest of what runs by itself.',
+    w:{ kind:'program', title:r.title, meta:plural(r.steps.length, 'step'),
+        every:r.every, cron:r.cron, steps:r.steps, out:r.out }
+  };
+}
 
 /* The composer is a single node with its listeners already bound, so it MOVES
    between the pages that borrow it and its pinned position rather than being
@@ -1374,12 +1465,11 @@ function heroNode(){
     row.append(b);
   });
   h.append(row);
-  h.append(el('p','hero__note',
-    'Each one runs a worked example. Anything definite it produces is kept in the results column on the right.'));
+  h.append(el('p','hero__note', HERO_NOTE[heroMode]));
 
   /* The input follows the starters, because a starter is a half-written
      message and the place it lands should be the next thing under it. */
-  h.append(inlineComposer());
+  h.append(inlineComposer(heroMode === 'Auto program' ? AUTO_PH : null));
 
   if (heroMode === 'Data Discovery') h.append(dashboardsNode());
   return h;
@@ -6273,13 +6363,21 @@ function boot(){
     /* Attachments were for that message; the assistant binding survives it,
        so it is put back after the row is cleared. */
     $('#composerChips').innerHTML = '';
+    /* Typed into an empty chat while the hero's Auto program mode is up: the
+       first turn consumes the mode — the sentence is a routine, so the reply
+       is the parsed program rather than a scripted answer. After that turn the
+       thread is an ordinary thread. The project guard keeps the project page's
+       own behaviour: it has an Auto program surface of its own. */
+    const t0 = state.section === 'chat' ? byId(D.THREADS, state.item.chat) : null;
+    const auto = !!t0 && !t0.msgs.length && heroMode === 'Auto program' &&
+                 kindOf(state.item.chat) !== 'p';
     /* Typed on a project page, where there is no thread yet: one is opened in
        the project, which is also what binds its assistant, and the turn lands
        there. Every other surface already has the thread it belongs to. */
     if (state.section === 'chat' && kindOf(state.item.chat) === 'p')
       newThread(idOf(state.item.chat));
     syncAssistantChip();
-    runTurn(v);
+    runTurn(v, auto ? autoScript(v) : undefined);
   });
 
   let attachN = 0;
