@@ -1095,7 +1095,9 @@ const LIVE_KIND = {
     body.append(el('pre','code', highlight(w.variants[w.variant])));
     const row = el('div','live__acts');
     const copy = el('button','btn btn--secondary btn--sm', ic('copy',13) + 'Copy');
-    copy.onclick = () => toast('Copied ' + w.variant + ' to clipboard');
+    /* The real clipboard, not a toast pretending to be one — the same helper
+       every other copy affordance uses. */
+    copy.onclick = () => copyText(w.variants[w.variant], w.variant);
     row.append(copy);
     body.append(row);
   },
@@ -4593,8 +4595,8 @@ function accountView(body, view){
    Every serialiser below works off ONE reading of the result — what is tabular
    about it, or what its text is — rather than off five shapes each. That is why
    adding a format is a row in FORMATS and not a branch in five places. */
-const CODE_EXT = { Python:'py', 'Node.js':'js', SQL:'sql', 'cURL':'sh' };
-const CODE_LANG = { Python:'python', 'Node.js':'js', SQL:'sql', 'cURL':'bash' };
+const CODE_EXT = { Python:'py', 'Node.js':'js', SQL:'sql', 'cURL':'sh', Bash:'sh' };
+const CODE_LANG = { Python:'python', 'Node.js':'js', SQL:'sql', 'cURL':'bash', Bash:'bash' };
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'result';
 const shapeOf = a => a.kind === 'result' ? a.shape : a.kind;
 const isDocResult = a => shapeOf(a) === 'doc';
