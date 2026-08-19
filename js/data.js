@@ -1302,9 +1302,10 @@ const APPS = [
 ];
 
 /* An app opens into a panel, so each one needs a surface rather than a page.
-   Seven apps, six shapes — `s` picks the renderer:
+   Seven apps, seven shapes — `s` picks the renderer:
 
-     agenda   a month, and what is on today
+     agenda   a week at hour resolution, a month, and what is coming up
+     cvx      a CV tray: upload, extract into one format, compare candidates
      extract  a document read into fields, with what to check and what to file
      files    what has been uploaded, attachable to the next message
      news     headlines, unread first, askable about in the thread
@@ -1333,21 +1334,64 @@ const APP_PANELS = {
       [ 8,'11:00',45,'Q3 close','Finance']
     ] },
 
-  ap2:{ s:'extract', sub:'cv-priya-raman.pdf · 2 pages', foot:'Fields are read from the file, never invented.',
-    file:'cv-priya-raman.pdf', pages:'2 pages · read in 1.4s',
-    res:'Priya Raman — CV fields',
-    fields:[
-      ['Name','Priya Raman',''],
-      ['Current title','Staff Data Engineer',''],
-      ['Location','Berlin · EU work permit',''],
-      ['Experience','8 years',''],
-      ['Notice period','~2 months','check']
-    ],
-    chipsLabel:'Skills found',
-    chips:['Python','dbt','Airflow','Snowflake','Terraform','Kafka','Postgres'],
-    /* Named because a field the model guessed and a field it read are not the
-       same fact, and only one of them needs a human. */
-    note:'Notice period was written in prose — "about two months" — not in a field. Confirm before it goes in an offer.' },
+  /* One reader, one format: every CV is read into the SAME five fields, so
+     candidates compare — ten shaped records line up, ten prose summaries do
+     not. The first CV ships read so the format is visible on arrival; the
+     rest wait in a pretend tray behind the upload box, because an upload is
+     simulated here like every reply. */
+  ap2:{ s:'cvx', sub:'1 of 5 read · one format', foot:'Fields are read from the file, never invented. Uploads are simulated, like every reply here.',
+    cvs:[
+      { file:'cv-priya-raman.pdf', pages:'2 pages · read in 1.4s',
+        fields:[
+          ['Name','Priya Raman',''],
+          ['Current title','Staff Data Engineer',''],
+          ['Location','Berlin · EU work permit',''],
+          ['Experience','8 years',''],
+          ['Notice period','~2 months','check']
+        ],
+        skills:['Python','dbt','Airflow','Snowflake','Terraform','Kafka','Postgres'],
+        /* Named because a field the model guessed and a field it read are not
+           the same fact, and only one of them needs a human. */
+        note:'Notice period was written in prose — "about two months" — not in a field. Confirm before it goes in an offer.' },
+      { file:'cv-marco-silva.pdf', pages:'1 page · read in 0.8s',
+        fields:[
+          ['Name','Marco Silva',''],
+          ['Current title','Senior Frontend Engineer',''],
+          ['Location','Lisbon · EU citizen',''],
+          ['Experience','6 years',''],
+          ['Notice period','1 month','']
+        ],
+        skills:['TypeScript','React','Next.js','GraphQL','Playwright','CSS'] },
+      { file:'cv-anaelle-dupont.pdf', pages:'2 pages · read in 1.1s',
+        fields:[
+          ['Name','Anaëlle Dupont',''],
+          ['Current title','Product Data Analyst',''],
+          ['Location','Paris',''],
+          ['Experience','4 years',''],
+          ['Notice period','3 months','check']
+        ],
+        skills:['SQL','Looker','Python','A/B testing','dbt'],
+        note:'Notice period comes from the cover letter, not the CV. Confirm which document is right.' },
+      { file:'cv-tomasz-kowal.pdf', pages:'1 page · read in 0.7s',
+        fields:[
+          ['Name','Tomasz Kowal',''],
+          ['Current title','DevOps Engineer',''],
+          ['Location','Warsaw · remote',''],
+          ['Experience','9 years',''],
+          ['Notice period','2 weeks','']
+        ],
+        skills:['Kubernetes','Terraform','AWS','Go','Prometheus','ArgoCD'] },
+      { file:'cv-lena-hoffmann.pdf', pages:'3 pages · read in 1.6s',
+        fields:[
+          ['Name','Lena Hoffmann',''],
+          ['Current title','ML Engineer',''],
+          ['Location','Munich',''],
+          ['Experience','5 years',''],
+          ['Notice period','~6 weeks','check']
+        ],
+        skills:['PyTorch','Python','MLflow','Spark','Docker'],
+        note:'"~6 weeks" was inferred from a start-date sentence. Confirm before it goes in an offer.' }
+    ] },
 
   ap3:{ s:'extract', sub:'INV-2026-0841 · Northwind Traders', foot:'Totals are re-added here rather than trusted.',
     file:'northwind-inv-0841.pdf', pages:'1 page · read in 0.9s',

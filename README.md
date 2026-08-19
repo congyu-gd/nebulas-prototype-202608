@@ -190,7 +190,9 @@ files**, **News**, **Note**, **Todo**. They are wired into the rest of the
 workspace rather than being pictures of apps — a file attaches to your next
 message, a headline writes the question into the composer, an extraction is filed
 in the results column, and a ticked box or a typed note survives switching apps
-and sections. The calendar reads a week as a time grid or a month as a day grid
+and sections. The CV extractor is a tray: upload several CVs, press one
+`Extract`, and each becomes a candidate in a list — every file read into the
+same five fields, so clicking through the candidates compares them. The calendar reads a week as a time grid or a month as a day grid
 — arrows move whichever is on screen — with an Upcoming list naming what the
 blocks can only place. The grids are doors: an empty slot drafts an event at
 that day and hour, and an existing event opens for editing, with an undoable

@@ -861,6 +861,25 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .week__evt:hover{ border-left-color:var(--text-4); color:var(--text) }
 
+/* ================================================================= dropbox
+   An upload box: the dashed edge is the affordance, and the help line under
+   the invitation is where the box stays honest about what an upload is in a
+   given surface (in the prototype, simulated). A button, so it works from
+   the keyboard like everything else. */
+.dropbox{
+  display:grid; justify-items:center; gap:var(--s-1);
+  width:100%;
+  padding:var(--s-5) var(--s-3);
+  border:var(--border) dashed var(--line-strong);
+  border-radius:var(--r-md);
+  background:var(--surface);
+  color:var(--text-3); font-size:var(--t-12); text-align:center;
+  cursor:pointer;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.dropbox:hover{ background:var(--raised); color:var(--text-2) }
+.dropbox b{ font-weight:var(--w-medium); color:var(--text-2) }
+
 /* ============================================================ definitions */
 .deflist{
   display:grid; grid-template-columns:auto minmax(0,1fr);

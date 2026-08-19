@@ -1030,13 +1030,14 @@ conversation. (Published solutions reach this rail through the App-rail surface;
 none of the fixtures is installed, which is what the builder's `Open` button
 says when it is disabled.)
 
-Six surfaces cover the seven, each assembled from components that already exist
-elsewhere — an app is a new arrangement, not a new vocabulary:
+Seven surfaces cover the seven, each assembled from components that already
+exist elsewhere — an app is a new arrangement, not a new vocabulary:
 
 | Surface | Built from | Apps |
 |---|---|---|
 | `agenda` | a week time grid + a month grid over one event list, and an Upcoming list | Calendar |
-| `extract` | a source card, a `.deflist` of fields, chips, and one action | CV extractor, Invoice extractor |
+| `cvx` | an upload box, a candidate list, and the fields of whoever is selected | CV extractor |
+| `extract` | a source card, a `.deflist` of fields, chips, and one action | Invoice extractor |
 | `files` | rows that attach to the next message | My files |
 | `news` | rows that wrap, unread marked, that ask the thread about themselves | News |
 | `note` | a list plus a `textarea`, first line as title | Note |
@@ -1068,6 +1069,17 @@ list and nowhere else, which the footer says out loud: the panel mirrors a
 work calendar this prototype cannot write to. Sync says the same thing when
 clicked — nothing upstream to fetch, so it reports being a mirror instead of
 pretending.
+
+**The CV extractor is a tray, not a page-per-file.** An upload box takes CVs
+(from a fixed pretend set — an upload is simulated here like every reply, and
+the box says so), one `Extract` reads everything waiting, and every file is
+read into the **same five fields** — the pre-set format is the point, because
+five shaped records compare and five prose summaries do not. The candidate
+list is the pivot: a row is a person once read and a filename until then, and
+the cards underneath always describe whoever is selected — fields, skills, a
+`check` badge where the model guessed rather than read, and `Save to results`
+filing that candidate under their name. The first CV ships already read so
+the format is visible on arrival.
 
 **Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
 once and owned in JS after that — the same rule as a chat widget's state. A

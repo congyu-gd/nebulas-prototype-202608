@@ -5728,8 +5728,8 @@ function renderApps(){
   });
 }
 /* ============================================================== app panel
-   Seven apps, six surfaces, every one assembled from components that already
-   exist elsewhere: an app is a new arrangement, not a new vocabulary.
+   Seven apps, seven surfaces, every one assembled from components that
+   already exist elsewhere: an app is a new arrangement, not a new vocabulary.
 
    Everything the reader can change lives in APP_STATE — not in the fixture and
    not in the DOM. Ticking a todo, typing a note or marking a headline read has
@@ -5745,6 +5745,15 @@ function appState(app){
     if (p.events){
       s.events = p.events.map(e => ({ off:e[0], at:e[1], min:e[2], t:e[3], sub:e[4] }));
       s.view = 'Week'; s.wk = 0; s.mo = 0; s.draft = null; s.edit = null;
+    }
+    if (p.s === 'cvx'){
+      const mk = c => ({ file:c.file, pages:c.pages, note:c.note, read:false,
+        fields:c.fields.map(x => x.slice()), skills:(c.skills || []).slice() });
+      /* The first CV ships read so the format is visible on arrival; the rest
+         wait in the pretend tray behind the upload box. */
+      s.cvs = [Object.assign(mk(p.cvs[0]), { read:true })];
+      s.pool = p.cvs.slice(1).map(mk);
+      s.sel = 0;
     }
     if (p.s === 'news') s.read = p.rows.map(r => !r[3]);
     APP_STATE[app.id] = s;
@@ -6032,6 +6041,99 @@ function appAgenda(app, p){
   return nodes;
 }
 
+/* ----------------------------------------------------------------- cvx
+   The CV extractor is a tray, not a page-per-file: add CVs, press Extract,
+   and every one is read into the SAME five fields — the pre-set format is
+   the point, because five shaped records compare and five prose summaries
+   do not. The candidate list is the pivot: a row selects, and the cards
+   under it always describe the selected candidate. Uploads are simulated
+   from a fixed set, like every reply here, and the box says so. */
+function appCvx(app, p){
+  const st = appState(app);
+  const nodes = [];
+
+  const up = appCard('Upload');
+  const box = el('button','dropbox');
+  box.type = 'button';
+  box.innerHTML =
+    '<span style="display:flex;color:var(--text-4)">' + ic('files', 18) + '</span>' +
+    '<span><b>Add a CV</b> — pdf or docx</span>' +
+    '<span class="field__help">' + (st.pool.length
+      ? plural(st.pool.length, 'pretend CV') + ' left in the tray — uploads are simulated'
+      : 'The tray is empty — every pretend CV is in') + '</span>';
+  box.onclick = () => {
+    if (!st.pool.length)
+      return toast('Nothing left to upload — the pretend tray is empty');
+    const cv = st.pool.shift();
+    st.cvs.push(cv);
+    st.sel = st.cvs.length - 1;
+    repaintApp(app);
+    toast(cv.file + ' uploaded — Extract reads it');
+  };
+  up.body.append(box);
+  nodes.push(up.card);
+
+  /* One Extract for everything waiting: the reading is a batch, not a
+     ceremony per file. When nothing waits the head says so instead. */
+  const unread = st.cvs.filter(c => !c.read).length;
+  let lead;
+  if (unread){
+    lead = el('button','btn btn--primary btn--sm',
+      ic('spark', 12) + 'Extract ' + (unread > 1 ? unread + ' CVs' : 'CV'));
+    lead.type = 'button';
+    lead.onclick = () => {
+      st.cvs.forEach(c => c.read = true);
+      repaintApp(app);
+      toast(plural(unread, 'CV') + ' read into the same 5 fields');
+    };
+  } else lead = el('span','badge badge--ok','all read');
+  const list = appCard('Candidates', lead);
+  list.body.style.padding = 'var(--s-1) var(--s-2)';
+  st.cvs.forEach((c, i) => {
+    list.body.append(listRow({
+      lead: dotLead(c.read ? 'ok' : ''),
+      title: c.read ? c.fields[0][1] : c.file,
+      sub: c.read ? c.fields[1][1] + ' · ' + c.pages : 'uploaded · not read yet',
+      current: i === st.sel,
+      onClick: () => { st.sel = i; repaintApp(app); }
+    }));
+  });
+  nodes.push(list.card);
+
+  const cv = st.cvs[st.sel];
+  if (!cv.read){
+    nodes.push(banner('info', esc(cv.file) + ' is uploaded and unread — Extract fills the five fields.'));
+    return nodes;
+  }
+  const f = appCard('Fields', el('span','badge badge--ok', String(cv.fields.length) + ' read'));
+  f.body.append(defList(cv.fields.map(([k, v, flag]) => [k,
+    esc(v) + (flag === 'check' ? ' <span class="badge badge--warn">check</span>' : '')])));
+  nodes.push(f.card);
+
+  if (cv.skills.length){
+    const sk = appCard('Skills found');
+    const wrap = el('div');
+    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:var(--s-2)';
+    cv.skills.forEach(s => wrap.append(el('span','chip','<span>' + esc(s) + '</span>')));
+    sk.body.append(wrap);
+    nodes.push(sk.card);
+  }
+  if (cv.note) nodes.push(banner('warn', esc(cv.note)));
+
+  const acts = el('div','live__acts');
+  const save = el('button','btn btn--primary btn--sm', ic('check', 13) + 'Save to results');
+  save.type = 'button';
+  save.onclick = () => fileResult({
+    id:'r-' + app.id + '-' + slug(cv.fields[0][1]),
+    title:cv.fields[0][1] + ' — CV fields', from:app.name, shape:'list',
+    size:plural(cv.fields.length, 'field'),
+    rows:cv.fields.map(([k, v]) => [k, v])
+  });
+  acts.append(save);
+  nodes.push(acts, helpNote('Every CV is read into the same five fields, so candidates compare.'));
+  return nodes;
+}
+
 /* ------------------------------------------------------------- extract
    A document read into fields. Two things make it honest: a field the model
    guessed is marked as needing a look, and the outcome can be FILED — an
@@ -6238,6 +6340,7 @@ function appSurface(app){
   const p = D.APP_PANELS[app.id];
   if (!p) return [emptyState('cube', app.name, app.desc)];
   if (p.s === 'agenda')  return appAgenda(app, p);
+  if (p.s === 'cvx')     return appCvx(app, p);
   if (p.s === 'extract') return appExtract(app, p);
   if (p.s === 'files')   return appFiles(app, p);
   if (p.s === 'news')    return appNews(app, p);
