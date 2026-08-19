@@ -4520,7 +4520,7 @@ function connectorView(body, c){
     acts.push(test);
     const off = el('button','btn btn--danger', ic('x',13) + 'Disconnect');
     off.onclick = () => {
-      const n = grants.length + inPkgs.length;
+      const n = grants.length + inPjs.length;
       c.state = 'off'; c.last = '—'; c.calls = '—';
       render();
       toast(n ? c.name + ' disconnected — ' + plural(n, 'grant') + ' now unreachable'
@@ -4625,13 +4625,30 @@ function lineRow(widths, cls){
 function templateNode(d){
   const c = d.cfg, t = el('div','tpl');
   const nav = commaList(c.nav);
-  if (c.header){
+  /* A PDF has no site chrome — its header is the page's own, drawn below. */
+  if (c.header && d.shape !== 'pdf'){
     t.append(el('div','tpl__bar',
       '<span class="tpl__logo"></span><span class="tpl__nm">' + esc(c.title) + '</span>' +
       '<span class="tpl__navs">' + nav.map(n => '<span>' + esc(n) + '</span>').join('') + '</span>'));
   }
 
-  if (d.shape === 'portal'){
+  if (d.shape === 'pdf'){
+    const page = el('div','tpl__paper');
+    page.innerHTML =
+      (c.header ? '<div class="tpl__pagehead"><span style="display:inline-flex;align-items:center;gap:var(--s-2)">' +
+        '<span class="tpl__logo"></span><span class="tpl__nm">' + esc(c.title) + '</span></span>' +
+        '<div class="tpl__line" style="width:18%"></div></div>' : '') +
+      '<div class="tpl__h1">' + esc(c.title) + '</div>' +
+      (c.sub ? '<div class="tpl__sub">' + esc(c.sub) + '</div>' : '') +
+      commaList(c.sections).map((nm, i) =>
+        '<div class="tpl__sec">' +
+          '<div class="tpl__secnm">' + esc(nm) + '</div>' +
+          lineRow(i % 2 ? [100, 88, 52] : [100, 94, 71]) +
+        '</div>').join('') +
+      '<div class="tpl__pagefoot"><span>' + esc(c.footer || '') + '</span><span>1 / 3</span></div>';
+    t.append(page);
+
+  } else if (d.shape === 'portal'){
     const cols = el('div','tpl__cols');
     /* One nav item is where you are; the rest are where you could go. Branding
        all of them would say every page is the current one. */
@@ -4683,6 +4700,12 @@ function embedSnippet(d){
       '        data-token="pk_live_9f2c…"></script>'
     ].join('\n');
   }
+  if (d.shape === 'pdf'){
+    return [
+      'nebulas layout set-default ' + d.id,
+      '  applied to PDF downloads from the results column'
+    ].join('\n');
+  }
   return [
     'nebulas deploy ' + d.id + ' --domain help.example.com',
     '  built 3 routes · tokens inlined · 41 kB'
@@ -4693,7 +4716,8 @@ function designView(body, d){
   const c = d.cfg;
   const pad = el('div','pane__pad');
   pad.append(pageHead(d.name, d.desc,
-    '<span class="badge badge--mono">' + (d.kind === 'widget' ? 'Widget' : 'Website template') + '</span>' +
+    '<span class="badge badge--mono">' + (d.kind === 'widget' ? 'Widget'
+      : d.shape === 'pdf' ? 'PDF template' : 'Website template') + '</span>' +
     ownerBadge(d) + stateBadge(d.state)));
 
   const s = buildSplit();
@@ -4702,14 +4726,19 @@ function designView(body, d){
   const emb = el('section','section');
   emb.style.marginTop = 'var(--s-6)';
   /* A widget's meta is whose theme wins, because it lands in a page we do not
-     control. A template IS the page, so its meta is how many routes it has. */
-  emb.append(sectionHead(d.kind === 'widget' ? 'Embed' : 'Deploy',
+     control. A template IS the page, so its meta is how many routes it has —
+     and a PDF's is how many sections, since a page count is the printer's. */
+  const pdf = d.shape === 'pdf';
+  emb.append(sectionHead(d.kind === 'widget' ? 'Embed' : pdf ? 'Apply' : 'Deploy',
     '<span class="t-mono">' + esc(d.kind === 'widget'
       ? (c.theme === 'Follow' ? 'inherits the host page' : c.theme.toLowerCase() + ', fixed')
+      : pdf ? plural(commaList(c.sections).length, 'section')
       : plural(commaList(c.nav).length, 'route')) + '</span>'));
   emb.append(codeCard(embedSnippet(d)));
   emb.append(noteP(d.kind === 'widget'
     ? 'The widget ships its own tokens, so it looks like this inside a page whose CSS we have never seen.'
+    : pdf
+    ? 'A PDF layout styles what leaves as a document — when a result downloads as pdf, this is the page it is set on.'
     : 'A template is a hosted page. The routes come from the nav; the palette comes from the accent chosen here.'));
   s.main.append(emb);
 
@@ -4738,8 +4767,16 @@ function designView(body, d){
       s.side.append(field('Sub-headline', inputCtl(c.sub, v => { c.sub = v; up(); })));
       s.side.append(field('Call to action', inputCtl(c.cta, v => { c.cta = v; up(); })));
     }
-    s.side.append(field('Navigation', inputCtl(c.nav, v => { c.nav = v; up(); }),
-      'Comma separated. Each one becomes a route.'));
+    if (d.shape === 'pdf'){
+      s.side.append(field('Sub-title', inputCtl(c.sub, v => { c.sub = v; up(); })));
+      s.side.append(field('Sections', inputCtl(c.sections, v => { c.sections = v; up(); }),
+        'Comma separated, in reading order.'));
+      s.side.append(field('Footer', inputCtl(c.footer, v => { c.footer = v; up(); }),
+        'Printed on every page, opposite the page number.'));
+    } else {
+      s.side.append(field('Navigation', inputCtl(c.nav, v => { c.nav = v; up(); }),
+        'Comma separated. Each one becomes a route.'));
+    }
   }
 
   s.side.append(field('Brand colour', selectCtl(D.DESIGN_ACCENTS.map(x => x[0]), c.accent,

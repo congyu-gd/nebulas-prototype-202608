@@ -1710,6 +1710,32 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .tpl__pad{ padding:var(--s-3) }
 
+/* A PDF layout is a page, not a site: portrait, sections in reading order,
+   a footer that counts pages. Bars where the prose goes, same as every
+   template — the layout is judged, not the placeholder text. */
+.tpl__paper{
+  display:flex; flex-direction:column; gap:var(--s-3);
+  aspect-ratio:1 / 1.35;
+  padding:var(--s-5) var(--s-6);
+}
+.tpl__pagehead{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--s-2);
+  padding-bottom:var(--s-2);
+  border-bottom:var(--border) solid var(--line);
+}
+.tpl__secnm{
+  font-size:var(--t-11); font-weight:var(--w-semi);
+  letter-spacing:var(--ls-caps); text-transform:uppercase;
+  color:var(--text-3);
+}
+.tpl__sec{ display:grid; gap:var(--s-2) }
+.tpl__pagefoot{
+  display:flex; justify-content:space-between;
+  margin-top:auto; padding-top:var(--s-2);
+  border-top:var(--border) solid var(--line);
+  font-family:var(--mono); font-size:var(--t-11); color:var(--text-4);
+}
+
 /* ================================================================ toasts */
 .toasts{
   position:fixed; bottom:calc(var(--status-h) + var(--s-3)); left:50%; translate:-50% 0;

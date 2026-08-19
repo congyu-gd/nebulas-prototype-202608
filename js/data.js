@@ -1234,7 +1234,17 @@ const DESIGNS = [
     desc:'Three columns: what exists, what you are reading, and where you are in it.',
     cfg:{ title:'Help Centre', sub:'Sources, assistants and the API', accent:'Blue',
           radius:'Square', theme:'Follow', width:'Wide', header:true, credit:true,
-          nav:'Getting started, Sources, Assistants, API' } }
+          nav:'Getting started, Sources, Assistants, API' } },
+
+  /* A PDF template is a document layout, not a site: what a result looks like
+     once it leaves as a page. Sections are the reading order; the footer is
+     printed opposite the page number. */
+  { id:'de8', name:'Monthly report layout', kind:'template', shape:'pdf', state:'live', owner:'me', team:'Revenue',
+    desc:'The page every monthly report is set on: headline numbers first, then the detail, then what to do.',
+    cfg:{ title:'Acme Industrial', sub:'Monthly performance report', accent:'Nebulas',
+          radius:'Soft', theme:'Light', width:'Medium', header:true, credit:true,
+          sections:'Headline numbers, What moved, Risks, Actions',
+          footer:'Confidential · finance@acme.com' } }
 ];
 /* Six brands to pick from, each already a token. A colour picker would invite a
    seventh that matches nothing. */
