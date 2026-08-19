@@ -987,6 +987,26 @@ button.chip--plain:hover{ background:var(--raised) }
 .deflist dt{ color:var(--text-4); white-space:nowrap }
 .deflist dd{ margin:0; color:var(--text-2); min-width:0 }
 
+/* ============================================================== setrow
+   A configuration read as facts. Each row is a button — the label, the current
+   value, a chevron — because clicking the fact is how you change it: the row
+   opens a dialog, and the record only moves when the dialog saves. The value
+   truncates; the dialog holds the full text. */
+.setlist{ display:flex; flex-direction:column }
+.setlist > .setrow + .setrow{ border-top:var(--border) solid var(--line) }
+.setrow{
+  display:grid; grid-template-columns:calc(var(--u) * 28) minmax(0,1fr) auto;
+  gap:var(--s-3); align-items:center;
+  padding:var(--s-2);
+  border:0; background:none; text-align:left;
+  font:inherit; font-size:var(--t-12); color:var(--text-2);
+  line-height:var(--lh-ui); cursor:pointer;
+}
+.setrow:hover{ background:var(--raised) }
+.setrow__k{ color:var(--text-4); font-size:var(--t-11) }
+.setrow__v{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
+.setrow__go{ display:flex; color:var(--text-4) }
+
 /* ============================================================== timeline
    A run log read downward, newest first: one dot per entry coloured by how the
    run ended, and a rail joining them because the entries are one history rather

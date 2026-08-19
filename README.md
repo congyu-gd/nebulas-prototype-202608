@@ -217,6 +217,12 @@ workspace, so there is no ownership filter to work.
 Connectors live in Cloud → Connections, since connecting a system is an
 administrative act; Build only grants one.
 
+The **assistant page** reads first and edits second: the left column states
+the configuration as facts, the right column is a **test bench** that answers
+as the record is currently configured (a scratch conversation — never in
+History, never touching the record), and clicking any fact opens a dialog
+whose changes apply only when **Save** confirms them.
+
 Every lane is also **built by chat, without leaving Build**: the lane's `+`
 opens **the maker** — an overlay with the conversation on the left and the
 record live on the right. Create is optimize on a fresh draft: the first

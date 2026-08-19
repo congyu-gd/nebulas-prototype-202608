@@ -376,6 +376,31 @@
   </div>
 </div>
 
+<!-- ============================================================ edit dialog
+     One dialog for every setting on the assistant page. A row opens it with a
+     staged copy of the values it names; the controls write only the copy, and
+     the record changes when Save says so.
+-->
+<div class="scrim scrim--center" id="editScrim" data-open="false">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <header class="dialog__head">
+      <span class="dialog__ico" id="editIco" aria-hidden="true"></span>
+      <span class="dialog__id">
+        <span class="dialog__title" id="editTitle">Edit</span>
+        <span class="dialog__sub" id="editSub"></span>
+      </span>
+      <button class="iconbtn iconbtn--sm" id="editClose" title="Close (esc)" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="dialog__body" id="editBody"></div>
+    <footer class="dialog__foot">
+      <button class="btn btn--ghost" id="editCancel" type="button">Cancel</button>
+      <button class="btn btn--primary" id="editSave" type="button">Save</button>
+    </footer>
+  </div>
+</div>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script src="js/icons.js"></script>

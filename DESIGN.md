@@ -918,9 +918,34 @@ one is a list you are assembling, the other takes effect as you touch it.
 
 One record, two verbs. Nothing is duplicated: starring in Chat and editing here
 write to the same object, the assistant card in Chat carries an **Edit in
-Build** button, and the builder's **Test in a thread** binds the assistant and
+Build** button, and the builder's **Open in a thread** binds the assistant and
 opens a new one. The palette lands on the definition, because that is the
 address that can do both.
+
+### The assistant page reads first, tests beside, edits behind a dialog
+
+The other lanes keep the form-plus-inspector shape. The assistant page
+inverted it, because its owner's loop is *read the setup → try it → adjust*,
+in that order:
+
+- **The left column states the configuration as facts** — `.setrow` rows:
+  label, current value, chevron. Nothing on the page is a live control, so
+  reading the record cannot accidentally edit it.
+- **The right column is the test bench**: a conversation with the record as
+  configured, streamed by the same turn engine as chat and the maker
+  (`opts.who` names the speaker). Its thread is a scratch object per
+  assistant — it survives re-renders, never enters History, and never edits
+  the record, because a rehearsal is not work. The reply is built from the
+  actual bindings (`testScript`), so flipping a setting on the left visibly
+  changes the next answer on the right.
+- **Clicking a fact opens a dialog holding a staged copy.** The controls
+  write only the copy; the record changes when **Save** says so, and Cancel,
+  Escape and the scrim all discard — the one place in Build where an edit
+  waits for confirmation, because a page whose job is reading should not be
+  a form armed to fire.
+- The old inspector died of redundancy. Its summary repeated, narrowly, facts
+  the wide column now states — and its title, **Becomes** (shorthand for
+  "what this configuration becomes at run time"), explained itself to nobody.
 
 Two gaps are shown rather than hidden:
 
@@ -1533,9 +1558,10 @@ harder to find, which is why the green came back out again after the first pass.
   is a store that stops being read.
 - Keyboard traversal of the sidebar, and focus management when the palette
   closes.
-- Build has no draft state and no version history. Edits apply as you make them
-  — the maker says so out loud — which is honest for a prototype and wrong for
-  a product: publishing should promote a draft, not mutate the live thing.
+- Build has no version history. Outside the assistant page — whose dialogs
+  stage a copy and commit on Save — edits apply as you make them, which is
+  honest for a prototype and wrong for a product: publishing should promote a
+  draft, not mutate the live thing.
 - A widget cannot yet be previewed against real data from the assistant or
   project that would feed it — the values are typed (or said in the maker), so
   a widget can claim a number its assistant could not produce.

@@ -4084,87 +4084,250 @@ function stateBadge(s){
   return '<span class="badge ' + badge + '">' + esc(text) + '</span>';
 }
 
-/* ------------------------------------------------------- assistant builder
-   The same record the chat sidebar lists. Chat picks one; this defines it. */
-function assistantBuildView(body, a){
-  const pad = el('div','pane__pad');
-  pad.append(pageHead(a.name, a.desc, stateBadge(a.state)));
-  const s = buildSplit();
+/* ----------------------------------------------------------- edit dialog
+   One dialog for every setting on the assistant page. A row opens it with a
+   staged copy of the values it names; the controls write only the copy, and
+   the record changes when Save says so — the one place in Build where an edit
+   waits for a confirmation, because the page around it is for reading. */
+let editOn = null;   /* { staged, apply, title } */
+function openEdit(spec){
+  editOn = { staged:spec.staged, apply:spec.apply, title:spec.title };
+  $('#editIco').innerHTML = ic(spec.ico || 'gear', 16);
+  $('#editTitle').textContent = spec.title;
+  $('#editSub').textContent = spec.sub || '';
+  const body = $('#editBody');
+  body.innerHTML = '';
+  const stack = el('div');
+  stack.style.cssText = 'display:grid;gap:var(--s-4)';
+  spec.build(stack, spec.staged);
+  body.append(stack);
+  $('#editScrim').dataset.open = 'true';
+  const first = $('input:not([type=checkbox]), textarea, select', body);
+  if (first) first.focus();
+}
+function closeEdit(){
+  editOn = null;
+  $('#editScrim').dataset.open = 'false';
+}
+function saveEdit(){
+  if (!editOn) return;
+  editOn.apply(editOn.staged);
+  const what = editOn.title;
+  closeEdit();
+  render();
+  toast(what + ' saved');
+}
 
-  const pair = el('div','build__pair');
-  pair.append(field('Name', inputCtl(a.name, v => { a.name = v.trim() || a.name; render(); })));
-  pair.append(field('Team', selectCtl(D.ASSISTANT_TEAMS, a.team, v => { a.team = v; render(); })));
-  s.main.append(pair);
-
-  const pair2 = el('div','build__pair');
+/* The setting editors. Each stages only the fields its rows name. */
+function editAbout(a){
+  openEdit({ title:'About', sub:a.name, ico:'agent',
+    staged:{ name:a.name, team:a.team, desc:a.desc },
+    build(body, st){
+      body.append(field('Name', inputCtl(st.name, v => { st.name = v; })));
+      body.append(field('Team', selectCtl(D.ASSISTANT_TEAMS, st.team, v => { st.team = v; })));
+      body.append(field('Description', textareaCtl(st.desc, v => { st.desc = v; },
+        'One sentence on what it is for.')));
+    },
+    apply(st){ a.name = st.name.trim() || a.name; a.team = st.team; a.desc = st.desc; } });
+}
+function editModel(a){
   /* An assistant can be pinned to a model this workspace does not offer in the
      composer, so the current value is added rather than silently replaced by
      the first option. */
   const models = D.MODELS.indexOf(a.model) > -1 ? D.MODELS : D.MODELS.concat([a.model]);
-  pair2.append(field('Model', selectCtl(models, a.model, v => {
-    a.model = v; a.opts.think = v.indexOf('extended') > -1; render();
-  }), 'A thread can still route a single turn elsewhere.'));
+  openEdit({ title:'Model', sub:a.name, ico:'cube',
+    staged:{ model:a.model },
+    build(body, st){
+      body.append(field('Model', selectCtl(models, st.model, v => { st.model = v; }),
+        'A thread can still route a single turn elsewhere.'));
+    },
+    apply(st){ a.model = st.model; a.opts.think = st.model.indexOf('extended') > -1; } });
+}
+function editKb(a){
   const kbNames = ['— none —'].concat(D.KBS.map(k => k.name));
-  pair2.append(field('Knowledge base', selectCtl(kbNames, a.kb || '— none —', v => {
-    a.kb = v === '— none —' ? null : v; render();
-  }), 'The only corpus it may cite.'));
-  s.main.append(pair2);
-
-  s.main.append(field('Instructions', textareaCtl(a.inst, v => { a.inst = v; render(); },
-    'What it must do, and what it must refuse to do.'),
-    'Read before every turn. State the refusals — they are the half that holds under pressure.'));
-
+  openEdit({ title:'Knowledge base', sub:a.name, ico:'library',
+    staged:{ kb:a.kb },
+    build(body, st){
+      body.append(field('Knowledge base', selectCtl(kbNames, st.kb || '— none —', v => {
+        st.kb = v === '— none —' ? null : v;
+      }), 'The only corpus it may cite.'));
+    },
+    apply(st){ a.kb = st.kb; } });
+}
+function editInst(a){
+  openEdit({ title:'Instructions', sub:a.name, ico:'filetext',
+    staged:{ inst:a.inst },
+    build(body, st){
+      body.append(field('Instructions', textareaCtl(st.inst, v => { st.inst = v; },
+        'What it must do, and what it must refuse to do.'),
+        'Read before every turn. State the refusals — they are the half that holds under pressure.'));
+    },
+    apply(st){ a.inst = st.inst; } });
+}
+function editSkills(a){
   /* Skills an assistant names but the workspace has not defined are shown as
      such rather than dropped: the gap belongs on screen, not in a filter. */
   const defined = D.SKILLS.map(x => x.name);
   const undef = a.skills.filter(n => defined.indexOf(n) < 0);
-  const skillItems = D.SKILLS.map(x => ({ nm:x.name, sub:x.desc, meta:x.avg, id:x.name }))
+  const items = D.SKILLS.map(x => ({ nm:x.name, sub:x.desc, meta:x.avg, id:x.name }))
     .concat(undef.map(n => ({ nm:n, sub:'not defined in this workspace', meta:'—', id:n })));
-  const skillSec = el('section','section');
-  skillSec.append(sectionHead('Skills', '<span class="t-mono">' + a.skills.length + ' of ' + skillItems.length + '</span>'));
-  skillSec.append(pickList(skillItems,
-    it => a.skills.indexOf(it.id) > -1,
-    (it, on) => {
-      a.skills = on ? a.skills.concat([it.id]) : a.skills.filter(n => n !== it.id);
-      render();
-    }));
+  openEdit({ title:'Skills', sub:a.name, ico:'tool',
+    staged:{ skills:a.skills.slice() },
+    build(body, st){
+      body.append(pickList(items,
+        it => st.skills.indexOf(it.id) > -1,
+        (it, on) => {
+          st.skills = on ? st.skills.concat([it.id]) : st.skills.filter(n => n !== it.id);
+        }));
+      if (undef.length){
+        body.append(banner('warn', '<strong>' + esc(undef.join(', ')) +
+          '</strong> ' + (undef.length === 1 ? 'is named here but has no definition' :
+          'are named here but have no definitions') + ' in Skills. Calls to ' +
+          (undef.length === 1 ? 'it' : 'them') + ' will fail at run time.'));
+      }
+    },
+    apply(st){ a.skills = st.skills; } });
+}
+function editConn(a){
+  openEdit({ title:'Connectors', sub:a.name, ico:'plug',
+    staged:{ conn:a.conn.slice() },
+    build(body, st){
+      body.append(pickList(
+        D.CONNECTORS.map(c => ({
+          nm:c.name, sub:c.state === 'off' ? 'not connected — grant it here, connect it in Cloud' : c.scope,
+          meta:c.kind, id:c.id
+        })),
+        it => st.conn.indexOf(it.id) > -1,
+        (it, on) => {
+          st.conn = on ? st.conn.concat([it.id]) : st.conn.filter(x => x !== it.id);
+        }));
+      body.append(noteP('A grant is not a connection. Granting one that is not connected is allowed — it states what this assistant will need. Connecting it is done in Cloud → Connections, usually by someone else.'));
+    },
+    apply(st){ a.conn = st.conn; } });
+}
+function editOpts(a){
+  openEdit({ title:'Behaviour', sub:a.name, ico:'gear',
+    staged:{ cite:a.opts.cite, confirm:a.opts.confirm, think:a.opts.think },
+    build(body, st){
+      [['cite','Attach a source to every claim'],
+       ['confirm','Confirm before writing anything outside the workspace'],
+       ['think','Extended thinking']].forEach(([k, label]) => {
+        const sw = switchCtl(label, st[k]);
+        $('input', sw).onchange = e => { st[k] = e.target.checked; };
+        body.append(sw);
+      });
+    },
+    apply(st){ a.opts.cite = st.cite; a.opts.confirm = st.confirm; a.opts.think = st.think; } });
+}
+
+/* A setting shown as a fact: label, current value, and the chevron that says
+   the row itself is the editor's door. */
+function setRow(label, value, onClick){
+  const b = el('button','setrow');
+  b.type = 'button';
+  b.innerHTML =
+    '<span class="setrow__k">' + esc(label) + '</span>' +
+    '<span class="setrow__v">' + value + '</span>' +
+    '<span class="setrow__go">' + ic('chevR',13) + '</span>';
+  b.onclick = onClick;
+  return b;
+}
+
+/* ------------------------------------------------------------ test bench
+   The right column of the assistant page: a conversation with the record as
+   configured. Its thread is a scratch object per assistant — it survives
+   re-renders but never enters History, because a rehearsal is not work. */
+const testThreads = {};
+function testThread(a){
+  if (!testThreads[a.id]) testThreads[a.id] = { title:'test', msgs:[] };
+  return testThreads[a.id];
+}
+/* The reply runs the question through the actual configuration — the steps
+   name what is bound, the answer names what each binding did — so changing a
+   setting on the left visibly changes the next answer on the right. */
+function testScript(text, a){
+  const steps = [{ n:'inst.read', d:'reading the instructions', t:'0.3s' }];
+  if (a.opts.think) steps.push({ n:'think', d:'extended thinking', t:'1.1s' });
+  if (a.kb) steps.push({ n:'kb.search', d:'searching ' + a.kb, t:'0.8s' });
+  const low = ' ' + text.toLowerCase() + ' ';
+  const sk = a.skills.filter(n =>
+    n.split(/[._]/).some(w => w.length > 3 && low.indexOf(w) >= 0))[0] || a.skills[0];
+  if (sk) steps.push({ n:sk, d:'called with your question', t:'0.9s' });
+  steps.push({ n:'compose', d:'drafting the answer', t:'0.4s' });
+
+  const lines = ['Answering as **' + a.name + '** — the real configuration, simulated output.', ''];
+  lines.push(a.kb
+    ? '- Drawn only from **' + a.kb + '**. A claim that corpus cannot back would be named as missing, not filled in.'
+    : '- No knowledge base is bound, so this leans on the model alone — bind one on the left if it should cite a corpus.');
+  if (sk) lines.push('- `' + sk + '` did the work the corpus could not.');
+  if (a.opts.confirm) lines.push('- Anything that writes outside the workspace stops here and asks first.');
+  if (!a.opts.cite && a.kb) lines.push('- Sources are not attached — that is the *cite* switch, currently off.');
+  const reply = { steps:steps, md:lines.join('\n') };
+  if (a.opts.cite && a.kb) reply.cites = [{ n:a.kb, s:'knowledge' }];
+  return reply;
+}
+
+/* ------------------------------------------------------- assistant builder
+   The same record the chat sidebar lists. Read first, test beside, edit
+   through a dialog: the left column states the configuration as facts, the
+   right column talks to it, and a row's dialog is where changes wait for
+   Save. */
+function assistantBuildView(body, a){
+  const pad = el('div','pane__pad');
+  pad.append(pageHead(a.name, a.desc, stateBadge(a.state)));
+  const s = buildSplit();
+  s.wrap.classList.add('build--test');
+
+  /* ------------------------------------------------ the record, as facts */
+  const connName = id => find(D.CONNECTORS, id).name;
+  const onSwitches = [a.opts.cite && 'cites sources', a.opts.confirm && 'confirms writes',
+                      a.opts.think && 'extended thinking'].filter(Boolean).join(' · ');
+
+  const about = el('section','section');
+  about.append(sectionHead('About'));
+  const l1 = el('div','setlist');
+  l1.append(setRow('Name', esc(a.name), () => editAbout(a)));
+  l1.append(setRow('Team', esc(a.team), () => editAbout(a)));
+  l1.append(setRow('Description', esc(a.desc), () => editAbout(a)));
+  about.append(l1);
+  s.main.append(about);
+
+  const engine = el('section','section');
+  engine.append(sectionHead('Model & knowledge'));
+  const l2 = el('div','setlist');
+  l2.append(setRow('Model', esc(a.model), () => editModel(a)));
+  l2.append(setRow('Knowledge base',
+    a.kb ? esc(a.kb) : '<span style="color:var(--warn)">none — it answers from the model alone</span>',
+    () => editKb(a)));
+  l2.append(setRow('Instructions', esc(a.inst || '—'), () => editInst(a)));
+  engine.append(l2);
+  s.main.append(engine);
+
+  const caps = el('section','section');
+  caps.append(sectionHead('Capabilities'));
+  const l3 = el('div','setlist');
+  l3.append(setRow('Skills',
+    a.skills.length ? esc(a.skills.join(' · '))
+                    : '<span style="color:var(--warn)">none — it can only talk</span>',
+    () => editSkills(a)));
+  l3.append(setRow('Connectors',
+    a.conn.length ? esc(a.conn.map(connName).join(' · ')) : 'none granted',
+    () => editConn(a)));
+  l3.append(setRow('Behaviour', onSwitches ? esc(onSwitches) : 'defaults — nothing switched on',
+    () => editOpts(a)));
+  caps.append(l3);
+  /* Skills the record names but the workspace has not defined: the gap belongs
+     on the page, not only inside the dialog. */
+  const undef = a.skills.filter(n => D.SKILLS.map(x => x.name).indexOf(n) < 0);
   if (undef.length){
     const b = banner('warn', '<strong>' + esc(undef.join(', ')) +
       '</strong> ' + (undef.length === 1 ? 'is named here but has no definition' :
       'are named here but have no definitions') + ' in Skills. Calls to ' +
       (undef.length === 1 ? 'it' : 'them') + ' will fail at run time.');
     b.style.margin = 'var(--s-3) 0 0';
-    skillSec.append(b);
+    caps.append(b);
   }
-  s.main.append(skillSec);
-
-  const connSec = el('section','section');
-  connSec.append(sectionHead('Connectors', '<span class="t-mono">' + a.conn.length + '</span>'));
-  connSec.append(pickList(
-    D.CONNECTORS.map(c => ({
-      nm:c.name, sub:c.state === 'off' ? 'not connected — grant it here, connect it in Cloud' : c.scope,
-      meta:c.kind, id:c.id
-    })),
-    it => a.conn.indexOf(it.id) > -1,
-    (it, on) => {
-      a.conn = on ? a.conn.concat([it.id]) : a.conn.filter(x => x !== it.id);
-      render();
-    }));
-  connSec.append(noteP('A grant is not a connection. Granting one that is not connected is allowed — it states what this assistant will need. Connecting it is done in Cloud \u2192 Connections, usually by someone else.'));
-  s.main.append(connSec);
-
-  const optSec = el('section','section');
-  optSec.append(sectionHead('Behaviour'));
-  const opts = el('div');
-  [['cite','Attach a source to every claim'],
-   ['confirm','Confirm before writing anything outside the workspace'],
-   ['think','Extended thinking']].forEach(([k, label]) => {
-    const sw = switchCtl(label, a.opts[k]);
-    $('input', sw).onchange = e => { a.opts[k] = e.target.checked; };
-    opts.append(sw);
-  });
-  optSec.append(opts);
-  s.main.append(optSec);
+  s.main.append(caps);
 
   /* Projects bind assistants BY NAME (the project dialog's convention). */
   const pjs = D.PROJECTS.filter(p => p.assistant === a.name);
@@ -4173,30 +4336,18 @@ function assistantBuildView(body, a){
     go:() => select('build', key('pj', p.id))
   })), 'Bind it to a project and it answers for everyone working there.'));
 
-  /* ------------------------------------------------------------ inspector */
-  inspectorHead(s.side, 'Becomes', plural(a.threads, 'thread'));
-  s.side.append(defList([
-    ['State', dotLead(a.state) + esc({ ok:'live', idle:'idle', draft:'draft' }[a.state] || a.state)],
-    ['Model', esc(a.model)],
-    ['Skills', a.skills.length ? esc(String(a.skills.length)) : '<span style="color:var(--warn)">none</span>'],
-    ['Knowledge', esc(a.kb || 'none')],
-    ['Connectors', esc(String(a.conn.length))],
-    ['In composer', a.fav ? 'yes' : 'no']
-  ]));
-  s.side.append(noteP('Edits apply as you make them — this prototype keeps no draft and no version history.'));
-
-  const test = el('button','btn btn--primary', ic('play',13) + 'Test in a thread');
-  test.onclick = () => {
-    state.assistant = a.id;
-    renderComposer();
-    newThread();
-    toast('New thread bound to ' + a.name);
-  };
   const star = el('button','btn btn--secondary',
     ic(a.fav ? 'starOn' : 'star', 13) + (a.fav ? 'In the composer' : 'Add to composer'));
   star.onclick = () => { a.fav = !a.fav; render(); renderComposer(); };
   const opt = el('button','btn btn--secondary', ic('spark',13) + 'Optimize in chat');
   opt.onclick = () => openMaker('as', a);
+  const open = el('button','btn btn--ghost', ic('chat',13) + 'Open in a thread');
+  open.onclick = () => {
+    state.assistant = a.id;
+    renderComposer();
+    newThread();
+    toast('New thread bound to ' + a.name);
+  };
   const dup = el('button','btn btn--ghost', ic('copy',13) + 'Duplicate');
   dup.onclick = () => {
     const c = Object.assign({}, a, {
@@ -4207,7 +4358,76 @@ function assistantBuildView(body, a){
     select('build', key('as', c.id));
     toast('Duplicated as ' + c.name);
   };
-  inspectorActs(s.side, [test, opt, star, dup]);
+  const acts = el('div');
+  acts.style.cssText = 'display:flex;gap:var(--s-2);flex-wrap:wrap;margin-top:var(--s-6)';
+  acts.append(opt, star, open, dup);
+  s.main.append(acts);
+
+  /* ------------------------------------------------------------ the bench */
+  const th = testThread(a);
+  const bh = el('div','build__sidehead',
+    '<span class="t-eyebrow">Try it</span>' +
+    '<span class="t-mono">' + (th.msgs.length ? plural(th.msgs.length / 2, 'turn') : '') + '</span>');
+  if (th.msgs.length){
+    const reset = el('button','iconbtn iconbtn--xs tip', ic('undo',12));
+    reset.setAttribute('data-tip','Start over');
+    reset.onclick = () => { th.msgs.length = 0; render(); };
+    bh.append(reset);
+  }
+  s.side.append(bh);
+
+  const log = el('div','testbench__log');
+  log.id = 'testLog';
+  const submit = () => {
+    const v = input.value.trim();
+    if (!v || state.busy) return;
+    input.value = '';
+    runTurn(v, testScript(v, a), {
+      host:log, thread:th, who:a.name,
+      scroll:() => log.scrollTo({ top:log.scrollHeight, behavior:'instant' }),
+      busy:on => {
+        send.disabled = on; input.disabled = on;
+        if (!on){
+          input.focus();
+          /* The head's count is drawn at render; keep it true between them. */
+          $('.t-mono', bh).textContent = plural(th.msgs.length / 2, 'turn');
+        }
+      }
+    });
+  };
+  if (!th.msgs.length){
+    const hint = emptyState('play','Try it before you ship it',
+      'Ask what a user would ask. The reply runs through the configuration on the left — change a setting and the next answer changes with it.');
+    const chips = el('div');
+    chips.style.cssText = 'display:flex;flex-direction:column;gap:var(--s-2);margin-top:var(--s-4);align-items:center';
+    asstPrompts(a).slice(0, 2).forEach(t => {
+      const c = el('button','chip','<span>' + esc(t) + '</span>');
+      c.type = 'button';
+      c.onclick = () => { input.value = t; submit(); };
+      chips.append(c);
+    });
+    hint.append(chips);
+    log.append(hint);
+  } else {
+    th.msgs.forEach(m => log.append(msgNode(m)));
+    log.scrollTop = log.scrollHeight;
+  }
+  s.side.append(log);
+
+  const ask = el('div','testbench__ask');
+  const input = el('textarea','textarea');
+  input.id = 'testInput';
+  input.rows = 2;
+  input.placeholder = 'Ask ' + a.name + '…';
+  const send = el('button','btn btn--primary btn--sm','Send');
+  send.type = 'button';
+  send.onclick = submit;
+  input.onkeydown = e => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); submit(); }
+  };
+  ask.append(input, send);
+  s.side.append(ask);
+  s.side.append(noteP('A test stays here — it never enters History, and it never edits the record.'));
 
   pad.append(s.wrap);
   body.append(pad);
@@ -4665,10 +4885,10 @@ function makerScript(text, m){
   const md = changes.length
     ? 'Done — applied to **' + (rn ? rn[1].trim() : rec.name) + '**:\n\n' +
       changes.map(c => '- ' + c).join('\n') +
-      '\n\nAnything I did not catch, the inspector on its Build page edits — this chat and that panel write the same record.'
+      '\n\nAnything I did not catch, its Build page edits — this chat and that page write the same record.'
     : 'I read it, but nothing in it maps to what a ' + noun + ' has. I match **names** — a model, ' +
       'a skill, a corpus, a connector, a colour — and a few phrases like *rename it…* or *every week*. ' +
-      'The inspector on its Build page edits everything, always.';
+      'Its Build page edits everything, always.';
   return { steps:steps, md:md, apply:() => acts.forEach(f => f()) };
 }
 
@@ -7464,8 +7684,8 @@ function syncHead(){
    overlay streams into its own log. opts.host is the container, opts.scroll
    its scroller, opts.thread the record the turn is written into, opts.busy a
    lock indicator for the host's own send button, opts.sync a redraw called
-   once the script's work has been applied. With no opts, everything below is
-   exactly what it always was. */
+   once the script's work has been applied, opts.who the name the reply speaks
+   under. With no opts, everything below is exactly what it always was. */
 async function runTurn(userText, script, opts){
   if (state.busy) return;
   state.busy = true;
@@ -7502,9 +7722,11 @@ async function runTurn(userText, script, opts){
   wrap.dataset.role = 'ai';
   const head = el('div','msg__head');
   /* A bound assistant answers under its own name — that is what binding one
-     means. The model it routes to is still in the composer. */
+     means. The model it routes to is still in the composer. A host can name
+     the speaker itself (the test bench answers as the record on trial). */
   head.innerHTML = '<span class="msg__who">' +
-    esc(state.assistant ? find(D.ASSISTANTS, state.assistant).name : state.model) +
+    esc(opts && opts.who ? opts.who :
+        (state.assistant ? find(D.ASSISTANTS, state.assistant).name : state.model)) +
                    '</span><span class="msg__meta" data-dur>thinking...</span>';
   wrap.append(head);
 
@@ -8024,6 +8246,12 @@ function boot(){
   $('#schedClose').onclick = closeSched;
   $('#schedScrim').addEventListener('mousedown', e => { if (e.target === $('#schedScrim')) closeSched(); });
 
+  /* the edit dialog — the scrim discards like Cancel; only Save commits */
+  $('#editClose').onclick = closeEdit;
+  $('#editCancel').onclick = closeEdit;
+  $('#editSave').onclick = saveEdit;
+  $('#editScrim').addEventListener('mousedown', e => { if (e.target === $('#editScrim')) closeEdit(); });
+
   /* the maker */
   $('#makerClose').onclick = closeMaker;
   $('#makerScrim').addEventListener('mousedown', e => { if (e.target === $('#makerScrim')) closeMaker(); });
@@ -8055,6 +8283,10 @@ function boot(){
       e.preventDefault(); toggleAppPanel();
     } else if (mod && e.key.toLowerCase() === 'j'){
       e.preventDefault(); setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+    } else if (e.key === 'Escape' && $('#editScrim').dataset.open === 'true'){
+      /* Opened over whatever page armed it, so it takes Escape first —
+         and Escape means Cancel: the staged copy is dropped unsaved. */
+      closeEdit();
     } else if (e.key === 'Escape' && $('#asstScrim').dataset.open === 'true'){
       closeAssistant();
     } else if (e.key === 'Escape' && $('#shareScrim').dataset.open === 'true'){

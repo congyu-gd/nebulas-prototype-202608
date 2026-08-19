@@ -504,6 +504,22 @@
   display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
   gap:var(--s-3);
 }
+/* The assistant page's right column is the test bench — a conversation, not an
+   inspector — so the split gives it a chat's width rather than a summary's. */
+.build--test{ grid-template-columns:minmax(0,1fr) minmax(0, calc(var(--list-w) * 1.5)) }
+.testbench__log{
+  display:flex; flex-direction:column; gap:var(--s-5);
+  overflow:auto; overscroll-behavior:contain;
+  height:min(60vh, calc(var(--measure) * 0.85));
+  padding:var(--s-2) 0;
+}
+/* The bench's own composer: one box, one send, nothing of the page composer. */
+.testbench__ask{
+  display:flex; gap:var(--s-2); align-items:flex-end;
+  padding-top:var(--s-3);
+  border-top:var(--border) solid var(--line);
+}
+.testbench__ask .textarea{ flex:1; min-width:0; resize:none }
 @media (max-width:1080px){
   .build{ grid-template-columns:minmax(0,1fr) }
   .build__side{ position:static }
