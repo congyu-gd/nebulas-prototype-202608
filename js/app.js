@@ -5741,7 +5741,10 @@ function appState(app){
     const p = D.APP_PANELS[app.id] || {};
     const s = {};
     if (p.items) s.items = p.items.map(i => ({ t:i.t, due:i.due, done:!!i.done }));
-    if (p.notes){ s.notes = p.notes.slice(); s.note = 0; }
+    if (p.notes){
+      s.notes = p.notes.map(n => ({ html:n.html, tags:n.tags.slice() }));
+      s.open = null; s.tagging = false;
+    }
     if (p.events){
       s.events = p.events.map(e => ({ off:e[0], at:e[1], min:e[2], t:e[3], sub:e[4] }));
       s.view = 'Week'; s.wk = 0; s.mo = 0; s.draft = null; s.edit = null;
@@ -6395,48 +6398,160 @@ function appNews(app, p){
 }
 
 /* ---------------------------------------------------------------- note
-   The one app that is a text editor, so it is the one that proves the panel
-   holds state: what you type survives switching apps, sections and threads.
-
-   A note is one string and its first line is its title, which is why there is
-   no title field — a second control for text that is already on screen. */
-const noteTitle = b => (String(b).split('\n').filter(l => l.trim())[0] || '').trim().slice(0, 48) || 'Empty note';
-function noteWords(b){
-  const n = b.trim() ? b.trim().split(/\s+/).length : 0;
-  return plural(n, 'word');
+   Two screens, like every app that holds more than one thing: the note
+   list, and behind each name the note itself in an editor. The editor is
+   contenteditable with a small formatting hand — bold to strikethrough,
+   three heading sizes, three list kinds, quote, code, rule, undo and redo —
+   and its first line is still the title, so there is no title field. What
+   you make survives switching apps, sections and threads. */
+const noteTitle = n => {
+  const d = el('div');
+  d.innerHTML = n.html;
+  const t = (d.firstElementChild ? d.firstElementChild.textContent : d.textContent).trim();
+  return t.slice(0, 48) || 'Empty note';
+};
+function noteWords(n){
+  const d = el('div');
+  d.innerHTML = n.html;
+  const t = d.textContent.trim();
+  return plural(t ? t.split(/\s+/).length : 0, 'word');
 }
 function appNoteSurface(app){
   const st = appState(app);
-  const add = el('button','btn btn--ghost btn--sm', ic('plus',12) + 'New');
+  if (st.open != null) return noteEditor(app, st);
+
+  const add = el('button','btn btn--ghost btn--sm', ic('plus', 12) + 'New');
   add.type = 'button';
-  add.onclick = () => { st.notes.unshift(''); st.note = 0; repaintApp(app); };
+  add.onclick = () => {
+    st.notes.unshift({ html:'', tags:[] });
+    st.open = 0;
+    repaintApp(app);
+  };
   const c = appCard('Notes', add);
-
-  let open = null;                  /* the row of the note being edited */
-  st.notes.forEach((b, i) => {
-    const row = listRow({
-      title:noteTitle(b), sub:noteWords(b), current:i === st.note,
-      onClick:() => { st.note = i; repaintApp(app); }
-    });
-    if (i === st.note) open = row;
-    c.body.append(row);
+  st.notes.forEach((n, i) => {
+    c.body.append(listRow({
+      title:noteTitle(n),
+      sub:noteWords(n) + (n.tags.length ? ' · ' + n.tags.join(' · ') : ''),
+      onClick:() => { st.open = i; repaintApp(app); }
+    }));
   });
+  return [c.card, helpNote('Click a note to read or edit it.')];
+}
 
-  const ta = el('textarea','textarea textarea--prose');
-  ta.value = st.notes[st.note];
-  ta.rows = 10;
-  ta.placeholder = 'First line is the title…';
-  /* Saved on every keystroke, into the instance. The row above is patched by
-     hand rather than re-rendered: a repaint per character would take the caret
-     with it. */
-  ta.oninput = () => {
-    st.notes[st.note] = ta.value;
-    if (open){
-      $('.row__title', open).textContent = noteTitle(ta.value);
-      $('.row__sub', open).textContent = noteWords(ta.value);
+/* The editor. Formatting goes through the browser's own editing commands —
+   the note is HTML, styled by .notebody — and the note saves on every
+   keystroke, into the instance, with no repaint: a repaint per character
+   would take the caret with it. A ☐ in a checklist toggles when clicked. */
+function noteEditor(app, st){
+  const note = st.notes[st.open];
+  const nodes = [];
+
+  const back = el('button','btn btn--ghost btn--sm', ic('chevL', 12) + 'Notes');
+  back.type = 'button';
+  back.onclick = () => { st.open = null; st.tagging = false; repaintApp(app); };
+  const bar = el('div');
+  bar.append(back);
+  nodes.push(bar);
+
+  const ed = el('div','notebody');
+  ed.contentEditable = 'true';
+  ed.innerHTML = note.html;
+  ed.setAttribute('data-empty','First line is the title…');
+  ed.oninput = () => { note.html = ed.innerHTML; };
+  /* Clicking a checklist mark flips it — the character IS the checkbox. */
+  ed.onclick = () => {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    const nd = sel.anchorNode;
+    if (!nd || nd.nodeType !== 3) return;
+    for (const j of [sel.anchorOffset, sel.anchorOffset - 1]){
+      const ch = nd.textContent[j];
+      if (ch === '☐' || ch === '☑'){
+        nd.textContent = nd.textContent.slice(0, j) + (ch === '☐' ? '☑' : '☐') + nd.textContent.slice(j + 1);
+        note.html = ed.innerHTML;
+        return;
+      }
     }
   };
-  return [c.card, ta];
+
+  /* One row of controls, families separated by hairlines. Buttons take
+     mousedown so the selection in the editor is still there to format. */
+  const tb = el('div','notebar');
+  const press = (label, title, run) => {
+    const b = el('button','iconbtn iconbtn--xs', label);
+    b.type = 'button';
+    b.title = title;
+    b.onmousedown = e => e.preventDefault();
+    b.onclick = () => { ed.focus(); run(); note.html = ed.innerHTML; };
+    return b;
+  };
+  const cmd = (c, v) => () => document.execCommand(c, false, v || null);
+  const block = tag => () => {
+    const cur = String(document.queryCommandValue('formatBlock')).toLowerCase();
+    document.execCommand('formatBlock', false, cur === tag ? '<p>' : '<' + tag + '>');
+  };
+  const sep = () => el('span','notebar__sep');
+  tb.append(
+    press('<b>B</b>', 'Bold — ⌘B', cmd('bold')),
+    press('<i>I</i>', 'Italic — ⌘I', cmd('italic')),
+    press('<u>U</u>', 'Underline — ⌘U', cmd('underline')),
+    press('<s>S</s>', 'Strikethrough', cmd('strikeThrough')),
+    sep(),
+    press('H1', 'Heading 1', block('h1')),
+    press('H2', 'Heading 2', block('h2')),
+    press('H3', 'Heading 3', block('h3')),
+    sep(),
+    press(ic('ulist', 13), 'Bulleted list', cmd('insertUnorderedList')),
+    press(ic('olist', 13), 'Numbered list', cmd('insertOrderedList')),
+    press(ic('clist', 13), 'Checklist — click a ☐ to tick it', () => {
+      document.execCommand('insertUnorderedList');
+      document.execCommand('insertText', false, '☐ ');
+    }),
+    sep(),
+    press(ic('quote', 13), 'Quote', block('blockquote')),
+    press(ic('code', 13), 'Code block', block('pre')),
+    press(ic('hrule', 13), 'Rule', cmd('insertHorizontalRule')),
+    sep(),
+    press(ic('undo', 13), 'Undo', cmd('undo')),
+    press(ic('redo', 13), 'Redo', cmd('redo'))
+  );
+  nodes.push(tb, ed);
+
+  /* Tags: chips with a way out, and + Tag becomes the input when asked. */
+  const tags = el('div');
+  tags.style.cssText = 'display:flex;align-items:center;flex-wrap:wrap;gap:var(--s-2)';
+  note.tags.forEach((t, k) => {
+    const chip = el('span','chip chip--removable','<span>' + esc(t) + '</span>');
+    const x = el('button','chip__x', ic('x', 11));
+    x.type = 'button';
+    x.title = 'Remove the tag';
+    x.onclick = () => { note.tags.splice(k, 1); repaintApp(app); };
+    chip.append(x);
+    tags.append(chip);
+  });
+  if (st.tagging){
+    const inp = el('input','input');
+    inp.type = 'text';
+    inp.placeholder = 'finance';
+    inp.style.width = 'calc(var(--s-16) * 2)';
+    const commit = () => {
+      const v = inp.value.trim().toLowerCase();
+      if (v && note.tags.indexOf(v) < 0) note.tags.push(v);
+      st.tagging = false;
+      repaintApp(app);
+    };
+    inp.onblur = commit;
+    inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); commit(); } };
+    tags.append(inp);
+    requestAnimationFrame(() => inp.focus());
+  } else {
+    const addTag = el('button','linkbtn','+ Tag');
+    addTag.type = 'button';
+    addTag.onclick = () => { st.tagging = true; repaintApp(app); };
+    tags.append(addTag);
+  }
+  nodes.push(tags);
+  return nodes;
 }
 
 /* ---------------------------------------------------------------- todo

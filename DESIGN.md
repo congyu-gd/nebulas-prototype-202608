@@ -1049,7 +1049,7 @@ exist elsewhere — an app is a new arrangement, not a new vocabulary:
 | `invx` | the same two screens with a second way in — the camera — and the list as a ledger | Invoice extractor |
 | `files` | rows that attach to the next message | My files |
 | `news` | headline cards — token-drawn picture, topic tabs, summary in place, three verbs | News |
-| `note` | a list plus a `textarea`, first line as title | Note |
+| `note` | a note list, each opening into a contenteditable editor with a small formatting hand and tags | Note |
 | `todo` | `.picklist` rows with real checkboxes, a count and a meter | Todo |
 
 **The calendar is generated from the clock**, and the fixture marks events by
@@ -1118,6 +1118,19 @@ the summary in the results column as a document. Topic tabs filter the feed;
 inline SVGs drawn from the design tokens — abstract editorial marks, cycled —
 because a card without a picture is a list row, and a fetched picture would
 be the page's only network call.
+
+**Notes are a list and an editor, two screens like the extractors.** The
+list is titles (the first line is still the title, so there is no title
+field) with word counts and tags; a name opens the note itself in a
+contenteditable editor with a small formatting hand — bold to
+strikethrough, three headings, bulleted, numbered and check lists, quote,
+code, rule, undo and redo — one wrapping row, families separated by
+hairlines. The blocks are styled by `.notebody`, the reader's own voice,
+because `.prose` is the model's. A checklist mark is the character itself
+(`☐`/`☑`), toggled by clicking it. Tags are chips with a way out, and
+`+ Tag` becomes the input when asked. Everything saves on the keystroke
+into `APP_STATE`, with no repaint — a repaint per character would take the
+caret with it.
 
 **Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
 once and owned in JS after that — the same rule as a chat widget's state. A

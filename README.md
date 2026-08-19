@@ -189,7 +189,9 @@ screen. Seven apps: **Calendar**, **CV extractor**, **Invoice extractor**, **My
 files**, **News**, **Note**, **Todo**. They are wired into the rest of the
 workspace rather than being pictures of apps — a file attaches to your next
 message, an extraction is filed in the results column, and a ticked box or a
-typed note survives switching apps and sections. News is headline cards with
+typed note survives switching apps and sections. Notes are a list, and each
+name opens the note in an editor with a small formatting hand — headings,
+lists, a clickable checklist, quote, code, rule, undo — plus tags. News is headline cards with
 pictures drawn from the design tokens (nothing is fetched): topic tabs filter
 the feed, `Summarize` opens the summary in the card, `Ask in chat` writes the
 question into the composer, and `Save` files the summary as a result. The CV extractor is a tray: upload several CVs, press one

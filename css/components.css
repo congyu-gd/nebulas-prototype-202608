@@ -894,6 +894,46 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .newscard__acts{ display:flex; gap:var(--s-4) }
 
+/* ============================================================ note editor
+   A small formatting hand for contenteditable text: one wrapping row of
+   controls with hairline separators between the families, and a body whose
+   blocks are styled here rather than left to browser defaults — .prose is
+   the model's voice, this is the reader's own. */
+.notebar{ display:flex; align-items:center; flex-wrap:wrap; gap:var(--s-1) }
+.notebar__sep{ flex:none; width:var(--border); height:var(--s-4); background:var(--line); margin:0 var(--s-1) }
+.notebar .iconbtn{
+  width:auto; min-width:var(--ctl-xs);
+  padding:0 var(--s-1);
+  font-size:var(--t-11); font-weight:var(--w-semi);
+}
+.notebody{
+  min-height:calc(var(--s-16) * 3);
+  outline:none; cursor:text;
+  font-size:var(--t-13); line-height:var(--lh-prose); letter-spacing:var(--ls-snug);
+  color:var(--text-2);
+}
+.notebody:empty::before{ content:attr(data-empty); color:var(--text-4) }
+.notebody h1{ margin:0 0 var(--s-3); font-size:var(--t-18); font-weight:var(--w-semi); letter-spacing:var(--ls-tight); color:var(--text) }
+.notebody h2{ margin:var(--s-4) 0 var(--s-2); font-size:var(--t-15); font-weight:var(--w-semi); color:var(--text) }
+.notebody h2:first-child,.notebody h3:first-child{ margin-top:0 }
+.notebody h3{ margin:var(--s-4) 0 var(--s-2); font-size:var(--t-13); font-weight:var(--w-semi); color:var(--text-2) }
+.notebody p{ margin:0 0 var(--s-3) }
+.notebody ul,.notebody ol{ margin:0 0 var(--s-3); padding-left:var(--s-6) }
+.notebody li{ margin-bottom:var(--s-1) }
+.notebody b,.notebody strong{ font-weight:var(--w-semi); color:var(--text) }
+.notebody blockquote{
+  margin:0 0 var(--s-3); padding-left:var(--s-3);
+  border-left:var(--ring) solid var(--line-strong);
+  color:var(--text-3);
+}
+.notebody pre{
+  margin:0 0 var(--s-3); padding:var(--s-2) var(--s-3);
+  font-family:var(--mono); font-size:var(--t-12);
+  background:var(--raised); border-radius:var(--r-md);
+  white-space:pre-wrap;
+}
+.notebody hr{ border:0; border-top:var(--border) solid var(--line); margin:var(--s-4) 0 }
+
 /* ================================================================= dropbox
    An upload box: the dashed edge is the affordance, and the help line under
    the invitation is where the box stays honest about what an upload is in a

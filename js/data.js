@@ -1311,7 +1311,8 @@ const APPS = [
      files    what has been uploaded, attachable to the next message
      news     headline cards with token-drawn pictures, topic tabs, a
               summary read in place, askable about in the thread
-     note     an editable scratchpad
+     note     a note list, each opening into an editor with a small
+              formatting hand and tags
      todo     items you can tick
 
    Anything the reader can change (a ticked box, typed text, an item marked
@@ -1462,13 +1463,21 @@ const APP_PANELS = {
         sum:'Product revenue guidance rises 2 points on the back of data-sharing and marketplace consumption, now 11% of revenue. The quarter beat on both lines; NRR steadies at 127%.' }
     ] },
 
-  /* A note is one string and its FIRST LINE is its title — the same rule every
-     notes app converged on, and one less control than a title field. */
+  /* A note's FIRST LINE is its title — the rule every notes app converged
+     on, and one less control than a title field. The body is the HTML the
+     editor makes; ☐ and ☑ in a list are the checklist, toggled by clicking
+     the mark. */
   ap6:{ s:'note', foot:'Kept in this session only.',
     notes:[
-      'Q3 close — open questions\n\nServices $0.6M: Q2 implementation that slipped. Do not count as growth.\n\nSMB churn 40bps — check against the ledger before the board pack.\n\nAsk Ana whether the two enterprise renewals are signed or verbal.',
-      'Contoso renewal — call prep\n\nUsage down 34% over 30 days, admin changed 9 days ago.\n\nOpen with the admin change, not the number: they may not know.',
-      ''
+      { tags:['finance','q3'],
+        html:'<h2>Q3 close — open questions</h2>' +
+          '<p>Services <b>$0.6M</b>: Q2 implementation that slipped. Do not count as growth.</p>' +
+          '<ul><li>☐ SMB churn 40bps — check against the ledger before the board pack</li>' +
+          '<li>☑ Ask Ana whether the two enterprise renewals are signed or verbal</li></ul>' },
+      { tags:['sales'],
+        html:'<h2>Contoso renewal — call prep</h2>' +
+          '<p>Usage down <b>34%</b> over 30 days, admin changed 9 days ago.</p>' +
+          '<blockquote>Open with the admin change, not the number: they may not know.</blockquote>' }
     ] },
 
   ap7:{ s:'todo', foot:'Kept in this session only.',

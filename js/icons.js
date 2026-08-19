@@ -86,6 +86,15 @@ const P = {
   idcard:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.1"/><path d="M5.8 16.2a3.6 3.6 0 0 1 6.4 0M15 10h3.5M15 13.5h3.5"/>',
   receipt:'<path d="M6 3h12v18l-3-1.6-3 1.6-3-1.6L6 21Z"/><path d="M9 8h6M9 11.5h6M9 15h3"/>',
   camera:'<path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.9l1.3-2.1a1 1 0 0 1 .8-.4h5a1 1 0 0 1 .8.4L16.6 7h2.9A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="13" r="3.4"/>',
+
+  /* the note editor's hand — lists, quote, rule, and the two ways back */
+  ulist:'<path d="M9.5 6h11M9.5 12h11M9.5 18h11"/><path d="M4.2 6h.01M4.2 12h.01M4.2 18h.01"/>',
+  olist:'<path d="M10.5 6h10M10.5 12h10M10.5 18h10"/><path d="m4 4.9 1.4-.9V9"/><path d="M3.5 12.7c.2-1 1.2-1.5 2.1-1.1.9.4 1 1.4.3 2.2L3.4 16.1h3"/>',
+  clist:'<rect x="3" y="3.6" width="5.4" height="5.4" rx="1.2"/><path d="m4.6 6.4 1 1 1.8-2"/><path d="M11.5 6.3h9M11.5 12h9M11.5 17.7h9"/><rect x="3" y="15" width="5.4" height="5.4" rx="1.2"/>',
+  quote:'<path d="M10 7.5c-2.4.7-3.8 2.3-3.8 4.6V17h4.6v-4.6H8c.1-1.5 1-2.5 2-3Z"/><path d="M19 7.5c-2.4.7-3.8 2.3-3.8 4.6V17h4.6v-4.6H17c.1-1.5 1-2.5 2-3Z"/>',
+  hrule:'<path d="M4 12h16"/>',
+  undo:'<path d="M7.5 6.5 4 10l3.5 3.5"/><path d="M4 10h9.5a5.5 5.5 0 0 1 5.5 5.5V17"/>',
+  redo:'<path d="M16.5 6.5 20 10l-3.5 3.5"/><path d="M20 10h-9.5A5.5 5.5 0 0 0 5 15.5V17"/>',
   news:'<path d="M4 6h11a1 1 0 0 1 1 1v11H6a2 2 0 0 1-2-2Z"/><path d="M16 9h3a1 1 0 0 1 1 1v6a2 2 0 0 1-2 2h-2"/><path d="M7 9h5M7 12h5M7 15h3"/>',
   note:'<path d="M5 5.5A1.5 1.5 0 0 1 6.5 4h7L19 9.5v9A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5Z"/><path d="M13 4v6h6"/><path d="M8.5 13.5h6M8.5 16.5h4"/>',
 
