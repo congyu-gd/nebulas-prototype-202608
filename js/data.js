@@ -346,19 +346,25 @@ const THREADS = [
      run     null, or { every, ask, sched } — the schedule that makes it an app
              (`sched` points at the SCHEDULE row so the two cannot drift) */
 const PROJECTS = [
+  /* `conn` is the external systems a project is granted — connector ids, the
+     same grant-not-connection language an assistant uses. Granting names what
+     the project needs; connecting stays in Cloud → Connections. */
   { id:'p1', name:'Q3 close', icon:'chart', shared:true,
     desc:'Everything feeding the Q3 revenue close and the Q4 forecast handed to the board.',
     assistant:'Revenue analyst', kbs:['Finance corpus'], sources:['q3_ledger','renewals_export'],
+    conn:['cn1'],
     run:{ every:'Every week', sched:'sc6',
           ask:'Rebuild the forecast bridge and flag every line that moved more than 5% against plan.' },
     when:'2m' },
   { id:'p2', name:'Pipeline health', icon:'code', shared:true,
     desc:'Ingestion reliability work — backpressure, adapter budgets, the ADR-014 follow-through.',
     assistant:'Code reviewer', kbs:['Engineering docs'], sources:['support_tickets'],
+    conn:['cn5','cn6'],
     run:null, when:'1h' },
   { id:'p3', name:'Churn program', icon:'users', shared:false,
     desc:'Enterprise retention: signals, the account watchlist, and what the CRM knows before usage does.',
     assistant:'Revenue analyst', kbs:['Support corpus'], sources:['accounts_health','support_tickets'],
+    conn:['cn1','cn9'],
     run:{ every:'Every day', sched:'sc3',
           ask:'Refresh the watchlist and name the accounts whose churn signal moved since yesterday.' },
     when:'1d' },
@@ -399,6 +405,7 @@ const PROJECTS = [
              'problem you have not solved and an engineer who has tried.\n\n' +
              'Places are limited: acme.com/openday' }
     ],
+    conn:['cn10','cn11','cn12'],
     run:{ every:'Every week', sched:'sc7',
           ask:'Pull last week across Facebook, Instagram and LinkedIn. Report reach, ' +
               'engagement rate and follower change per channel, name the post that beat ' +
@@ -406,6 +413,9 @@ const PROJECTS = [
               'that fell more than 20% against the four-week mean.' },
     when:'20m' }
 ];
+/* Build lists projects as a lane, and the ownership filter reads `owner`.
+   Every project here is yours — `shared` is visibility, not ownership. */
+PROJECTS.forEach(p => { p.owner = 'me'; if (!p.conn) p.conn = []; });
 
 /* ------------------------------------------------------------- assistants
    An assistant is a named binding of model, skills and knowledge. The rail
@@ -1231,50 +1241,6 @@ const DESIGNS = [
 const DESIGN_ACCENTS = [
   ['Nebulas','var(--accent)'], ['Indigo','var(--app-1)'], ['Emerald','var(--app-2)'],
   ['Amber','var(--app-3)'],    ['Blue','var(--app-4)'],   ['Red','var(--app-5)']
-];
-
-/* ---------------------------------------------------------------- surfaces
-   Where a package can ship. `renders` is the load-bearing field: a surface that
-   renders needs a design element, and one that answers in JSON does not. */
-const SURFACES = [
-  { id:'app',   name:'App rail',        renders:true,  desc:'A panel in this workspace’s right-hand rail.' },
-  { id:'embed', name:'Embedded widget', renders:true,  desc:'Dropped into a page another team owns.' },
-  { id:'site',  name:'Public website',  renders:true,  desc:'A hosted page on your own domain.' },
-  { id:'hook',  name:'Webhook',         renders:false, desc:'Called by another system, answers in JSON.' },
-  { id:'sched', name:'Scheduled digest',renders:false, desc:'Runs on a clock, writes into a thread or channel.' }
-];
-
-/* ------------------------------------------------------- solution packages
-   A package is what ships: an assistant, the skills it may call, the knowledge
-   it may cite, the connectors it needs, the design element it renders as, and
-   the surfaces it reaches. Every field is an id into one of the lists above, so
-   a package cannot claim a part that does not exist. */
-const SOLUTIONS = [
-  { id:'so1', name:'Revenue Cockpit', state:'live', app:'RC', users:'42 users', version:'1.4.0',
-    owner:'me', team:'Revenue',
-    desc:'The finance team\'s standing view: variance by segment, the forecast bridge, and a question box wired to the revenue analyst.',
-    assistant:'as1', skills:['sk1','sk2','sk4'], kb:'k1', conn:['cn1','cn2'],
-    design:'de1', surfaces:['app','sched'], audience:'Finance team' },
-  { id:'so2', name:'Churn Radar', state:'live', app:'CR', users:'18 users', version:'1.1.0',
-    owner:'Ana', team:'Support',
-    desc:'Account watchlist ranked by churn probability, with the signal that put each account on the list.',
-    assistant:'as11', skills:['sk1'], kb:'k3', conn:['cn1','cn3'],
-    design:'de4', surfaces:['app'], audience:'Revenue and support leads' },
-  { id:'so3', name:'Ticket Triage', state:'live', app:'TT', users:'64 users', version:'2.0.1',
-    owner:'Ana', team:'Support',
-    desc:'Labels inbound tickets and escalates the uncertain ones to a human queue instead of guessing.',
-    assistant:'as3', skills:['sk3'], kb:'k3', conn:['cn3','cn6'],
-    design:'de4', surfaces:['hook','app'], audience:'Support team' },
-  { id:'so4', name:'Board Digest', state:'beta', app:'BD', users:'6 users', version:'0.9.0',
-    owner:'me', team:'Revenue',
-    desc:'Assembles the weekly leadership note from the week\'s analyses. Drafts only — a human sends it.',
-    assistant:'as4', skills:['sk3','sk5'], kb:'k1', conn:['cn2','cn4'],
-    design:null, surfaces:['sched'], audience:'Leadership' },
-  { id:'so5', name:'Pricing Lab', state:'draft', app:'PL', users:'—', version:'0.3.0',
-    owner:'Ravi', team:'Revenue',
-    desc:'Scenario tool for the November pricing cohort. Still wiring the renewal exposure model.',
-    assistant:'as6', skills:['sk1','sk2'], kb:'k1', conn:['cn1'],
-    design:null, surfaces:['app','embed'], audience:'Revenue team' }
 ];
 
 /* ------------------------------------------------------------------- apps
@@ -2149,8 +2115,8 @@ const REPLIES = [
 
 return {
   ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SKILL_DESC, SCHEDULE,
-  KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, SOLUTIONS, APPS, APP_PANELS, CLOUD,
-  CONNECTORS, CONNECTOR_AUTHS, DESIGNS, DESIGN_ACCENTS, SURFACES,
+  KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, APPS, APP_PANELS, CLOUD,
+  CONNECTORS, CONNECTOR_AUTHS, DESIGNS, DESIGN_ACCENTS,
   ACCOUNT, MODELS, CASES, REPLIES
 };
 })();

@@ -80,7 +80,7 @@ const state = {
   item:{
     chat:'t1',                 /* thread id · 'assistants' · 'schedule' · 'p:id' */
     knowledge:key('kb','k1'),  /* 'kb:id' · 'ds:id' · 'art:id' */
-    /* 'as:id' assistant · 'so:id' solution · 'de:id' design element */
+    /* 'as:id' assistant · 'pj:id' project · 'wg:id' widget · 'tp:id' template */
     build:key('as','as1'),
     cloud:'c1',              /* a settings page id, or 'cn:id' for a connector */
     account:'profile'
@@ -348,10 +348,11 @@ const SECTIONS = {
 
   /* ------------------------------------------------------------ build
      "Build mode" in the sketch, and the section where things are made rather
-     than used. Three kinds now: the assistant that answers, the solution that
-     ships it, and the design it renders as. Skills are chosen inside an
-     assistant rather than authored on a page of their own, and scheduled runs
-     are already visible in Chat → Schedule — so neither is a menu entry.
+     than used. Four kinds now: the assistant that answers, the project that
+     organises work (and what it reaches outside), the widget that embeds,
+     and the template a page or a PDF is laid out by. Skills are chosen inside
+     an assistant rather than authored on a page of their own, and scheduled
+     runs are already visible in Chat → Schedule — so neither is a menu entry.
 
      An assistant is defined here and *chosen* in Chat — one object, two verbs.
      Nothing is duplicated between the two: starring in Chat and editing here
@@ -425,15 +426,23 @@ const SECTIONS = {
     },
     head(){
       const v = state.item.build, id = idOf(v), k = kindOf(v);
-      if (k === 'de'){ const d = find(D.DESIGNS, id); return { title:d.name, sub:d.kind === 'widget' ? 'widget' : 'website template' }; }
-      if (k === 'so'){ const s = find(D.SOLUTIONS, id); return { title:s.name, sub:s.version + ' · ' + s.users }; }
+      if (k === 'wg' || k === 'tp'){
+        const d = find(D.DESIGNS, id);
+        return { title:d.name, sub:d.kind === 'widget' ? 'widget · ' + d.shape
+          : (d.shape === 'pdf' ? 'PDF template' : 'website template · ' + d.shape) };
+      }
+      if (k === 'pj'){
+        const p = find(D.PROJECTS, id);
+        return { title:p.name, sub:(p.shared ? 'shared' : 'personal') +
+          (p.run ? ' · runs ' + p.run.every.toLowerCase() : '') };
+      }
       const a = find(D.ASSISTANTS, id);
       return { title:a.name, sub:a.team + ' · ' + a.model };
     },
     main(body){
       const v = state.item.build, id = idOf(v), k = kindOf(v);
-      if (k === 'de') return designView(body, find(D.DESIGNS, id));
-      if (k === 'so') return packageView(body, find(D.SOLUTIONS, id));
+      if (k === 'wg' || k === 'tp') return designView(body, find(D.DESIGNS, id));
+      if (k === 'pj') return projectBuildView(body, find(D.PROJECTS, id));
       return assistantBuildView(body, find(D.ASSISTANTS, id));
     }
   },
@@ -497,25 +506,34 @@ const SECTIONS = {
 const ORDER = ['chat','knowledge','build','cloud'];
 
 /* ---------------------------------------------------------- build groups
-   The three kinds Build makes, as data: one entry adds a group to the sidebar
-   with its own "+", its own row shape and its own empty line. */
+   The four kinds Build makes, as data: one entry adds a group to the sidebar
+   with its own "+", its own row shape and its own empty line. The four are
+   the maker's whole vocabulary — an assistant that answers, a project that
+   organises work (including what external systems it reaches), a widget
+   that embeds, and a template a page or a PDF is laid out by. */
 const BUILD_GROUPS = [
   { kind:'as', label:'Assistants', icon:'agent', addTip:'New assistant', add:() => newAssistant(),
     items:() => D.ASSISTANTS,
     lead:a => dotLead(a.state), sub:a => a.model,
     empty:'No assistant here matches this filter.' },
 
-  { kind:'so', label:'Solutions', icon:'pkg', addTip:'New solution', add:() => newPackage(),
-    items:() => D.SOLUTIONS,
-    lead:() => '<span class="row__icon">' + ic('pkg',13) + '</span>',
-    sub:s => s.version + ' · ' + s.state,
-    empty:'No solution here matches this filter.' },
+  { kind:'pj', label:'Projects', icon:'folder', addTip:'New project', add:() => openProject(null),
+    items:() => D.PROJECTS,
+    lead:p => '<span class="row__icon">' + ic(p.icon, 13) + '</span>',
+    sub:p => (p.shared ? 'shared' : 'personal') + (p.run ? ' · runs' : ''),
+    empty:'No project here matches this filter.' },
 
-  { kind:'de', label:'Design settings', icon:'widget', addTip:'New design element', add:() => newDesign(),
-    items:() => D.DESIGNS,
-    lead:d => '<span class="row__icon">' + ic(d.kind === 'widget' ? 'widget' : 'template', 13) + '</span>',
-    sub:d => d.kind === 'widget' ? 'widget' : 'website template',
-    empty:'No design element here matches this filter.' }
+  { kind:'wg', label:'Widgets', icon:'widget', addTip:'New widget', add:() => newDesign('widget'),
+    items:() => D.DESIGNS.filter(d => d.kind === 'widget'),
+    lead:() => '<span class="row__icon">' + ic('widget', 13) + '</span>',
+    sub:d => d.shape,
+    empty:'No widget here matches this filter.' },
+
+  { kind:'tp', label:'Templates', icon:'template', addTip:'New template', add:() => newDesign('template'),
+    items:() => D.DESIGNS.filter(d => d.kind === 'template'),
+    lead:() => '<span class="row__icon">' + ic('template', 13) + '</span>',
+    sub:d => d.shape === 'pdf' ? 'PDF' : 'web · ' + d.shape,
+    empty:'No template here matches this filter.' }
 ];
 
 /* Ownership scope. Two questions get asked of a list this size — "where is the
@@ -728,21 +746,6 @@ function pickList(items, isOn, onToggle){
       '<span class="picklist__nm">' + esc(it.nm) + '</span>' +
       (it.sub ? '<span class="picklist__sub">' + esc(it.sub) + '</span>' : '')));
     if (it.meta) row.append(el('span','picklist__meta', esc(it.meta)));
-    list.append(row);
-  });
-  return list;
-}
-
-/* What is still missing, stated as a condition rather than a score. Status
-   colour carries it — this is data about state, so the accent stays out. */
-function checkList(rows){
-  const list = el('div','checklist');
-  rows.forEach(r => {
-    const row = el('div','checklist__row',
-      '<span class="checklist__ico">' + ic(r.ok ? 'check' : 'alert', 14) + '</span>' +
-      '<span class="checklist__nm">' + esc(r.nm) + '</span>' +
-      '<span class="checklist__val">' + esc(r.val) + '</span>');
-    row.dataset.ok = String(!!r.ok);
     list.append(row);
   });
   return list;
@@ -1218,7 +1221,7 @@ const LIVE_KIND = {
       const go = el('button','btn btn--secondary btn--sm',
         '<span style="display:flex">' + ic('widget',13) + '</span>Open in Build');
       go.type = 'button';
-      go.onclick = () => select('build', key('de', w.created));
+      go.onclick = () => select('build', key('wg', w.created));
       row.append(go);
       body.append(row);
       return;
@@ -2247,7 +2250,7 @@ function assistantsView(body){
   const pad = el('div','pane__pad');
   pad.append(pageHead('Assistants',
     'An assistant is a named binding of a model, a set of skills and one knowledge base. ' +
-    'Threads pick one; agents and solutions reuse them.'));
+    'Threads pick one; projects and agents reuse them.'));
 
   const split = el('div','asst');
   const left = el('div','asst__main');
@@ -3674,6 +3677,24 @@ function projectView(body, p){
   }));
   panel.append(know);
 
+  /* The external systems it is granted — each row a door to the connector,
+     where the connection itself is managed. Only shown when there are any:
+     a project that reaches nothing outside says nothing about it. */
+  if ((p.conn || []).length){
+    const cx = el('section','section');
+    cx.append(sectionHead('Connections'));
+    p.conn.forEach(id => {
+      const cn = connById(id);
+      if (!cn) return;
+      cx.append(listRow({
+        lead:dotLead(cn.state),
+        title:cn.name, sub:cn.state === 'off' ? 'not connected' : cn.scope, meta:cn.kind,
+        onClick:() => select('cloud', key('cn', cn.id))
+      }));
+    });
+    panel.append(cx);
+  }
+
   /* Where it publishes, and what is written but not out yet. Both only exist on
      a project that posts — a project that only reads has neither, and shows
      neither rather than showing two empty headings. */
@@ -4068,10 +4089,11 @@ function datasetView(body, d){
 }
 
 /* ==================================================================== build
-   Three kinds of thing are built here, and they point at each other by id: an
-   assistant grants connectors, a solution binds an assistant and renders as a
-   design element. Strict lookups, not `find()` — `find()` falls back to the
-   first item, which would quietly turn "nothing bound" into "the first one". */
+   Four kinds of thing are built here. Assistants and widgets point at other
+   records by id; projects bind their assistant and knowledge by NAME — the
+   project dialog's convention, kept rather than doubled. Strict lookups, not
+   `find()` — `find()` falls back to the first item, which would quietly turn
+   "nothing bound" into "the first one". */
 const byId = (list, id) => list.filter(x => x.id === id)[0] || null;
 /* A glyph per connector kind. Not brand marks: what matters in a list of grants
    is what KIND of system it is, and a logo says which vendor instead. */
@@ -4083,7 +4105,6 @@ const connById    = id => byId(D.CONNECTORS, id);
 const kbById      = id => byId(D.KBS, id);
 const designById  = id => byId(D.DESIGNS, id);
 const asstById    = id => byId(D.ASSISTANTS, id);
-const surfaceById = id => byId(D.SURFACES, id);
 
 /* Referenced-by is derived, never stored. The builder mutates these objects, so
    a cached list of dependents would be wrong by the second edit. */
@@ -4196,10 +4217,12 @@ function assistantBuildView(body, a){
   optSec.append(opts);
   s.main.append(optSec);
 
-  const pkgs = D.SOLUTIONS.filter(p => p.assistant === a.id);
-  s.main.append(usedBySection('Shipped in', pkgs.map(p => ({
-    ic:'pkg', nm:p.name, sub:p.version + ' · ' + p.state, go:() => select('build', key('so', p.id))
-  })), 'Bind it to a solution and it reaches someone other than you.'));
+  /* Projects bind assistants BY NAME (the project dialog's convention). */
+  const pjs = D.PROJECTS.filter(p => p.assistant === a.name);
+  s.main.append(usedBySection('Answers in', pjs.map(p => ({
+    ic:p.icon, nm:p.name, sub:p.shared ? 'shared project' : 'personal project',
+    go:() => select('build', key('pj', p.id))
+  })), 'Bind it to a project and it answers for everyone working there.'));
 
   /* ------------------------------------------------------------ inspector */
   inspectorHead(s.side, 'Becomes', plural(a.threads, 'thread'));
@@ -4252,8 +4275,16 @@ function newAssistant(){
   select('build', key('as', a.id));
 }
 
-function newDesign(){
-  const d = {
+function newDesign(kind){
+  const tpl = kind === 'template';
+  const d = tpl ? {
+    id:'de-n' + (++madeN), name:'Untitled template', kind:'template', shape:'landing',
+    state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
+    desc:'A new landing page. Everything about it is set in the inspector.',
+    cfg:{ title:'Untitled', sub:'', cta:'Get started', nav:'Home, Docs, Pricing',
+          accent:'Nebulas', radius:'Soft', theme:'Follow', width:'Wide',
+          header:true, credit:true }
+  } : {
     id:'de-n' + (++madeN), name:'Untitled widget', kind:'widget', shape:'kpi',
     state:'draft', owner:'me', team:D.ASSISTANT_TEAMS[0],
     desc:'A new metric tile. Everything about it is set in the inspector.',
@@ -4262,7 +4293,152 @@ function newDesign(){
           value:'—', delta:'', cap:'' }
   };
   D.DESIGNS.push(d);
-  select('build', key('de', d.id));
+  select('build', key(tpl ? 'tp' : 'wg', d.id));
+  return d;
+}
+
+/* --------------------------------------------------------- project builder
+   The same record the chat sidebar lists — Build defines it, the project page
+   works in it. Projects bind their assistant, knowledge and tables BY NAME
+   (the project dialog's convention, kept rather than doubled), and external
+   systems by connector id — the same grant-not-connection language an
+   assistant uses. */
+function projectBuildView(body, p){
+  const pad = el('div','pane__pad');
+  pad.append(pageHead(p.name, p.desc,
+    '<span class="badge badge--mono">' + (p.shared ? 'You · Shared' : 'You · Personal') + '</span>' +
+    (p.run ? '<span class="badge badge--info">' + esc(p.run.every.toLowerCase()) + '</span>' : '')));
+  const s = buildSplit();
+
+  const pair = el('div','build__pair');
+  pair.append(field('Name', inputCtl(p.name, v => {
+    const nm = v.trim() || p.name;
+    /* The schedule row keeps its own name, but it targets this project. */
+    const row = p.run && p.run.sched && find(D.SCHEDULE, p.run.sched);
+    if (row) row.target = nm;
+    p.name = nm;
+    render();
+  })));
+  const vis = el('div');
+  vis.append(segCtl(PROJ_VIS, p.shared ? 'Shared' : 'Personal', v => {
+    p.shared = v === 'Shared'; render();
+  }));
+  pair.append(field('Who can see it', vis));
+  s.main.append(pair);
+
+  const pair2 = el('div','build__pair');
+  const asstNames = ['— none —'].concat(D.ASSISTANTS.map(a => a.name));
+  pair2.append(field('Assistant', selectCtl(asstNames, p.assistant || '— none —', v => {
+    p.assistant = v === '— none —' ? null : v; render();
+  }), 'Answers every thread opened inside the project.'));
+  pair2.append(field('Icon', selectCtl(PROJ_ICONS, p.icon, v => { p.icon = v; render(); }),
+    'Named after the kind of work, in the sidebar.'));
+  s.main.append(pair2);
+
+  /* Knowledge: bases it cites and tables it reads, both by name. */
+  const knowSec = el('section','section');
+  knowSec.append(sectionHead('Knowledge',
+    '<span class="t-mono">' + ((p.kbs || []).length + (p.sources || []).length) + '</span>'));
+  knowSec.append(pickList(
+    D.KBS.map(k => ({ nm:k.name, sub:k.docs + ' documents', meta:'docs', id:k.name }))
+      .concat(D.DATASETS.map(t => ({ nm:t.name, sub:t.desc, meta:'table', id:t.name }))),
+    it => (p.kbs || []).indexOf(it.id) > -1 || (p.sources || []).indexOf(it.id) > -1,
+    (it, on) => {
+      const isBase = D.KBS.some(k => k.name === it.id);
+      const list = isBase ? (p.kbs = p.kbs || []) : (p.sources = p.sources || []);
+      const i = list.indexOf(it.id);
+      if (on && i < 0) list.push(it.id);
+      if (!on && i > -1) list.splice(i, 1);
+      render();
+    }));
+  s.main.append(knowSec);
+
+  /* Connections: the external systems this project reaches — its data in and
+     its posts out. A grant is not a connection, same as on an assistant. */
+  const connSec = el('section','section');
+  connSec.append(sectionHead('Connections', '<span class="t-mono">' + (p.conn || []).length + '</span>'));
+  connSec.append(pickList(
+    D.CONNECTORS.map(c => ({
+      nm:c.name, sub:c.state === 'off' ? 'not connected — grant it here, connect it in Cloud' : c.scope,
+      meta:c.kind, id:c.id
+    })),
+    it => (p.conn || []).indexOf(it.id) > -1,
+    (it, on) => {
+      p.conn = p.conn || [];
+      const i = p.conn.indexOf(it.id);
+      if (on && i < 0) p.conn.push(it.id);
+      if (!on && i > -1) p.conn.splice(i, 1);
+      render();
+    }));
+  connSec.append(noteP('A grant is not a connection. Granting one that is not connected is allowed — ' +
+    'it states what this project will need. Connecting it is done in Cloud → Connections.'));
+  s.main.append(connSec);
+
+  if (p.channels && p.channels.length){
+    const chSec = el('section','section');
+    chSec.append(sectionHead('Channels', '<span class="t-mono">' + p.channels.length + '</span>'));
+    p.channels.forEach(ch => {
+      const cn = connById(ch.cn);
+      chSec.append(listRow({
+        lead:dotLead(cn ? cn.state : 'off'),
+        title:ch.nm, sub:ch.handle + ' · ' + ch.posts,
+        meta:cn && cn.state === 'off' ? 'not connected' : '',
+        onClick:() => cn && select('cloud', key('cn', cn.id))
+      }));
+    });
+    s.main.append(chSec);
+  }
+
+  /* The program: what makes a folder a small application. */
+  const runSec = el('section','section');
+  runSec.append(sectionHead('Auto program'));
+  const sw = switchCtl('Produce a result on a schedule', !!p.run);
+  $('input', sw).onchange = e => {
+    const prev = p.run && p.run.sched;
+    p.run = e.target.checked
+      ? { every:'Every week', ask:p.run && p.run.ask || 'Summarise what changed in ' + p.name + '.' }
+      : null;
+    syncProjectRun(p, prev);
+    render();
+  };
+  runSec.append(sw);
+  if (p.run){
+    const cad = el('div');
+    cad.style.marginTop = 'var(--s-3)';
+    cad.append(segCtl(CADENCE, p.run.every, v => {
+      const prev = p.run.sched;
+      p.run.every = v;
+      syncProjectRun(p, prev);
+      render();
+    }));
+    runSec.append(cad);
+    runSec.append(field('What it produces', textareaCtl(p.run.ask, v => { p.run.ask = v; },
+      'What should each run make?')));
+    runSec.append(noteP('Each run files its result in the results column and appears in Chat → Schedule.'));
+  }
+  s.main.append(runSec);
+
+  /* ------------------------------------------------------------ inspector */
+  const threads = D.THREADS.filter(t => t.project === p.id);
+  inspectorHead(s.side, 'Holds', plural(threads.length, 'thread'));
+  s.side.append(defList([
+    ['Visibility', p.shared ? 'shared' : 'personal'],
+    ['Assistant', esc(p.assistant || 'none')],
+    ['Knowledge', esc(String((p.kbs || []).length + (p.sources || []).length))],
+    ['Connections', esc(String((p.conn || []).length))],
+    ['Schedule', p.run ? esc(p.run.every.toLowerCase()) : '—'],
+    ['Threads', esc(String(threads.length))]
+  ]));
+  s.side.append(noteP('Edits apply as you make them — the project page and the sidebar read this same record.'));
+
+  const open = el('button','btn btn--primary', ic('open',13) + 'Open the project');
+  open.onclick = () => select('chat', key('p', p.id));
+  const del = el('button','btn btn--ghost', ic('trash',13) + 'Delete');
+  del.onclick = () => deleteProject(p);
+  inspectorActs(s.side, [open, del]);
+
+  pad.append(s.wrap);
+  body.append(pad);
 }
 
 /* -------------------------------------------------------------- connectors
@@ -4310,11 +4486,12 @@ function connectorView(body, c){
   const grants = D.ASSISTANTS.filter(a => a.conn.indexOf(c.id) > -1).map(a => ({
     ic:'agent', nm:a.name, sub:a.team + ' · ' + a.model, go:() => select('build', key('as', a.id))
   }));
-  const inPkgs = D.SOLUTIONS.filter(p => p.conn.indexOf(c.id) > -1).map(p => ({
-    ic:'pkg', nm:p.name, sub:p.version + ' · ' + p.state, go:() => select('build', key('so', p.id))
+  const inPjs = D.PROJECTS.filter(p => (p.conn || []).indexOf(c.id) > -1).map(p => ({
+    ic:p.icon, nm:p.name, sub:p.shared ? 'shared project' : 'personal project',
+    go:() => select('build', key('pj', p.id))
   }));
-  s.main.append(usedBySection('Granted to', grants.concat(inPkgs),
-    'No assistant or solution reaches through this connector.'));
+  s.main.append(usedBySection('Granted to', grants.concat(inPjs),
+    'No assistant or project reaches through this connector.'));
 
   /* ------------------------------------------------------------ inspector */
   inspectorHead(s.side, 'Connection', c.kind);
@@ -4322,7 +4499,7 @@ function connectorView(body, c){
     ['State', dotLead(c.state) + esc(c.state === 'off' ? 'not connected' : c.state === 'warn' ? 'degraded' : 'live')],
     ['Auth', esc(c.auth)],
     ['Direction', esc(c.writes ? 'read and write' : 'read only')],
-    ['Granted to', esc(String(grants.length + inPkgs.length))],
+    ['Granted to', esc(String(grants.length + inPjs.length))],
     ['Last sync', esc(c.last)]
   ]));
 
@@ -4536,11 +4713,6 @@ function designView(body, d){
     : 'A template is a hosted page. The routes come from the nav; the palette comes from the accent chosen here.'));
   s.main.append(emb);
 
-  const pkgs = D.SOLUTIONS.filter(p => p.design === d.id);
-  s.main.append(usedBySection('Rendered by', pkgs.map(p => ({
-    ic:'pkg', nm:p.name, sub:p.version + ' · ' + p.state, go:() => select('build', key('so', p.id))
-  })), 'No solution renders as this yet, so nobody has seen it.'));
-
   /* --------------------------------------------------- inspector = config */
   inspectorHead(s.side, 'Design', d.shape);
   const up = () => render();
@@ -4597,185 +4769,6 @@ function designView(body, d){
 
   pad.append(s.wrap);
   body.append(pad);
-}
-
-/* --------------------------------------------------------------- solutions
-   A solution is the shipping unit: an assistant, the skills it may call, the
-   knowledge it may cite, the connectors it needs, what it renders as, and where
-   it reaches. Everything is an id, so it cannot claim a part that does not
-   exist — and the checklist below is what "ready" actually means. */
-function packageChecks(p){
-  const a  = asstById(p.assistant);
-  const kb = kbById(p.kb);
-  const de = designById(p.design);
-  const conns   = p.conn.map(connById).filter(Boolean);
-  const offline = conns.filter(c => c.state === 'off');
-  const surf    = p.surfaces.map(surfaceById).filter(Boolean);
-  const renders = surf.filter(x => x.renders);
-  const skills  = p.skills.map(skillById).filter(Boolean);
-  const orphan  = skills.filter(x => !a || a.skills.indexOf(x.name) < 0);
-
-  return [
-    { nm:'Assistant', ok:!!a, val:a ? a.name : 'nothing to answer with' },
-    { nm:'Skills',
-      ok:skills.length > 0 && !orphan.length,
-      val:!skills.length ? 'none enabled'
-        : orphan.length ? orphan.map(x => x.name).join(', ') + ' not on ' + (a ? a.name : 'the assistant')
-        : plural(skills.length, 'skill') + ' enabled' },
-    { nm:'Knowledge', ok:!!kb, val:kb ? kb.name : 'model only, nothing to cite' },
-    { nm:'Connectors',
-      ok:!offline.length,
-      val:offline.length ? offline.map(c => c.name).join(', ') + ' not connected'
-        : conns.length ? plural(conns.length, 'connector') + ' live' : 'none needed' },
-    { nm:'Design element',
-      ok:!renders.length || !!de,
-      val:de ? de.name
-        : renders.length ? renders.map(x => x.name).join(' and ') + ' need one'
-        : 'not required by these surfaces' },
-    { nm:'Surface', ok:surf.length > 0,
-      val:surf.length ? surf.map(x => x.name).join(', ') : 'nowhere to ship' }
-  ];
-}
-function bumpMinor(v){
-  const n = String(v).split('.').map(Number);
-  return [n[0] || 0, (n[1] || 0) + 1, 0].join('.');
-}
-
-function packageView(body, p){
-  const pad = el('div','pane__pad');
-  pad.append(pageHead(p.name, p.desc,
-    '<span class="badge badge--mono">' + esc(p.version) + '</span>' +
-    ownerBadge(p) + stateBadge(p.state)));
-
-  const s = buildSplit();
-  const a = asstById(p.assistant);
-
-  const pair = el('div','build__pair');
-  pair.append(field('Name', inputCtl(p.name, v => { p.name = v.trim() || p.name; render(); })));
-  pair.append(field('Audience', inputCtl(p.audience, v => { p.audience = v; render(); })));
-  s.main.append(pair);
-
-  const pair2 = el('div','build__pair');
-  const asstNames = ['— none —'].concat(D.ASSISTANTS.map(x => x.name));
-  pair2.append(field('Assistant', selectCtl(asstNames, a ? a.name : '— none —', v => {
-    const picked = D.ASSISTANTS.filter(x => x.name === v)[0];
-    p.assistant = picked ? picked.id : null;
-    render();
-  }), 'The solution answers as this assistant.'));
-  const kbNames = ['— none —'].concat(D.KBS.map(k => k.name));
-  const curKb = kbById(p.kb);
-  pair2.append(field('Knowledge base', selectCtl(kbNames, curKb ? curKb.name : '— none —', v => {
-    const picked = D.KBS.filter(k => k.name === v)[0];
-    p.kb = picked ? picked.id : null;
-    render();
-  })));
-  s.main.append(pair2);
-
-  /* Skills are a subset of the assistant's, not a free choice: enabling one it
-     does not have would ship a call that cannot resolve. Shown, not hidden. */
-  const skSec = el('section','section');
-  skSec.append(sectionHead('Skills enabled', '<span class="t-mono">' + p.skills.length + '</span>'));
-  skSec.append(pickList(D.SKILLS.map(x => ({
-    nm:x.name,
-    sub:a && a.skills.indexOf(x.name) > -1 ? x.desc : 'not on ' + (a ? a.name : 'the bound assistant'),
-    meta:x.avg, id:x.id
-  })), it => p.skills.indexOf(it.id) > -1, (it, on) => {
-    p.skills = on ? p.skills.concat([it.id]) : p.skills.filter(x => x !== it.id);
-    render();
-  }));
-  s.main.append(skSec);
-
-  const cnSec = el('section','section');
-  cnSec.append(sectionHead('Connectors required', '<span class="t-mono">' + p.conn.length + '</span>'));
-  cnSec.append(pickList(D.CONNECTORS.map(c => ({
-    nm:c.name, sub:c.state === 'off' ? 'not connected' : c.scope, meta:c.kind, id:c.id
-  })), it => p.conn.indexOf(it.id) > -1, (it, on) => {
-    p.conn = on ? p.conn.concat([it.id]) : p.conn.filter(x => x !== it.id);
-    render();
-  }));
-  s.main.append(cnSec);
-
-  const surSec = el('section','section');
-  surSec.append(sectionHead('Surfaces', '<span class="t-mono">' + p.surfaces.length + '</span>'));
-  surSec.append(pickList(D.SURFACES.map(x => ({
-    nm:x.name, sub:x.desc, meta:x.renders ? 'renders' : 'no UI', id:x.id
-  })), it => p.surfaces.indexOf(it.id) > -1, (it, on) => {
-    p.surfaces = on ? p.surfaces.concat([it.id]) : p.surfaces.filter(x => x !== it.id);
-    render();
-  }));
-  surSec.append(noteP('A surface that renders needs a design element. One that answers in JSON does not — which is why the checklist asks for a design element only sometimes.'));
-  s.main.append(surSec);
-
-  /* The design element, chosen here and previewed here: this page is where
-     someone decides what the answer looks like, so it should not have to be
-     imagined from a name. */
-  const deSec = el('section','section');
-  deSec.append(sectionHead('Renders as'));
-  const deNames = ['— none —'].concat(D.DESIGNS.map(x => x.name));
-  const de = designById(p.design);
-  deSec.append(field('Design element', selectCtl(deNames, de ? de.name : '— none —', v => {
-    const picked = D.DESIGNS.filter(x => x.name === v)[0];
-    p.design = picked ? picked.id : null;
-    render();
-  })));
-  if (de){
-    deSec.append(designCanvas(de));
-    const openDe = el('button','btn btn--ghost btn--sm', ic('open',13) + 'Configure ' + de.name);
-    openDe.style.marginTop = 'var(--s-2)';
-    openDe.onclick = () => select('build', key('de', de.id));
-    deSec.append(openDe);
-  } else {
-    deSec.append(emptyState('widget','No design element',
-      'Pick a widget or a website template, or drop every surface that renders.'));
-  }
-  s.main.append(deSec);
-
-  /* ------------------------------------------------------------ inspector */
-  const checks = packageChecks(p);
-  const blocked = checks.filter(c => !c.ok);
-  inspectorHead(s.side, 'Ready to ship', (checks.length - blocked.length) + '/' + checks.length);
-  s.side.append(checkList(checks));
-
-  const ver = el('div');
-  ver.style.marginTop = 'var(--s-4)';
-  ver.append(field('Version', inputCtl(p.version, v => { p.version = v.trim() || p.version; render(); })));
-  s.side.append(ver);
-
-  const publish = el('button','btn btn--primary', ic('check',13) +
-    (p.state === 'live' ? 'Publish ' + bumpMinor(p.version) : 'Publish'));
-  publish.disabled = !!blocked.length;
-  publish.title = blocked.length ? blocked[0].nm + ': ' + blocked[0].val : 'Publish to ' +
-    p.surfaces.map(x => (surfaceById(x) || {}).name).join(', ');
-  publish.onclick = () => {
-    p.version = bumpMinor(p.version);
-    p.state = 'live';
-    render();
-    toast(p.name + ' ' + p.version + ' published to ' +
-      p.surfaces.map(x => (surfaceById(x) || {}).name).join(', '));
-  };
-  const open = el('button','btn btn--secondary', ic('play',13) + 'Open');
-  const app = D.APPS.filter(x => x.name === p.name)[0];
-  open.disabled = !app;
-  open.title = app ? 'Open ' + p.name + ' in the app rail' : 'Not installed on the app rail';
-  open.onclick = () => { if (app) openApp(app); };
-  inspectorActs(s.side, [publish, open]);
-  s.side.append(noteP(blocked.length
-    ? 'Publishing is blocked until every line above is met. The list is the specification, not a score.'
-    : 'Publishing bumps the minor version and pushes to every surface listed.'));
-
-  pad.append(s.wrap);
-  body.append(pad);
-}
-
-function newPackage(){
-  const p = {
-    id:'so-n' + (++madeN), name:'Untitled solution', state:'draft', app:'', users:'—', version:'0.1.0',
-    owner:'me', team:D.ASSISTANT_TEAMS[0],
-    desc:'Nothing bound yet. The checklist in the inspector is the shortest description of what a solution needs.',
-    assistant:null, skills:[], kb:null, conn:[], design:null, surfaces:[], audience:'—'
-  };
-  D.SOLUTIONS.push(p);
-  select('build', key('so', p.id));
 }
 
 function cloudView(body, c){
@@ -7272,10 +7265,8 @@ function palRender(q){
     items.push({ g:'Connectors', nm:c.name, sub:c.state === 'off' ? 'not connected' : c.kind,
                  run:() => select('cloud', key('cn', c.id)) }); });
   D.DESIGNS.forEach(d => { if (hitOnly(d.name))
-    items.push({ g:'Design settings', nm:d.name, sub:d.kind, run:() => select('build', key('de', d.id)) }); });
-  D.SOLUTIONS.forEach(s => { if (hitOnly(s.name))
-    items.push({ g:'Solutions', nm:s.name, sub:s.version + ' · ' + s.state,
-                 run:() => select('build', key('so', s.id)) }); });
+    items.push({ g:d.kind === 'widget' ? 'Widgets' : 'Templates', nm:d.name, sub:d.shape,
+                 run:() => select('build', key(d.kind === 'widget' ? 'wg' : 'tp', d.id)) }); });
 
   COMMANDS.forEach(c => { if (hit(c.nm)) items.push(c); });
 
