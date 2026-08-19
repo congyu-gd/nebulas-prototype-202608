@@ -1035,18 +1035,33 @@ elsewhere — an app is a new arrangement, not a new vocabulary:
 
 | Surface | Built from | Apps |
 |---|---|---|
-| `agenda` | a month grid + a timed list | Calendar |
+| `agenda` | a week time grid + a month grid over one event list, and an Upcoming list | Calendar |
 | `extract` | a source card, a `.deflist` of fields, chips, and one action | CV extractor, Invoice extractor |
 | `files` | rows that attach to the next message | My files |
 | `news` | rows that wrap, unread marked, that ask the thread about themselves | News |
 | `note` | a list plus a `textarea`, first line as title | Note |
 | `todo` | `.picklist` rows with real checkboxes, a count and a meter | Todo |
 
-**The month is generated from the clock**, and the fixture marks days by their
-offset from today rather than by date — a calendar pinned to August 2026 is
-wrong by September. The calendar is also where the colour rule gets tested: a
-marked day takes a neutral dot and a surface step, and today takes an inset
-hairline. Neither is the accent, because **a date is not an action**.
+**The calendar is generated from the clock**, and the fixture marks events by
+their offset from today rather than by date — a calendar pinned to August 2026
+is wrong by September. It is two views over one list: **Week** is a time grid,
+seven day columns against an hour ruler, and **Month** is the day grid — the
+arrows move whichever unit is on screen and a `Week · Month` seg switches. One
+token, `--week-hour`, sizes the whole grid, and it sits on the density scale
+rather than the control scale: an hour is area to read, not a control to hit.
+The gutter's rows *are* the vertical scale — the day columns stretch to them,
+so the ruler and the events cannot disagree. In a column the width of the app
+panel a day is about forty pixels, so the grid only answers *when is the day
+busy*; the **Upcoming** list under it answers *what*, and each block carries
+its full fact in its tooltip. The calendar is also where the colour rule gets
+tested: an event is a surface step with a strong leading edge, a marked day a
+neutral dot, today a tinted column or an inset hairline. None of it is the
+accent, because **a date is not an action**. `New event` asks the three things
+that make one — what, when, how long — and the row it adds lands in the
+panel's own list and nowhere else, which the footer says out loud: the panel
+mirrors a work calendar this prototype cannot write to. Sync says the same
+thing when clicked — nothing upstream to fetch, so it reports being a mirror
+instead of pretending.
 
 **Anything the reader can change lives in `APP_STATE`**, seeded from the fixture
 once and owned in JS after that — the same rule as a chat widget's state. A

@@ -813,6 +813,47 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .cal__d--today{ box-shadow:inset 0 0 0 1px var(--line-strong) }
 
+/* The same month at hour resolution: seven day columns against an hour ruler.
+   An event is a surface step with a strong leading edge — like the month's
+   marked days it is data, not an action, so nothing here takes the accent.
+   One token, --week-hour, sizes the whole grid: the gutter's rows set the row
+   height and the day columns stretch to it, so the two cannot disagree. */
+.week{ display:grid; grid-template-columns:auto repeat(7,minmax(0,1fr)) }
+.week__hd{
+  padding-bottom:var(--s-2);
+  text-align:center;
+  font-size:var(--t-11); color:var(--text-4);
+}
+.week__hd b{
+  display:block;
+  font-size:var(--t-12); font-weight:var(--w-medium); color:var(--text-2);
+}
+.week__hd--today b{ color:var(--text) }
+.week__gut{ display:grid; grid-auto-rows:var(--week-hour); padding-right:var(--s-2) }
+.week__hr{
+  translate:0 -50%;
+  text-align:right;
+  font-family:var(--mono); font-size:var(--t-11); color:var(--text-4);
+}
+.week__day{
+  position:relative;
+  border-left:var(--border) solid var(--line);
+  background-image:repeating-linear-gradient(to bottom,
+    var(--line) 0, var(--line) var(--border),
+    transparent var(--border), transparent var(--week-hour));
+}
+.week__day--today{ background-color:var(--raised) }
+.week__evt{
+  position:absolute; left:var(--s-1); right:var(--s-1);
+  overflow:hidden;
+  padding:0 var(--s-1);
+  border-left:var(--ring) solid var(--line-strong);
+  border-radius:var(--r-xs);
+  background:var(--raised-2);
+  font-size:var(--t-11); line-height:var(--lh-tight); color:var(--text-2);
+  white-space:nowrap; text-overflow:ellipsis;
+}
+
 /* ============================================================ definitions */
 .deflist{
   display:grid; grid-template-columns:auto minmax(0,1fr);

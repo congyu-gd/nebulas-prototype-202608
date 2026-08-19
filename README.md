@@ -190,7 +190,10 @@ files**, **News**, **Note**, **Todo**. They are wired into the rest of the
 workspace rather than being pictures of apps — a file attaches to your next
 message, a headline writes the question into the composer, an extraction is filed
 in the results column, and a ticked box or a typed note survives switching apps
-and sections.
+and sections. The calendar reads a week as a time grid or a month as a day grid
+— arrows move whichever is on screen — with an Upcoming list naming what the
+blocks can only place, and `New event` adds to the panel's own list: it mirrors
+a work calendar it cannot write to, and says so.
 
 The workspace's **Build** section is the maker's half, and it has three groups:
 **assistants**, **solutions** (with a publish checklist that says what is still

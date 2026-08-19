@@ -1317,15 +1317,20 @@ const APPS = [
    first click. */
 const APP_PANELS = {
 
-  /* Days are OFFSETS FROM TODAY, not dates: a calendar fixture pinned to
-     August 2026 is wrong by September. The grid is generated from the clock. */
-  ap1:{ s:'agenda', sub:'4 events today', foot:'Mirrors your work calendar. Read-only here.',
-    marks:{ 0:'4 events', 1:'Renewal review', 4:'Board pack due', 8:'Q3 close' },
-    rows:[
-      ['09:30','Pipeline review','Meet · 30m'],
-      ['11:00','Contoso renewal call','Ana, Ravi · 45m'],
-      ['14:00','Q3 close walkthrough','Finance · 1h'],
-      ['16:30','1:1 with Marc','Meet · 30m']
+  /* Events are [day offset, start, minutes, title, who] — OFFSETS FROM TODAY,
+     not dates: a calendar fixture pinned to August 2026 is wrong by September.
+     Both grids are generated from the clock. */
+  ap1:{ s:'agenda', sub:'4 events today', foot:'Mirrors your work calendar. An event you add here stays here.',
+    events:[
+      [ 0,'09:30',30,'Pipeline review','Meet'],
+      [ 0,'11:00',45,'Contoso renewal call','Ana, Ravi'],
+      [ 0,'14:00',60,'Q3 close walkthrough','Finance'],
+      [ 0,'16:30',30,'1:1 with Marc','Meet'],
+      [-1,'13:00',45,'Design crit','Studio'],
+      [ 1,'10:00',45,'Renewal review','Deal desk'],
+      [ 2,'15:30',30,'Support sync','#support'],
+      [ 4,'09:00',60,'Board pack review','Leads'],
+      [ 8,'11:00',45,'Q3 close','Finance']
     ] },
 
   ap2:{ s:'extract', sub:'cv-priya-raman.pdf · 2 pages', foot:'Fields are read from the file, never invented.',

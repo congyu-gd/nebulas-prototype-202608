@@ -109,6 +109,9 @@
   --s-10:calc(var(--u) * 10 * var(--density));
   --s-12:calc(var(--u) * 12 * var(--density));
   --s-16:calc(var(--u) * 16 * var(--density));
+  /* One hour of the calendar's week grid. On the density scale rather than the
+     control scale: an hour is area to read, not a control to hit. */
+  --week-hour:calc(var(--u) * 8 * var(--density));
 
   /* ------------------------------------------------------- radius / edge */
   --r-xs:2px; --r-sm:4px; --r-md:6px; --r-lg:8px; --r-xl:10px; --r-2xl:16px;

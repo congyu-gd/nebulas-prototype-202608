@@ -5742,6 +5742,10 @@ function appState(app){
     const s = {};
     if (p.items) s.items = p.items.map(i => ({ t:i.t, due:i.due, done:!!i.done }));
     if (p.notes){ s.notes = p.notes.slice(); s.note = 0; }
+    if (p.events){
+      s.events = p.events.map(e => ({ off:e[0], at:e[1], min:e[2], t:e[3], sub:e[4] }));
+      s.view = 'Week'; s.wk = 0; s.mo = 0; s.adding = false;
+    }
     if (p.s === 'news') s.read = p.rows.map(r => !r[3]);
     APP_STATE[app.id] = s;
   }
@@ -5776,51 +5780,193 @@ function helpNote(text){
 const FILE_ICON = { csv:'table', sql:'code', pdf:'doc', deck:'layers', image:'pie' };
 
 /* -------------------------------------------------------------- agenda
-   The month is generated from the clock and the fixture marks days by their
-   OFFSET from today, so the calendar is never wrong about what "today" is.
-   Monday-first, which is what the marks assume. */
-function appMonth(marks){
+   Everything is generated from the clock and the fixture marks events by
+   their OFFSET from today, so the calendar is never wrong about what "today"
+   is. Monday-first. Two views over one list of events: Week answers "when is
+   the day busy" at hour resolution, Month answers "which days hold
+   something" — and Upcoming answers "what", because a block forty pixels
+   wide cannot. An event added here lands in the panel's own list and nowhere
+   else: the fixture mirrors a work calendar this prototype cannot write to. */
+const WEEK_H0 = 8, WEEK_H1 = 18;              /* the hours the week grid draws */
+function calDay(off){ const d = new Date(T0); d.setDate(d.getDate() + off); return d; }
+/* Monday of the week `wk` weeks away, as an offset from today. */
+function calMonday(wk){ return wk * 7 - ((new Date(T0).getDay() + 6) % 7); }
+const calMins = at => { const p = String(at).split(':'); return (+p[0]) * 60 + (+p[1] || 0); };
+/* "Today 14:00" · "Tomorrow 10:00" · "Thu 27 11:00" — the day the way somebody
+   would say it, then the clock. */
+function calWhen(e){
+  const day = e.off === 0 ? 'Today' : e.off === 1 ? 'Tomorrow'
+    : DAYS[calDay(e.off).getDay()].slice(0, 3) + ' ' + calDay(e.off).getDate();
+  return day + ' ' + e.at;
+}
+
+function calWeekGrid(st){
+  const mon = calMonday(st.wk);
+  const grid = el('div','week');
+  grid.append(el('div','week__hd'));           /* over the hour gutter */
+  for (let i = 0; i < 7; i++){
+    const d = calDay(mon + i);
+    grid.append(el('div','week__hd' + (mon + i === 0 ? ' week__hd--today' : ''),
+      esc(DAYS[d.getDay()].slice(0, 3)) + '<b>' + d.getDate() + '</b>'));
+  }
+  /* The gutter's rows ARE the vertical scale: the day columns stretch to it. */
+  const gut = el('div','week__gut');
+  for (let h = WEEK_H0; h < WEEK_H1; h++) gut.append(el('span','week__hr', pad2(h) + ':00'));
+  grid.append(gut);
+  for (let i = 0; i < 7; i++){
+    const off = mon + i;
+    const col = el('div','week__day' + (off === 0 ? ' week__day--today' : ''));
+    st.events.filter(e => e.off === off).forEach(e => {
+      const b = el('div','week__evt', esc(e.t));
+      b.style.top = 'calc(var(--week-hour) * ' +
+        (Math.max(calMins(e.at) - WEEK_H0 * 60, 0) / 60).toFixed(3) + ')';
+      b.style.height = 'calc(var(--week-hour) * ' + (e.min / 60).toFixed(3) + ')';
+      b.title = e.at + ' · ' + e.t + ' — ' + e.sub + ' · ' + e.min + 'm';
+      col.append(b);
+    });
+    grid.append(col);
+  }
+  return grid;
+}
+
+function calMonthGrid(st){
   const now = new Date(T0);
-  const y = now.getFullYear(), m = now.getMonth(), today = now.getDate();
+  const first = new Date(now.getFullYear(), now.getMonth() + st.mo, 1);
+  const y = first.getFullYear(), m = first.getMonth();
   const days = new Date(y, m + 1, 0).getDate();
-  const first = new Date(y, m, 1).getDay();          /* 0 = Sunday */
-  const offset = (first + 6) % 7;                    /* → Monday-first */
-  /* Offsets become dates, and anything falling into next month is dropped
+  const offset = (first.getDay() + 6) % 7;           /* → Monday-first */
+  const today = st.mo === 0 ? now.getDate() : 0;
+  /* Offsets become dates, and anything outside the shown month is dropped
      rather than drawn on the wrong day. */
   const byDay = {};
-  Object.keys(marks).forEach(k => {
-    const d = today + Number(k);
-    if (d >= 1 && d <= days) byDay[d] = marks[k];
+  st.events.forEach(e => {
+    const d = calDay(e.off);
+    if (d.getFullYear() === y && d.getMonth() === m)
+      (byDay[d.getDate()] = byDay[d.getDate()] || []).push(e.t);
   });
-
-  const c = appCard(MONTHS[m] + ' ' + y);
   const grid = el('div','cal');
   ['M','T','W','T','F','S','S'].forEach(d => grid.append(el('div','cal__wd', d)));
   for (let i = 0; i < offset; i++) grid.append(el('div','cal__d cal__d--pad','0'));
   for (let d = 1; d <= days; d++){
     const cls = 'cal__d' + (byDay[d] ? ' cal__d--mark' : '') + (d === today ? ' cal__d--today' : '');
     const cell = el('div', cls, String(d));
-    if (byDay[d]) cell.title = MONTHS[m] + ' ' + d + ' — ' + byDay[d];
+    if (byDay[d]) cell.title = MONTHS[m] + ' ' + d + ' — ' + byDay[d].join(' · ');
     grid.append(cell);
   }
-  c.body.append(grid);
+  return grid;
+}
+
+/* Both views answer to one label. The week is named by its Thursday, so a week
+   straddling two months is named by the month holding most of it. */
+function calLabel(st){
+  const now = new Date(T0);
+  const d = st.view === 'Week' ? calDay(calMonday(st.wk) + 3)
+    : new Date(now.getFullYear(), now.getMonth() + st.mo, 1);
+  return MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+/* Three answers make an event: what, when, how long. */
+function calNewEvent(app, st){
+  const d = st.draft || (st.draft = { t:'', day:'Today', at:'09:00', min:'30m' });
+  const days = [];
+  for (let i = 0; i < 7; i++)
+    days.push(i === 0 ? 'Today' : i === 1 ? 'Tomorrow'
+      : DAYS[calDay(i).getDay()].slice(0, 3) + ' ' + calDay(i).getDate());
+  const c = appCard('New event');
+  const form = el('div');
+  form.style.cssText = 'display:grid;gap:var(--s-3)';
+  form.append(
+    field('Title', inputCtl(d.t, v => d.t = v, 'Renewal review')),
+    field('Day', selectCtl(days, d.day, v => d.day = v)),
+    field('Starts', inputCtl(d.at, v => d.at = v, '09:00'), 'The grid draws 08:00 – 18:00.'),
+    field('Length', segCtl(['30m','45m','1h'], d.min, v => d.min = v))
+  );
+  const acts = el('div','live__acts');
+  const add = el('button','btn btn--primary btn--sm', ic('check',13) + 'Add event');
+  add.type = 'button';
+  add.onclick = () => {
+    const off = Math.max(days.indexOf(d.day), 0);
+    const at = /^([01]?\d|2[0-3]):[0-5]\d$/.test(d.at.trim())
+      ? (d.at.trim().length < 5 ? '0' : '') + d.at.trim() : '09:00';
+    const e = { off:off, at:at, min:{ '30m':30, '45m':45, '1h':60 }[d.min],
+                t:d.t.trim() || 'Untitled event', sub:'Added here' };
+    st.events.push(e);
+    st.adding = false; st.draft = null;
+    /* Land where the event did, so Add is never followed by hunting for it. */
+    st.wk = Math.floor((off - calMonday(0)) / 7);
+    st.mo = (calDay(off).getFullYear() * 12 + calDay(off).getMonth())
+          - (new Date(T0).getFullYear() * 12 + new Date(T0).getMonth());
+    repaintApp(app);
+    toast(e.t + ' — ' + calWhen(e) + ', only in this workspace', {
+      label:'Undo',
+      run:() => {
+        const i = st.events.indexOf(e);
+        if (i >= 0) st.events.splice(i, 1);
+        if (state.app === app.id) repaintApp(app);
+      }
+    });
+  };
+  const cancel = el('button','btn btn--ghost btn--sm','Cancel');
+  cancel.type = 'button';
+  cancel.onclick = () => { st.adding = false; st.draft = null; repaintApp(app); };
+  acts.append(add, cancel);
+  c.body.append(form, acts);
   return c.card;
 }
+
 function appAgenda(app, p){
-  const nodes = [appMonth(p.marks)];
-  const c = appCard('Today');
-  c.body.style.padding = '0 var(--s-3)';
-  p.rows.forEach(([time, title, meta]) => {
-    const r = el('div','artlist__row');
-    r.innerHTML =
-      '<span class="t-mono" style="flex:none;color:var(--text-4);font-size:var(--t-11)">' + esc(time) + '</span>' +
-      '<span class="row__main" style="flex:1">' +
-        '<span class="row__title">' + esc(title) + '</span>' +
-        '<span class="row__sub">' + esc(meta) + '</span>' +
-      '</span>';
-    c.body.append(r);
+  const st = appState(app);
+  const week = st.view === 'Week';
+
+  /* One toolbar for both views: the arrows move whichever unit is on screen
+     and the label answers "where am I" after they have. Sync is honest about
+     being a mirror — there is nothing upstream to fetch in a prototype. */
+  const ctls = el('span');
+  ctls.style.cssText = 'display:flex;align-items:center;gap:var(--s-1)';
+  [['chevL', -1], ['chevR', 1]].forEach(([g, k]) => {
+    const b = el('button','iconbtn iconbtn--xs', ic(g, 13));
+    b.type = 'button';
+    b.title = (k < 0 ? 'Previous ' : 'Next ') + (week ? 'week' : 'month');
+    b.onclick = () => { if (week) st.wk += k; else st.mo += k; repaintApp(app); };
+    ctls.append(b);
   });
-  nodes.push(c.card);
+  const sync = el('button','iconbtn iconbtn--xs', ic('retry', 12));
+  sync.type = 'button';
+  sync.title = 'Sync with your work calendar';
+  sync.onclick = () =>
+    toast('In sync — ' + plural(st.events.length, 'event') + ' mirrored, nothing new upstream');
+  ctls.append(sync);
+  ctls.append(segCtl(['Week','Month'], st.view, v => { st.view = v; repaintApp(app); }));
+
+  const c = appCard(calLabel(st), ctls);
+  c.body.append(week ? calWeekGrid(st) : calMonthGrid(st));
+  const nodes = [c.card];
+
+  if (st.adding) nodes.push(calNewEvent(app, st));
+
+  const add = el('button','btn btn--ghost btn--sm', ic('plus', 12) + 'New event');
+  add.type = 'button';
+  add.onclick = () => { st.adding = !st.adding; repaintApp(app); };
+  const up = appCard('Upcoming', add);
+  const soon = st.events.filter(e => e.off >= 0)
+    .sort((a, b) => a.off - b.off || calMins(a.at) - calMins(b.at)).slice(0, 6);
+  if (!soon.length){
+    up.body.style.padding = 'var(--s-3)';
+    up.body.append(el('div','field__help','No upcoming events.'));
+  } else {
+    up.body.style.padding = '0 var(--s-3)';
+    soon.forEach(e => {
+      const r = el('div','artlist__row');
+      r.innerHTML =
+        '<span class="t-mono" style="flex:none;color:var(--text-4);font-size:var(--t-11)">' + esc(calWhen(e)) + '</span>' +
+        '<span class="row__main" style="flex:1">' +
+          '<span class="row__title">' + esc(e.t) + '</span>' +
+          '<span class="row__sub">' + esc(e.sub) + ' · ' + e.min + 'm</span>' +
+        '</span>';
+      up.body.append(r);
+    });
+  }
+  nodes.push(up.card);
   return nodes;
 }
 
