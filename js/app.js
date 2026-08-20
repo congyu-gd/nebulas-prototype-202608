@@ -254,8 +254,14 @@ const SECTIONS = {
         if (p.run) row.insertAdjacentHTML('beforeend',
           '<span class="row__flag tip tip--below" data-tip="Runs ' + esc(p.run.every.toLowerCase()) + '">' +
           ic('clock',12) + '</span>');
-        if (p.shared) row.insertAdjacentHTML('beforeend',
-          '<span class="row__flag tip tip--below" data-tip="Shared with ' + esc(D.ACCOUNT.org) + '">' +
+        /* Pages are the other switch that makes a folder more: the flag is the
+           whole announcement, the same way the clock announces the program. */
+        if ((p.pages || []).length) row.insertAdjacentHTML('beforeend',
+          '<span class="row__flag tip tip--below" data-tip="Publishes ' +
+          esc(plural(p.pages.length, 'page')) + '">' + ic('code',12) + '</span>');
+        if (p.shared || (p.people || []).length) row.insertAdjacentHTML('beforeend',
+          '<span class="row__flag tip tip--below" data-tip="Shared with ' +
+          esc(p.shared ? D.ACCOUNT.org : plural(p.people.length, 'coworker')) + '">' +
           ic('users',12) + '</span>');
         body.append(row);
       });
@@ -306,7 +312,9 @@ const SECTIONS = {
     composer(){
       const v = state.item.chat;
       if (v === 'assistants' || v === 'schedule') return false;
-      if (kindOf(v) === 'p') return projMode !== 'Auto program';
+      /* Auto program replaces the box with the program; an open chat and the
+         two asking modes all carry the composer, borrowed into the page. */
+      if (kindOf(v) === 'p') return !!projThread || projMode === 'Work' || projMode === 'Data';
       return true;
     }
   },
@@ -430,7 +438,8 @@ const SECTIONS = {
       if (k === 'pj'){
         const p = find(D.PROJECTS, id);
         return { title:p.name, sub:(p.shared ? 'shared' : 'personal') +
-          (p.run ? ' · runs ' + p.run.every.toLowerCase() : '') };
+          (p.run ? ' · runs ' + p.run.every.toLowerCase() : '') +
+          (p.pages.length ? ' · publishes ' + plural(p.pages.length, 'page') : '') };
       }
       const a = find(D.ASSISTANTS, id);
       return { title:a.name, sub:a.team + ' · ' + a.model };
@@ -516,7 +525,8 @@ const BUILD_GROUPS = [
   { kind:'pj', label:'Projects', icon:'folder', addTip:'New project — describe it', add:() => openMaker('pj'),
     items:() => D.PROJECTS,
     lead:p => '<span class="row__icon">' + ic(p.icon, 13) + '</span>',
-    sub:p => (p.shared ? 'shared' : 'personal') + (p.run ? ' · runs' : ''),
+    sub:p => (p.shared ? 'shared' : 'personal') + (p.run ? ' · runs' : '') +
+             ((p.pages || []).length ? ' · pages' : ''),
     empty:'No projects yet — the plus above makes one.' },
 
   { kind:'wg', label:'Widgets', icon:'widget', addTip:'New widget — describe it', add:() => openMaker('wg'),
@@ -764,9 +774,36 @@ function citesNode(cites){
 /* A result names its own shape rather than reading as the generic "result".
    artType is the name in a list ("Table"); artKind the same word in the mono
    footer, where lowercase is the house style. */
-const artGlyph = a => a.kind === 'result' ? (RESULT_ICON[a.shape] || 'file') : (KIND_ICON[a.kind] || 'file');
+const artGlyph = a => a.kind === 'result' ? (RESULT_ICON[a.shape] || 'file')
+  : a.kind === 'channel' ? (CH_ICON[a.ch] || 'globe')
+  : a.kind === 'page' ? 'template'
+  : a.kind === 'form' ? 'clist' : (KIND_ICON[a.kind] || 'file');
 const artType  = a => a.kind === 'result' ? (RESULT_TYPE[a.shape] || 'Result') : (KIND_TYPE[a.kind] || 'File');
 const artKind  = a => artType(a).toLowerCase();
+
+/* Under the reference, the act that belongs to it: filing the result into the
+   project this conversation is part of. A weak button, not a second card —
+   the card above is the thing. It only exists when there is a project to file
+   into, and it reads as its own undo once filed. */
+function artFileRow(a){
+  const fp = artFileTarget(a);
+  if (!fp) return null;
+  const filed = a.pj === fp.id;
+  const b = el('button','btn btn--ghost btn--sm',
+    '<span style="display:flex">' + ic(filed ? 'check' : 'folder',13) + '</span>' +
+    (filed ? 'In ' + esc(fp.name) + '’s results' : 'Add to ' + esc(fp.name) + '’s results'));
+  b.type = 'button';
+  b.style.marginTop = 'var(--s-1)';
+  b.title = filed ? 'Click to take it back out' : 'List this in ' + fp.name + '’s results too';
+  b.onclick = () => toggleArtFile(a, fp);
+  return b;
+}
+function toggleArtFile(a, fp){
+  if (a.pj === fp.id){ delete a.pj; toast('Removed from ' + fp.name + '’s results'); }
+  else { a.pj = fp.id; toast('Added to ' + fp.name + '’s results'); }
+  render();
+  renderArtifact();
+}
 
 function artRefNode(a){
   const b = el('button','artref msg__ref');
@@ -818,7 +855,11 @@ function msgNode(m){
   if (m.liveId && LIVE[m.liveId]) wrap.append(liveHost(LIVE[m.liveId]));
   if (m.artifactId){
     const a = D.ARTIFACT_BY_ID(m.artifactId);
-    if (a) wrap.append(artRefNode(a));
+    if (a){
+      wrap.append(artRefNode(a));
+      const file = artFileRow(a);
+      if (file) wrap.append(file);
+    }
   }
   if (m.cites && m.cites.length) wrap.append(citesNode(m.cites));
   return wrap;
@@ -1248,7 +1289,7 @@ const RESULT_ICON = { list:'doc', grid:'table', bars:'chart', doc:'doc', code:'c
    file it downloads as. Results have one pane, so this never shows up as a tab
    label — "Form · 1 row" is what it is for, and "rows · 1 row" was the bug. */
 const RESULT_TYPE = { list:'Form', grid:'Table', bars:'Chart', doc:'Document', code:'Source' };
-const KIND_TYPE   = { table:'Table', chart:'Chart', doc:'Document', diff:'Diff' };
+const KIND_TYPE   = { table:'Table', chart:'Chart', doc:'Document', diff:'Diff', channel:'Channel', page:'Page', form:'Form' };
 
 function liveResult(w){
   /* A program's outcome is the schedule row it creates, and an element's is
@@ -2124,13 +2165,22 @@ function useExample(a, text){
   closeAssistant();
   state.assistant = a.id;
 
-  const inThread = D.THREADS.some(t => t.id === state.item.chat);
-  if (state.section !== 'chat' || !inThread){
-    /* Reuse an empty thread rather than stacking up "New chat" rows. */
-    const empty = D.THREADS.filter(t => !t.msgs.length)[0];
-    if (empty) select('chat', empty.id); else newThread();
+  /* Asked from inside a project, the question stays inside the project: the
+     box below is the same composer, and sending it opens the thread in the
+     project's own chat column — never a new chat outside. Only Auto program
+     has no box, so that one mode steps back to Work. */
+  const cur = state.item.chat;
+  if (state.section === 'chat' && kindOf(cur) === 'p' && byId(D.PROJECTS, idOf(cur))){
+    if (projMode === 'Auto program'){ projMode = 'Work'; render(); }
   } else {
-    select('chat', state.item.chat);
+    const inThread = D.THREADS.some(t => t.id === cur);
+    if (state.section !== 'chat' || !inThread){
+      /* Reuse an empty thread rather than stacking up "New chat" rows. */
+      const empty = D.THREADS.filter(t => !t.msgs.length)[0];
+      if (empty) select('chat', empty.id); else newThread();
+    } else {
+      select('chat', cur);
+    }
   }
 
   const input = $('#composerInput');
@@ -2652,13 +2702,6 @@ const PROJ_ICONS = ['folder','chart','code','users','spark','calendar','doc','do
    project. */
 const ICON_NAME = { folder:'General', chart:'Analysis', code:'Engineering', users:'Team',
   spark:'Ideas', calendar:'Planning', doc:'Writing', dollar:'Money', share:'Publishing' };
-/* Two audiences, so two buttons rather than two radio rows with a paragraph
-   each: the consequence goes in one line under whichever is chosen. */
-const PROJ_VIS = ['Personal','Shared'];
-const VIS_HELP = {
-  'Personal':'Only you can open it, its threads and its results. You can share it later.',
-  'Shared':'Anyone in ' + D.ACCOUNT.org + ' can open it and start threads in it.'
-};
 /* Three cadences. A fourth would be a cron expression, and something that
    needs cron is a scheduled task — Chat → Schedule already holds those. */
 const CADENCE = ['Every day','Every week','Every month'];
@@ -2717,13 +2760,6 @@ function setHints(on){
   if (projDraft) renderProject();
 }
 
-/* Bases and datasets are both "things it may read", so the picker is one list
-   and each row says which kind it is rather than making two sections of it. */
-function knowledgeItems(){
-  return D.KBS.map(k => ({ id:'kb:' + k.name, nm:k.name, sub:'Knowledge base', meta:k.docs + ' docs' }))
-    .concat(D.DATASETS.map(d => ({ id:'ds:' + d.name, nm:d.name, sub:d.source, meta:d.rows + ' rows' })));
-}
-
 /* ------------------------------------------------------------- a fold
    Two of the settings are lists, and a list is tall. Collapsed, the row says
    its name and what is currently chosen — which is the only thing a reader
@@ -2753,19 +2789,30 @@ function autoDesc(p){
   const list = reads.length > 2
     ? reads.slice(0, 2).join(', ') + ' and ' + (reads.length - 2) + ' more'
     : reads.join(' and ');
+  if ((p.pages || []).length){
+    return 'Publishes ' + plural(p.pages.length, 'page') + ' built on preset code' +
+           (p.run ? ', rebuilt ' + p.run.every.toLowerCase() : '') +
+           (reads.length ? ', reading ' + list : '') + '.';
+  }
   if (p.run){
     return 'Produces a result ' + p.run.every.toLowerCase() +
            (p.assistant ? ', written by ' + p.assistant : '') +
            (reads.length ? ', from ' + list : '') + '.';
   }
   if (p.assistant){
+    const others = (p.assistants || []).length - 1;
     return 'Threads here are answered by ' + p.assistant +
+           (others > 0 ? ' and ' + plural(others, 'other assistant') : '') +
            (reads.length ? ', reading ' + list : '') + '.';
   }
   if (reads.length) return 'Threads and results kept together, scoped to ' + list + '.';
   return 'A folder for ' + p.name + ' — threads you start here stay together.';
 }
-const isBase = it => it.id.slice(0, 2) === 'kb';
+/* Every popup that changes what a project is rewrites the description, as the
+   dialog used to — while it stays automatic. A hand-written one is left alone. */
+function refreshDesc(p){
+  if (p.descAuto || !p.desc){ p.desc = autoDesc(p); p.descAuto = true; }
+}
 
 function openProject(p){
   projOn = p || null;
@@ -2797,7 +2844,7 @@ function renderProject(){
   body.innerHTML = ''; foot.innerHTML = '';
   const fresh = !projOn;
   $('#projTitle').textContent = fresh ? 'New project' : 'Project settings';
-  $('#projSub').textContent = fresh ? 'A name is all it needs'
+  $('#projSub').textContent = fresh ? 'A name and an icon — everything else is set on the project page'
     : projOn.name + ' · ' + (d.run ? CADENCE_ADJ[d.run.every].toLowerCase() : 'no schedule');
 
   $('#projHelp').setAttribute('aria-pressed', String(projHints));
@@ -2808,8 +2855,8 @@ function renderProject(){
   if (fresh && projHints && !hintGone.concept){
     const b = banner('info',
       'A project keeps one piece of work together: its threads, what it reads, and who ' +
-      'answers in it. Leave the rest of this empty and it is a folder. Switch on ' +
-      '<strong>a result on a schedule</strong> and it runs by itself.');
+      'answers in it. Created, it is a folder — its knowledge, assistant, connections ' +
+      'and schedule are all switched on from the project page itself.');
     const x = el('button','hint__x', ic('x',11));
     x.type = 'button';
     x.title = 'Hide this';
@@ -2837,9 +2884,13 @@ function renderProject(){
     if (e.key === 'Enter' && d.name.trim()){ e.preventDefault(); saveProject(); }
   };
   body.append(fieldH('Name', nameIn, 'name',
-    'The only required answer. Everything else is optional, changeable, and ' +
-    'the description is written for you from what you choose.'));
+    'The only required answer. The description is written for you from what the ' +
+    'project is later given.'));
 
+  /* Name and icon are the whole form: everything a project does — knowledge,
+     assistant, connections, the schedule — is switched on from the project
+     page's own panel, each setting behind the row that reports it. Creation
+     stays free; configuration happens where its consequences are visible. */
   const icons = el('div','iconpick');
   PROJ_ICONS.forEach(nm => {
     const b = el('button','iconpick__b', ic(nm, 15));
@@ -2853,91 +2904,7 @@ function renderProject(){
     };
     icons.append(b);
   });
-  const visHint = hint('vis', VIS_HELP[d.shared ? 'Shared' : 'Personal'] +
-    ' Either way, this can change afterwards.');
-  const setVis = v => {
-    d.shared = v === 'Shared';
-    if (visHint) $('.hint__t', visHint).textContent =
-      VIS_HELP[v] + ' Either way, this can change afterwards.';
-  };
-
-  /* Two one-line choices, side by side: stacked, they push the rest of the form
-     another 90px down for no gain. */
-  const two = el('div');
-  two.style.cssText = 'display:flex; gap:var(--s-6); flex-wrap:wrap; margin-bottom:var(--s-4)';
-  const visWrap = el('div');
-  visWrap.append(segCtl(PROJ_VIS, d.shared ? 'Shared' : 'Personal', setVis));
-  two.append(field('Icon', icons), field('Who can see it', visWrap));
-  /* The hint under both of them belongs to the choice on the right, so the two
-     fields give up their own bottom margin and it carries the gap. */
-  $$('.field', two).forEach(f => f.style.marginBottom = '0');
-  if (visHint){ two.style.marginBottom = 'var(--s-2)'; visHint.style.margin = '0 0 var(--s-4)'; }
-  body.append(two);
-  if (visHint) body.append(visHint);
-
-  /* The two list-shaped settings, folded. Closed, each row names what is chosen
-     — which is what a reader wants before deciding whether to open it. */
-  const readList = () => (d.kbs || []).concat(d.sources || []);
-  body.append(fold('Knowledge',
-    () => readList().length ? readList().join(' · ') : 'Nothing attached',
-    (into, touched) => {
-      const list = pickList(knowledgeItems(),
-        it => (isBase(it) ? d.kbs : d.sources).indexOf(it.nm) > -1,
-        (it, on) => {
-          const arr = isBase(it) ? d.kbs : d.sources;
-          const i = arr.indexOf(it.nm);
-          if (on && i < 0) arr.push(it.nm);
-          else if (!on && i > -1) arr.splice(i, 1);
-          touched();
-        });
-      list.classList.add('picklist--scroll');
-      into.append(list);
-      const h = hint('kb', 'What answers in this project may read. Nothing ticked means it ' +
-                           'answers from the model alone.');
-      if (h) into.append(h);
-    }));
-
-  const NONE = 'No assistant';
-  body.append(fold('Assistant',
-    () => d.assistant || NONE,
-    (into, touched) => {
-      into.append(selectCtl([NONE].concat(D.ASSISTANTS.map(a => a.name)), d.assistant || NONE,
-        v => { d.assistant = v === NONE ? '' : v; touched(); }));
-      const h = hint('as', 'Bound to new threads here. A thread can still pick another one.');
-      if (h) into.append(h);
-    }));
-
-  /* The switch that decides which of the two things a project is. Everything
-     under it only exists while it is on, because a cadence with nothing to
-     produce is a setting nobody can act on. */
-  const runWrap = el('div');
-  const sw = switchCtl('Produce a result on a schedule', !!d.run);
-  $('input', sw).onchange = e => {
-    d.run = e.target.checked
-      ? { every:'Every week', ask:'', sched:(projOn && projOn.run && projOn.run.sched) || null }
-      : null;
-    renderProject();
-  };
-  runWrap.append(sw);
-  if (d.run){
-    const when = el('div','field__help', runLine(d.run));
-    when.style.marginTop = 'var(--s-2)';
-    const cad = segCtl(CADENCE, d.run.every, v => {
-      d.run.every = v;
-      when.textContent = runLine(d.run);
-    });
-    cad.style.marginTop = 'var(--s-3)';
-    const ask = el('textarea','textarea textarea--prose');
-    ask.rows = 3;
-    ask.value = d.run.ask;
-    ask.placeholder = 'Summarise what changed this week and list what needs a decision.';
-    ask.oninput = () => { d.run.ask = ask.value; };
-    ask.style.marginTop = 'var(--s-3)';
-    runWrap.append(cad, when, ask);
-  }
-  body.append(fieldH('Runs by itself', runWrap, 'run',
-    d.run ? 'Each run files a result in the results column, timestamped. It is listed in Chat → Schedule too.'
-          : 'Off, this project is a folder. On, it produces a result on its own and files it in the results column.'));
+  body.append(field('Icon', icons));
 
   const cancel = el('button','btn btn--ghost','Cancel');
   cancel.type = 'button';
@@ -2982,7 +2949,9 @@ function saveProject(){
   const d = projDraft;
   if (!d || !d.name.trim()) return;
   const fresh = !projOn;
-  const p = projOn || { id:'p' + (++projN), descAuto:true };
+  /* The dialog stays basic on purpose: code and pages are Build's, so a fresh
+     project starts with the empty arrays and nothing here ever touches them. */
+  const p = projOn || { id:'p' + (++projN), descAuto:true, conn:[], code:[], pages:[], assistants:[] };
   const prevSched = p.run && p.run.sched;
   Object.assign(p, { name:d.name.trim(), icon:d.icon, shared:d.shared,
     assistant:d.assistant, kbs:d.kbs, sources:d.sources, run:d.run, when:'now' });
@@ -3174,69 +3143,100 @@ function connectChannel(c, then){
   if (x.endpoint === '—') x.endpoint = 'graph.' + c.nm.toLowerCase().replace(/\s+/g,'') + '.com/v1';
   if (x.scope === '—') x.scope = '1 account · publish, read insights';
   render();
+  renderArtifact();
   toast(c.nm + ' connected as ' + c.handle, { label:'Undo', icon:'plug', run:() => {
     x.state = 'off'; x.last = '—'; x.calls = '—';
     render();
+    renderArtifact();
     toast(c.nm + ' disconnected');
   }});
   if (then) then();
 }
 
-/* What is written but not out yet. A queue is the honest shape for publishing:
-   the writing and the sending are different acts, and the gap between them is
-   where a review happens. */
-const Q_STATE = { 'draft':'', 'needs review':'warn', 'scheduled':'ok', 'published':'ok' };
+/* What is written but not out yet lives with its channel: the writing and the
+   sending are different acts, and the gap between them — where a review
+   happens — is shown on the channel's own tab. */
 const POST_WHEN = ['Today 17:00','Tue 09:00','Tue 17:30','Wed 12:00','Thu 08:30','Next Mon 09:00'];
 
 function projectChannels(panel, p){
-  const sec = el('section','section');
-  sec.append(sectionHead('Channels',
-    infoTip('Where this project posts. The credential and its scope live in Cloud → Connections; ' +
-            'this row reports the state of it.')));
+  const sec = panelSec(p, 'Channels', { shut:true, count:p.channels.length,
+    trailing:infoTip('Where this project posts. Each row opens the channel\'s day in the results column — ' +
+            'the numbers, what went out, and what is written but not out yet.') });
   p.channels.forEach(c => {
-    const x = chConn(c);
     const live = chLive(c);
+    const waiting = (c.drafts || []).length;
     sec.append(listRow({
       lead:chIcon(c),
       title:c.nm,
-      sub:live ? c.handle + ' · ' + c.posts : 'not connected — nothing leaves',
+      sub:(live ? c.handle + ' · ' + c.posts : 'not connected — nothing leaves') +
+          (waiting ? ' · ' + waiting + ' prepared' : ''),
       meta:live ? '' : 'off',
-      onClick:() => x ? select('cloud', key('cn', x.id)) : openProject(p)
+      onClick:() => openArtifact(c.art)
     }));
-    /* The one channel that cannot publish gets the action rather than a
-       sentence telling somebody else to go and do it. */
-    if (!live){
-      const go = el('button','btn btn--secondary btn--sm',
-        '<span style="display:flex">' + ic('plug',13) + '</span>Connect ' + esc(c.nm));
-      go.type = 'button';
-      go.onclick = () => connectChannel(c);
-      sec.append(rowActs([go]));
-    }
   });
   panel.append(sec);
 }
 
-function projectQueue(panel, p){
-  const sec = el('section','section');
-  const waiting = p.queue.filter(q => q.state !== 'published').length;
-  sec.append(sectionHead('Queue', waiting
-    ? '<span class="t-mono" style="color:var(--text-4)">' + waiting + '</span>' : ''));
-  if (!p.queue.length){
-    sec.append(helpNote('Nothing written yet. Ask for a post and it arrives here before it ' +
-                        'goes anywhere.'));
-  } else {
-    p.queue.forEach(q => {
-      const c = p.channels.filter(x => x.id === q.ch)[0] || { nm:q.ch, id:q.ch };
-      sec.append(listRow({
-        lead:chIcon(c),
-        title:q.title,
-        sub:c.nm + ' · ' + q.when,
-        meta:q.state === 'scheduled' ? 'queued' : q.state,
-        onClick:() => openPost(p, q)
-      }));
-    });
+/* --------------------------------------------------------- a channel's day
+   One channel's day, in reading order: whether it can post at all, the
+   numbers, what went out (and what has not yet), and what is written and
+   waiting. Rendered inside the results column — a channel's day is a reading
+   of this project, so it lives with the rest of what the project produced.
+   The prepared rows stay doors to the post dialog; the pane's second tab is
+   the page of prepared content as it will read. */
+function channelDayNode(p, c){
+  const wrap = el('div');
+  const live = chLive(c);
+  if (!live){
+    const b = banner('warn', '<strong>' + esc(c.nm) + ' is not connected.</strong> Posts are ' +
+      'written and kept; nothing leaves and nothing is measured until the connection is made.');
+    const go = el('button','btn btn--secondary btn--sm',
+      '<span style="display:flex">' + ic('plug',13) + '</span>Connect ' + esc(c.nm));
+    go.type = 'button';
+    go.onclick = () => connectChannel(c);
+    wrap.append(b, rowActs([go]));
   }
-  panel.append(sec);
+
+  const t = c.today || {};
+  const today = el('section','section');
+  today.append(sectionHead('Today', '<span class="t-mono">' + esc(c.handle) + '</span>'));
+  today.append(statGrid([
+    ['Reach', t.reach || '—'], ['Engagement', t.eng || '—'],
+    ['New follows', t.follows || '—'], ['Posted', t.posted || '—']
+  ], ['Posted']));
+  wrap.append(today);
+
+  const sent = el('section','section');
+  sent.append(sectionHead('Today\'s posts', (c.sent || []).length
+    ? '<span class="t-mono">' + c.sent.length + '</span>' : ''));
+  if (!(c.sent || []).length){
+    sent.append(helpNote(live ? 'Nothing went out today.'
+      : 'Nothing went out today — the channel is not connected.'));
+  } else {
+    c.sent.forEach(sp => sent.append(listRow({
+      lead:dotLead(sp.state === 'sent' ? 'ok' : 'warn'),
+      title:sp.title, meta:sp.when,
+      sub:sp.state === 'sent' ? 'sent' : 'scheduled — not sent yet'
+    })));
+  }
+  wrap.append(sent);
+
+  const prep = el('section','section');
+  prep.append(sectionHead('Prepared', (c.drafts || []).length
+    ? '<span class="t-mono">' + c.drafts.length + '</span>' : ''));
+  if (!(c.drafts || []).length){
+    prep.append(helpNote('Nothing written for ' + c.nm + ' yet. Ask for a post in Work and ' +
+      'it arrives here before it goes anywhere.'));
+  } else {
+    c.drafts.forEach(q => prep.append(listRow({
+      lead:chIcon(c),
+      title:q.title, sub:q.when,
+      meta:q.state === 'scheduled' ? 'queued' : q.state,
+      onClick:() => openPost(p, c, q)
+    })));
+  }
+  wrap.append(prep);
+  return wrap;
 }
 
 /* ------------------------------------------------------- a post, before it goes
@@ -3247,26 +3247,25 @@ function projectQueue(panel, p){
    The primary action depends on the state and on the channel — a post on a
    channel that is not connected cannot be scheduled, so it offers the connection
    instead of a button that would quietly do nothing. */
-let postOn = null, postFor = null, postDraft = null;
+let postOn = null, postFor = null, postCh = null, postDraft = null;
 
-function openPost(p, q){
-  postFor = p; postOn = q;
+function openPost(p, c, q){
+  postFor = p; postCh = c; postOn = q;
   postDraft = { text:q.text, when:q.when };
-  $('#postIco').innerHTML = ic(CH_ICON[q.ch] || 'globe', 15);
+  $('#postIco').innerHTML = ic(CH_ICON[c.id] || 'globe', 15);
   renderPost();
   $('#postScrim').dataset.open = 'true';
 }
 function closePost(){
   $('#postScrim').dataset.open = 'false';
-  postOn = null; postFor = null; postDraft = null;
+  postOn = null; postFor = null; postCh = null; postDraft = null;
 }
 
 function renderPost(){
-  const p = postFor, q = postOn, d = postDraft;
+  const p = postFor, c = postCh, q = postOn, d = postDraft;
   if (!p || !q) return;
   const body = $('#postBody'), foot = $('#postFoot');
   body.innerHTML = ''; foot.innerHTML = '';
-  const c = p.channels.filter(x => x.id === q.ch)[0] || { nm:q.ch, id:q.ch, handle:'—' };
   const live = chLive(c);
 
   $('#postTitle').textContent = q.title;
@@ -3295,14 +3294,16 @@ function renderPost(){
   const remove = el('button','btn btn--danger','Remove');
   remove.type = 'button';
   remove.onclick = () => {
-    const i = p.queue.indexOf(q);
-    p.queue.splice(i, 1);
+    const i = c.drafts.indexOf(q);
+    c.drafts.splice(i, 1);
     closePost();
     render();
+    renderArtifact();
     toast('Removed ' + q.title, { label:'Undo', icon:'retry', run:() => {
-      p.queue.splice(i, 0, q);
+      c.drafts.splice(i, 0, q);
       render();
-      toast('Back in the queue');
+      renderArtifact();
+      toast('Back with ' + c.nm);
     }});
   };
   const cancel = el('button','btn btn--ghost','Cancel');
@@ -3331,6 +3332,7 @@ function renderPost(){
     q.state = 'scheduled';
     closePost();
     render();
+    renderArtifact();
     toast(first ? 'Queued for ' + c.nm + ' · ' + q.when : 'Saved · ' + c.nm + ' ' + q.when);
   };
 
@@ -3360,6 +3362,7 @@ function limitLine(c, text){
 const PROJ_MODES = ['Work','Data','Auto program'];
 let projMode = 'Work';
 let projModeFor = null;            /* the mode belongs to the project you opened */
+let projThread = null;             /* the chat open in the project's own chat area */
 
 /* ---------------------------------------------------- what to ask a project
    Four questions this project in particular could be asked, in the order they
@@ -3532,6 +3535,54 @@ function projectProgram(into, p){
                                  'timestamped. It is listed in Chat → Schedule too.'));
 }
 
+/* Which panel sections are folded shut, per project — a reading preference,
+   so it survives re-renders but not a reload. Keyed p.id:title. */
+const projSecShut = {};
+
+/* A panel section that folds: native <details>, the head as its summary, the
+   chevron as the affordance. Every setting still edits through the popup
+   behind the head's gear — stopPropagation keeps the gear from toggling the
+   fold it sits in. Rows appended to the returned element land in the body. */
+function panelSec(p, title, opts){
+  opts = opts || {};
+  const k = p.id + ':' + title;
+  const d = el('details','section section--fold');
+  /* Configuration sections ship folded (`shut`) — the count says what is
+     inside without opening anything. A toggle is remembered for the session
+     and outranks the default. */
+  d.open = projSecShut[k] === undefined ? !opts.shut : !projSecShut[k];
+  const sum = el('summary','section__head');
+  /* The chevron leads — the fold's own affordance, to the left of the heading
+     the way the fold and the trace draw theirs — then the title, then the
+     count, always: a folded section owes the reader its size. */
+  sum.innerHTML =
+    '<span class="section__chev">' + ic('chevR',12) + '</span>' +
+    '<span class="t-eyebrow">' + esc(title) + '</span>' +
+    (opts.count != null
+      ? '<span class="t-mono" style="color:var(--text-4)">' + opts.count + '</span>' : '') +
+    (opts.trailing || '');
+  /* One small plus at the right of the head — the same slot the sidebar's
+     group label and Build's lane head give their "+". It adds and it changes:
+     both verbs open the section's own popup. */
+  if (opts.edit){
+    const b = el('button','iconbtn iconbtn--xs tip tip--below', ic('plus',12));
+    b.type = 'button';
+    b.style.marginLeft = 'auto';
+    b.setAttribute('data-tip', opts.tip);
+    b.setAttribute('aria-label', opts.tip);
+    b.onclick = e => { e.preventDefault(); e.stopPropagation(); opts.edit(); };
+    sum.append(b);
+  }
+  d.append(sum);
+  /* Recorded on the click, not the toggle event: the event fires a task later,
+     and a re-render inside the same task would read yesterday's state. At
+     click time `open` still holds the pre-toggle value — which is exactly
+     "shut after this click". The gear stops propagation, so it never lands. */
+  sum.addEventListener('click', () => { projSecShut[k] = d.open; });
+  return d;
+}
+
+
 /* ------------------------------------------------------------ one project
    A project answers two different questions and one long page answered neither.
    So: a panel on the left carrying what this project *is* — its name, the
@@ -3549,13 +3600,21 @@ function projectProgram(into, p){
 function projectView(body, p){
   const threads = D.THREADS.filter(t => t.project === p.id);
   const reads = (p.kbs || []).concat(p.sources || []);
-  const mine = allResults().filter(a => a.from === p.name);
+  /* What the project produced, plus what was filed here by hand: a chat's
+     output lives in the global store, and filing lists it here as well. */
+  const mine = allResults().filter(a => a.from === p.name || a.pj === p.id);
   /* A mode says what you are here for, and that is a fact about the project you
      opened rather than a preference — so opening another one starts at Work. */
-  if (projModeFor !== p.id){ projMode = 'Work'; projModeFor = p.id; }
+  if (projModeFor !== p.id){ projMode = 'Work'; projThread = null; projModeFor = p.id; }
 
   const wrap = el('div','projwrap');
   const panel = el('aside','projpanel');
+  /* The panel's two zones: what the project IS (scrolls, takes what is left)
+     and what has HAPPENED (pinned at the foot, fixed height, its own scroll —
+     expanding an option above never moves the record below). */
+  const opts = el('div','projpanel__opts');
+  const plog = el('div','projpanel__log');
+  panel.append(opts, plog);
   const main = el('div','projmain');
   wrap.append(panel, main);
   /* The two columns scroll on their own, so the pane body does not. */
@@ -3563,58 +3622,68 @@ function projectView(body, p){
   body.append(wrap);
 
   /* ------------------------------------------------------------- identity
-     Name, the description Nebulas wrote, and who can see it — the three facts
-     that are true of the project itself rather than of anything in it. */
+     Name, glyph, the description Nebulas wrote, and who can see it — the
+     panel runs to the top of the pane now, so this is the one place the
+     project names itself. */
   const idb = el('div','projid');
-  idb.innerHTML =
-    '<div class="projid__top">' +
-      '<span class="projid__ico">' + ic(p.icon || 'folder', 16) + '</span>' +
-      '<h2 class="projid__name">' + esc(p.name) + '</h2>' +
-    '</div>' +
-    (p.desc ? '<p class="projid__desc">' + esc(p.desc) +
-      (p.descAuto ? ' ' + inlineTip('Written by Nebulas from this project\'s settings, ' +
-                                    'and rewritten when they change.') : '') + '</p>' : '');
-  /* "Shared" rather than "Shared with Gnomon Digital": the panel is 268px, the
-     tooltip has the room to name the audience, and the row is a control. */
-  const vis = el('button','projid__vis',
-    ic(p.shared ? 'users' : 'lock', 12) +
-    '<span>' + esc(p.shared ? 'Shared' : 'Personal') + '</span>');
-  vis.type = 'button';
-  vis.title = p.shared
-    ? 'Anyone in ' + D.ACCOUNT.org + ' can open it — click to change'
-    : 'Only you can open it — click to change';
-  vis.onclick = () => openProject(p);
-  const gear = el('button','iconbtn iconbtn--sm tip tip--below', ic('gear',14));
-  gear.type = 'button';
-  gear.setAttribute('data-tip','Project settings');
-  gear.setAttribute('aria-label','Project settings');
-  gear.onclick = () => openProject(p);
-  const row = el('div','projid__row');
-  row.append(vis, gear);
-  idb.append(row);
-  panel.append(idb);
+  const top = el('div','projid__top');
+  top.innerHTML =
+    '<span class="projid__ico">' + ic(p.icon || 'folder', 16) + '</span>' +
+    '<h2 class="projid__name">' + esc(p.name) + '</h2>';
+  /* Two small acts beside the name: share it, or change what it is called.
+     Visibility is a fact about sharing, so it lives in the share dialog now
+     rather than as a label the panel repeats on every visit. */
+  const shareB = el('button','iconbtn iconbtn--xs tip tip--below', ic('share',13));
+  shareB.type = 'button';
+  shareB.style.marginLeft = 'auto';
+  shareB.setAttribute('data-tip','Share with coworkers');
+  shareB.setAttribute('aria-label','Share with coworkers');
+  shareB.onclick = () => editPjShare(p);
+  const penB = el('button','iconbtn iconbtn--xs tip tip--below', ic('feather',13));
+  penB.type = 'button';
+  penB.setAttribute('data-tip','Rename & icon');
+  penB.setAttribute('aria-label','Rename & icon');
+  penB.onclick = () => editPjAbout(p);
+  top.append(shareB, penB);
+  idb.append(top);
+  if (p.desc) idb.insertAdjacentHTML('beforeend',
+    '<p class="projid__desc">' + esc(p.desc) +
+    (p.descAuto ? ' ' + inlineTip('Written by Nebulas from this project\'s settings, ' +
+                                  'and rewritten when they change.') : '') + '</p>');
+  opts.append(idb);
 
-  const asst = p.assistant ? D.ASSISTANTS.filter(x => x.name === p.assistant)[0] : null;
-  const sec = el('section','section');
-  sec.append(sectionHead('Assistant'));
-  sec.append(listRow({
-    lead:'<span class="row__icon">' + ic('agent',13) + '</span>',
-    title:p.assistant || 'None',
-    sub:asst ? asst.model : 'Answers come from the model alone',
-    onClick:asst ? () => openAssistant(asst) : () => openProject(p)
-  }));
-  panel.append(sec);
+  /* The architecture, the same for every project: the four basic options —
+     Assistant, Knowledge, Connections, Schedule — folded shut with their
+     counts on the head, then what the project makes of them (Pages, Channels,
+     also folded), then a full divider, and below it what has happened:
+     Results and Chat History, open, because activity is what you came for. */
+  const asstNames = p.assistants || (p.assistant ? [p.assistant] : []);
+  const sec = panelSec(p, 'Assistants', { shut:true, count:asstNames.length,
+    edit:() => editPjAsst(p), tip:'Add assistants' });
+  asstNames.forEach((nm, i) => {
+    const a = D.ASSISTANTS.filter(x => x.name === nm)[0];
+    sec.append(listRow({
+      lead:'<span class="row__icon">' + ic('agent',13) + '</span>',
+      title:nm,
+      sub:a ? a.model : 'Answers come from the model alone',
+      /* The first one is who a new thread gets; worth saying only once there
+         is a second to be told apart from. */
+      meta:i === 0 && asstNames.length > 1 ? 'answers' : undefined,
+      onClick:a ? () => openAssistant(a) : () => editPjAsst(p)
+    }));
+  });
+  opts.append(sec);
 
   /* Two kinds of thing it may read, and the row says which: a base is documents,
      a dataset is a table. */
-  const know = el('section','section');
-  know.append(sectionHead('Knowledge'));
+  const know = panelSec(p, 'Knowledge', { shut:true, count:reads.length,
+    edit:() => editPjKnow(p), tip:'Add knowledge' });
   (p.kbs || []).forEach(nm => {
     const k = D.KBS.filter(x => x.name === nm)[0];
     know.append(listRow({
       lead:'<span class="row__icon">' + ic('library',13) + '</span>',
       title:nm, sub:k ? k.docs + ' documents' : 'Knowledge base', meta:'docs',
-      onClick:k ? () => select('knowledge', key('kb', k.id)) : () => openProject(p)
+      onClick:k ? () => peekKb(k) : () => editPjKnow(p)
     }));
   });
   (p.sources || []).forEach(nm => {
@@ -3622,53 +3691,38 @@ function projectView(body, p){
     know.append(listRow({
       lead:'<span class="row__icon">' + ic('data',13) + '</span>',
       title:nm, sub:dsx ? dsx.source + ' · ' + dsx.rows + ' rows' : 'Source', meta:'table',
-      onClick:dsx ? () => select('knowledge', key('ds', dsx.id)) : () => openProject(p)
+      onClick:dsx ? () => peekDs(dsx) : () => editPjKnow(p)
     }));
   });
-  if (!reads.length) know.append(listRow({
-    lead:'<span class="row__icon">' + ic('library',13) + '</span>',
-    title:'None attached', sub:'Answers here read nothing of yours',
-    onClick:() => openProject(p)
-  }));
-  panel.append(know);
+  opts.append(know);
 
-  /* The external systems it is granted — each row a door to the connector,
-     where the connection itself is managed. Only shown when there are any:
-     a project that reaches nothing outside says nothing about it. */
-  if ((p.conn || []).length){
-    const cx = el('section','section');
-    cx.append(sectionHead('Connections'));
-    p.conn.forEach(id => {
-      const cn = connById(id);
-      if (!cn) return;
-      cx.append(listRow({
-        lead:dotLead(cn.state),
-        title:cn.name, sub:cn.state === 'off' ? 'not connected' : cn.scope, meta:cn.kind,
-        onClick:() => select('cloud', key('cn', cn.id))
-      }));
-    });
-    panel.append(cx);
-  }
+  /* The external systems it is granted — a row answers in a modal, like every
+     row in this panel; the connection itself is still managed in Cloud. */
+  const cx = panelSec(p, 'Connections', { shut:true, count:(p.conn || []).length,
+    edit:() => editPjConn(p), tip:'Grant a connection' });
+  (p.conn || []).forEach(id => {
+    const cn = connById(id);
+    if (!cn) return;
+    cx.append(listRow({
+      lead:dotLead(cn.state),
+      title:cn.name, sub:cn.state === 'off' ? 'not connected' : cn.scope, meta:cn.kind,
+      onClick:() => peekCn(cn)
+    }));
+  });
+  opts.append(cx);
 
-  /* Where it publishes, and what is written but not out yet. Both only exist on
-     a project that posts — a project that only reads has neither, and shows
-     neither rather than showing two empty headings. */
-  if (p.channels && p.channels.length) projectChannels(panel, p);
-  if (p.queue) projectQueue(panel, p);
-
-  /* ----------------------------------------------------------- the workflow
-     What the project does without being asked: when it runs, and the script it
+  /* What the project does without being asked: when it runs, and the script it
      runs — which is a sentence, because that is what the model is given. The
      button is there because a weekly project is hard to believe in on a
      Tuesday. */
-  const auto = el('section','section');
-  auto.append(sectionHead('Workflow',
-    infoTip('Nebulas runs this without being asked and files each result in the results column.')));
+  const auto = panelSec(p, 'Schedule', { shut:true, count:p.run ? 1 : 0,
+    edit:() => editPjRun(p), tip:'Set the schedule',
+    trailing:infoTip('Nebulas runs this without being asked and files each result in the results column.') });
   if (p.run){
     auto.append(listRow({
       lead:'<span class="row__icon">' + ic('clock',13) + '</span>',
       title:p.run.every, sub:runLine(p.run),
-      onClick:() => openProject(p)
+      onClick:() => editPjRun(p)
     }));
     if (p.run.ask){
       const script = el('pre','projscript');
@@ -3680,39 +3734,52 @@ function projectView(body, p){
     now.type = 'button';
     now.onclick = () => runProject(p);
     auto.append(rowActs([now]));
-  } else {
-    auto.append(helpNote('None. This project produces results only when somebody asks it ' +
-                         'something.'));
-    const set = el('button','btn btn--ghost btn--sm',
-      '<span style="display:flex">' + ic('clock',13) + '</span>Set up a schedule');
-    set.type = 'button';
-    set.onclick = () => openProject(p);
-    auto.append(rowActs([set]));
   }
-  panel.append(auto);
+  opts.append(auto);
 
-  const count = n => '<span class="t-mono" style="color:var(--text-4)">' + n + '</span>';
-  const hist = el('section','section');
-  hist.append(sectionHead('Threads', threads.length ? count(threads.length) : ''));
-  if (!threads.length){
-    hist.append(helpNote('None yet. The first message you send starts one.'));
+  /* Pages are not a panel section: a page IS a result of the project, so it
+     lives in Results below — a `page` artifact rendered live from the record,
+     authored in Build. */
+
+  /* Where it publishes. Only a project that posts has it; the writing that is
+     not out yet lives inside each channel's own tab, not in a panel list. */
+  if (p.channels && p.channels.length) projectChannels(opts, p);
+
+  /* The line between IS and HAPPENED is the log zone's own top border. */
+  const res = panelSec(p, 'Results', { count:mine.length });
+  if (!mine.length){
+    res.append(helpNote('None yet. Results the project produces land here.'));
   } else {
-    threads.forEach(t => hist.append(listRow({
-      title:t.title, meta:t.when, onClick:() => select('chat', t.id)
-    })));
-  }
-  panel.append(hist);
-
-  if (mine.length){
-    const res = el('section','section');
-    res.append(sectionHead('Results', count(mine.length)));
     mine.forEach(a => res.append(listRow({
       lead:'<span class="row__icon">' + ic(artGlyph(a),13) + '</span>',
       title:a.title, meta:stampShort(a.at), sub:artType(a) + ' · ' + a.size,
       onClick:() => openArtifact(a.id)
     })));
-    panel.append(res);
   }
+  /* A project with a customer-facing widget designs it from here — beside the
+     forms it feeds. Design only: the popup restyles, never restructures. */
+  if (p.widget){
+    const wb = el('button','btn btn--secondary btn--sm',
+      '<span style="display:flex">' + ic('widget',13) + '</span>Widget design');
+    wb.type = 'button';
+    wb.onclick = () => editPjWidget(p);
+    res.append(rowActs([wb]));
+  }
+  plog.append(res);
+
+  /* A chat opened here opens HERE: the row swaps the right-hand column to the
+     conversation instead of leaving the project for the main chat. The current
+     one is marked, the way the sidebar marks the thread you are in. */
+  const hist = panelSec(p, 'Chat History', { count:threads.length });
+  if (!threads.length){
+    hist.append(helpNote('None yet. The first message you send starts one.'));
+  } else {
+    threads.forEach(t => hist.append(listRow({
+      title:t.title, meta:t.when, current:projThread === t.id,
+      onClick:() => { projThread = t.id; render(); }
+    })));
+  }
+  plog.append(hist);
 
   /* ------------------------------------------------------- the right side
      Centred, because it is one column of one thing rather than a page of
@@ -3723,6 +3790,60 @@ function projectView(body, p){
      what it can do anywhere: attach a file, bind an assistant, route a model,
      ⌘↵. Sending opens a thread in this project and puts the message in it — see
      the submit handler in boot. */
+  /* The chat column's own bar: the shell's topbar withdraws on a project (the
+     panel runs to the top instead), so the two panel toggles it carried live
+     here, wired to the same acts. The title names the act — a new chat or
+     task starts in the box below — and becomes the thread's own title the
+     moment one is opened, because sending navigates to the thread. */
+  const openT = projThread ? byId(D.THREADS, projThread) : null;
+  if (!openT) projThread = null;
+
+  const bar = el('header','projmain__bar');
+  if (openT){
+    /* Reading a chat: the bar carries its title and the way back to a new one. */
+    const back = el('button','iconbtn iconbtn--sm tip tip--below', ic('chevL',14));
+    back.type = 'button';
+    back.setAttribute('data-tip','Back to New Chat / Task');
+    back.setAttribute('aria-label','Back to New Chat / Task');
+    back.onclick = () => { projThread = null; render(); };
+    bar.append(back);
+  }
+  bar.append(el('h2','projmain__bartitle', openT ? openT.title : 'New Chat / Task'));
+  const artB = el('button','iconbtn tip tip--below',
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M15 4.5v15"/></svg>');
+  artB.type = 'button';
+  artB.setAttribute('data-tip','Results  ⌘.');
+  artB.setAttribute('aria-label','Toggle results column');
+  artB.onclick = () => setPanel('art');
+  const appsB = el('button','iconbtn tip tip--below',
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="2.6"/><circle cx="17" cy="7" r="2.6"/><circle cx="7" cy="17" r="2.6"/><circle cx="17" cy="17" r="2.6"/></svg>');
+  appsB.type = 'button';
+  appsB.setAttribute('data-tip','App panel  ⌘]');
+  appsB.setAttribute('aria-label','Toggle app panel');
+  appsB.onclick = toggleAppPanel;
+  bar.append(artB, appsB);
+  main.append(bar);
+
+  /* An open chat replaces the mode surface: the conversation in the reading
+     measure, the composer borrowed beneath it — sticky, so a long chat still
+     has its box — and every turn recorded on the thread it belongs to. */
+  if (openT){
+    const conv = el('div','pane__measure');
+    conv.style.width = '100%';
+    openT.msgs.forEach(m => conv.append(msgNode(m)));
+    if (!openT.msgs.length) conv.append(helpNote('Nothing said yet. The box below starts it.'));
+    main.append(conv);
+    /* The box is a sibling of the message column, not its last child: a turn
+       streams into the column's end, and nothing may stream under the box. */
+    const box = el('div','pane__ask');
+    box.style.cssText = 'position:sticky;bottom:0;width:100%;max-width:var(--measure);' +
+      'background:var(--bg);padding:var(--s-3) var(--s-6) var(--s-6)';
+    box.append(inlineComposer('Reply in this chat…'));
+    main.append(box);
+    recount(openT);
+    return;
+  }
+
   const inner = el('div','projmain__inner');
   main.append(inner);
 
@@ -3747,7 +3868,8 @@ function projectView(body, p){
   const chips = el('div','askchips');
   (data ? dataPrompts(p) : projectPrompts(p)).forEach(q => chips.append(askChip(q)));
   inner.append(chips);
-  if (p.assistant) inner.append(helpNote(p.assistant + ' answers here unless a thread picks another.'));
+  if (p.assistant) inner.append(helpNote(p.assistant + ' answers here unless a thread picks another' +
+    ((p.assistants || []).length > 1 ? ' — ' + (p.assistants.length - 1) + ' more on call in the panel' : '') + '.'));
 }
 
 /* ====================================================== knowledge detail
@@ -4091,10 +4213,14 @@ function stateBadge(s){
    waits for a confirmation, because the page around it is for reading. */
 let editOn = null;   /* { staged, apply, title } */
 function openEdit(spec){
-  editOn = { staged:spec.staged, apply:spec.apply, title:spec.title };
+  editOn = { staged:spec.staged, apply:spec.apply, title:spec.title, read:!!spec.read };
   $('#editIco').innerHTML = ic(spec.ico || 'gear', 16);
   $('#editTitle').textContent = spec.title;
   $('#editSub').textContent = spec.sub || '';
+  /* A peek is this same dialog read-only: nothing is staged, so the foot
+     withdraws and × or Escape is the whole way out. */
+  $('#editScrim .dialog').classList.toggle('dialog--wide', !!spec.wide);
+  $('#editScrim .dialog__foot').style.display = spec.read ? 'none' : '';
   const body = $('#editBody');
   body.innerHTML = '';
   const stack = el('div');
@@ -4110,7 +4236,7 @@ function closeEdit(){
   $('#editScrim').dataset.open = 'false';
 }
 function saveEdit(){
-  if (!editOn) return;
+  if (!editOn || editOn.read) return;
   editOn.apply(editOn.staged);
   const what = editOn.title;
   closeEdit();
@@ -4446,7 +4572,7 @@ function assistantBuildView(body, a){
   s.main.append(caps);
 
   /* Projects bind assistants BY NAME (the project dialog's convention). */
-  const pjs = D.PROJECTS.filter(p => p.assistant === a.name);
+  const pjs = D.PROJECTS.filter(p => (p.assistants || []).indexOf(a.name) > -1 || p.assistant === a.name);
   s.main.append(usedBySection('Answers in', pjs.map(p => ({
     ic:p.icon, nm:p.name, sub:p.shared ? 'shared project' : 'personal project',
     go:() => select('build', key('pj', p.id))
@@ -4539,11 +4665,22 @@ function draftProject(){
   const p = {
     id:'p' + (++projN), name:'Untitled project', icon:'folder', shared:false,
     desc:'No description yet.', descAuto:true,
-    assistant:null, kbs:[], sources:[], conn:[], run:null, when:'now'
+    assistant:null, kbs:[], sources:[], conn:[], run:null,
+    code:[], pages:[], when:'now'
   };
   D.PROJECTS.unshift(p);
   return p;
 }
+
+/* No `kind` field anywhere: a project is basic until code and pages are
+   switched on, the same way `run` makes it an application. The word exists
+   only so prose can say it. */
+const projKind = p => (p.pages && p.pages.length) ? 'advanced' : 'basic';
+/* A page's parts, resolved: the preset copy it runs and the template it is
+   laid out on. Either can be missing — a deleted preset, an unpicked layout —
+   and the callers say so instead of hiding the row. */
+const pageLogic = (p, pg) => (p.code || []).filter(c => c.id === pg.logic)[0] || null;
+const pageTemplate = pg => D.DESIGNS.filter(d => d.id === pg.template && d.kind === 'template')[0] || null;
 
 /* --------------------------------------------------------- project builder
    The same record the chat sidebar lists — Build defines it, the project page
@@ -4557,12 +4694,9 @@ function draftProject(){
    own project — one store, no twin. */
 function editPjAbout(p){
   openEdit({ title:'About', sub:p.name, ico:'folder',
-    staged:{ name:p.name, shared:p.shared, icon:p.icon },
+    staged:{ name:p.name, icon:p.icon },
     build(body, st){
       body.append(field('Name', inputCtl(st.name, v => { st.name = v; })));
-      const vis = el('div');
-      vis.append(segCtl(PROJ_VIS, st.shared ? 'Shared' : 'Personal', v => { st.shared = v === 'Shared'; }));
-      body.append(field('Who can see it', vis));
       body.append(field('Icon', selectCtl(PROJ_ICONS, st.icon, v => { st.icon = v; }),
         'Named after the kind of work, in the sidebar.'));
     },
@@ -4571,22 +4705,84 @@ function editPjAbout(p){
       /* The schedule row keeps its own name, but it targets this project. */
       const row = p.run && p.run.sched && find(D.SCHEDULE, p.run.sched);
       if (row) row.target = nm;
-      p.name = nm; p.shared = st.shared; p.icon = st.icon;
+      p.name = nm; p.icon = st.icon;
+      refreshDesc(p);
     } });
 }
-function editPjAsst(p){
-  const asstNames = ['— none —'].concat(D.ASSISTANTS.map(a => a.name));
-  openEdit({ title:'Assistant', sub:p.name, ico:'agent',
-    staged:{ assistant:p.assistant },
+
+/* Sharing: named coworkers by email, or the whole workspace with one switch.
+   Nothing is sent — like every outward act here, it is simulated — but the
+   list is real state, so the sidebar flag and the Build page report it. */
+function editPjShare(p){
+  openEdit({ title:'Share', sub:p.name, ico:'share',
+    staged:{ people:(p.people || []).slice(), shared:!!p.shared },
     build(body, st){
-      body.append(field('Assistant', selectCtl(asstNames, st.assistant || '— none —', v => {
-        st.assistant = v === '— none —' ? null : v;
-      }), 'Answers every thread opened inside the project.'));
+      const list = el('div');
+      list.style.cssText = 'display:flex;flex-wrap:wrap;gap:var(--s-2)';
+      const draw = () => {
+        list.innerHTML = '';
+        st.people.forEach(em => {
+          const c = el('span','chip chip--removable', esc(em));
+          const x = el('button','chip__x', ic('x',11));
+          x.type = 'button';
+          x.setAttribute('aria-label','Remove ' + em);
+          x.onclick = () => { st.people = st.people.filter(v => v !== em); draw(); };
+          c.append(x);
+          list.append(c);
+        });
+        if (!st.people.length) list.append(el('span','field__help','No one yet.'));
+      };
+      const row = el('div');
+      row.style.cssText = 'display:flex;gap:var(--s-2)';
+      const inp = el('input','input');
+      inp.type = 'email';
+      inp.placeholder = 'coworker@' + (D.ACCOUNT.email.split('@')[1] || 'example.com');
+      const add = el('button','btn btn--secondary','Invite');
+      add.type = 'button';
+      const commit = () => {
+        const v = inp.value.trim();
+        if (!v) return;
+        if (v.indexOf('@') < 1) return toast('That is not an email address');
+        if (st.people.indexOf(v) < 0) st.people.push(v);
+        inp.value = '';
+        draw();
+      };
+      add.onclick = commit;
+      inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); commit(); } };
+      row.append(inp, add);
+      body.append(field('Invite by email', row,
+        'They can open the project, its threads and its results.'));
+      body.append(list);
+      draw();
+      const sw = switchCtl('Share with everyone at ' + D.ACCOUNT.org, st.shared);
+      $('input', sw).onchange = e => { st.shared = e.target.checked; };
+      body.append(sw);
+      body.append(noteP('Invitations are simulated here, like everything that would leave the page.'));
+    },
+    apply(st){ p.people = st.people; p.shared = st.shared; } });
+}
+function editPjAsst(p){
+  /* Pick as many as the work needs — the list is a checklist like Knowledge,
+     not a dropdown, and there is no cap. The staging concat keeps the order
+     they were picked in, and the first one answers by default. */
+  openEdit({ title:'Assistants', sub:p.name, ico:'agent',
+    staged:{ assistants:(p.assistants || []).slice() },
+    build(body, st){
+      body.append(pickList(
+        D.ASSISTANTS.map(a => ({ nm:a.name, sub:a.desc, meta:a.team, id:a.name })),
+        it => st.assistants.indexOf(it.id) > -1,
+        (it, on) => {
+          st.assistants = on ? st.assistants.concat([it.id])
+                             : st.assistants.filter(n => n !== it.id);
+        }));
+      body.append(noteP('As many as you like. The first one picked answers new threads unless a thread picks another.'));
     },
     apply(st){
-      p.assistant = st.assistant;
+      p.assistants = st.assistants;
+      p.assistant = st.assistants[0] || null;
       /* The schedule row names its assistant; keep it true. */
       if (p.run) syncProjectRun(p, p.run.sched);
+      refreshDesc(p);
     } });
 }
 function editPjKnow(p){
@@ -4605,7 +4801,7 @@ function editPjKnow(p){
         }));
       body.append(noteP('Bases it cites and tables it reads, both by name.'));
     },
-    apply(st){ p.kbs = st.kbs; p.sources = st.sources; } });
+    apply(st){ p.kbs = st.kbs; p.sources = st.sources; refreshDesc(p); } });
 }
 function editPjConn(p){
   openEdit({ title:'Connections', sub:p.name, ico:'plug',
@@ -4625,8 +4821,149 @@ function editPjConn(p){
       body.append(noteP('A grant is not a connection. Granting one that is not connected is allowed — ' +
         'it states what this project will need. Connecting it is done in Cloud → Connections.'));
     },
-    apply(st){ p.conn = st.conn; } });
+    apply(st){ p.conn = st.conn; refreshDesc(p); } });
 }
+
+/* --------------------------------------------------------------- peeks
+   A row under a project subheading answers here, in this modal, instead of
+   leaving the project: the panel reads what the project has, and the thing
+   itself is still managed on its own page. Read-only, so no foot. */
+function peekKb(k){
+  openEdit({ title:k.name, sub:k.docs + ' documents · updated ' + k.updated,
+    ico:'library', read:true, wide:true, staged:{},
+    build(body){
+      if (k.desc) body.append(noteP(k.desc));
+      if (k.health === 'warn'){
+        body.append(banner('warn','This base is still on <strong>' + esc(k.embed) +
+          '</strong>. Retrieval will not match the other bases until the re-embed clears.'));
+        body.lastChild.style.marginBottom = '0';
+      }
+      body.append(defList([
+        ['Embedding', '<span class="t-mono">' + esc(k.embed) + '</span>'],
+        ['Used by', esc(plural(D.ASSISTANTS.filter(a => a.kb === k.name).length, 'assistant'))]
+      ]));
+      body.append(tableSection('Files', ['Name','From','Size','Status'],
+        k.files.map(f => [
+          '<td><span style="display:flex;align-items:center;gap:var(--s-2)">' +
+            '<span style="display:flex;color:var(--text-4)">' + ic(fileIcon(f.n),14) + '</span>' +
+            esc(f.n) + '</span></td>',
+          '<td>' + esc(f.from) + '</td>',
+          '<td class="t-mono">' + esc(f.size) + '</td>',
+          '<td>' + stateCell(f.st) + '</td>'
+        ])));
+    } });
+}
+function peekDs(d){
+  openEdit({ title:d.name, sub:d.source + ' · ' + d.rows + ' rows · updated ' + d.updated,
+    ico:'data', read:true, wide:true, staged:{},
+    build(body){
+      if (d.desc) body.append(noteP(d.desc));
+      if (d.health === 'warn'){
+        body.append(banner('warn','The June backfill is incomplete. Aggregations over Q2 will undercount.'));
+        body.lastChild.style.marginBottom = '0';
+      }
+      body.append(defList([
+        ['Columns', esc(String(d.schema.length))],
+        ['Access', esc(d.grant)]
+      ]));
+      body.append(tableSection('Schema', ['Column','Type','Example'],
+        d.schema.map(r => [
+          '<td style="font-family:var(--mono);color:var(--text)">' + esc(r[0]) + '</td>',
+          '<td style="font-family:var(--mono)">' + esc(r[1]) + '</td>',
+          '<td class="t-mono">' + esc(r[3]) + '</td>'
+        ])));
+      body.append(tableSection('Preview',
+        d.schema.slice(0, d.preview[0].length).map(c => c[0]),
+        d.preview.map(r => r.map(v => '<td style="font-family:var(--mono)">' + esc(v) + '</td>')),
+        '<span class="t-mono">first ' + d.preview.length + ' rows</span>'));
+    } });
+}
+function peekCn(c){
+  openEdit({ title:c.name, sub:c.kind + ' · ' + (c.state === 'off' ? 'not connected' : 'last used ' + c.last),
+    ico:'plug', read:true, staged:{},
+    build(body){
+      if (c.desc) body.append(noteP(c.desc));
+      if (c.note){
+        body.append(banner('warn', esc(c.note)));
+        body.lastChild.style.marginBottom = '0';
+      }
+      body.append(defList([
+        ['State', stateBadge(c.state)],
+        ['Endpoint', '<span class="t-mono" style="word-break:break-all">' + esc(c.endpoint) + '</span>'],
+        ['Auth', esc(c.auth)],
+        ['Scope', esc(c.scope)],
+        ['Writes', c.writes ? 'allowed' : 'read only'],
+        ['Calls', '<span class="t-mono">' + esc(c.calls) + '</span>']
+      ]));
+      body.append(noteP('The connection itself is managed in Cloud → Connections.'));
+    } });
+}
+
+/* The widget's design dialog: a live preview above the controls that change
+   it — logo, tone, the fixed lines. The tones are the workspace accent
+   schemes worn via data-accent, so every colour in the preview is a token.
+   Nothing here reaches the widget's data structure: the fields and where the
+   entries land are the forms', and the note says so. */
+function chatWidgetNode(w){
+  const n = el('div','chatwig');
+  n.setAttribute('data-accent', w.tone || 'nebula');
+  n.innerHTML =
+    '<div class="chatwig__head">' +
+      '<span class="chatwig__logo">' + esc(w.logo || 'GD') + '</span>' +
+      '<span class="chatwig__title">' + esc(w.title || 'Support') + '</span>' +
+      '<span class="dot dot--ok"></span>' +
+    '</div>' +
+    '<div class="chatwig__body">' +
+      '<div class="chatwig__msg">' + esc(w.greet || 'Hi — how can I help?') + '</div>' +
+      '<div class="chatwig__msg chatwig__msg--user">Where do I find my invoices?</div>' +
+      '<div class="chatwig__msg">Billing → Invoices lists every one; each row downloads as a PDF.</div>' +
+    '</div>' +
+    '<div class="chatwig__ask">' + esc(w.placeholder || 'Type your question…') + '</div>';
+  return n;
+}
+function editPjWidget(p){
+  const TONES = ['nebula','ocean','forest','ember','plum'];
+  openEdit({ title:'Widget design', sub:p.name, ico:'widget', wide:true,
+    staged:Object.assign({}, p.widget),
+    build(body, st){
+      const prev = el('div');
+      const draw = () => { prev.innerHTML = ''; prev.append(chatWidgetNode(st)); };
+      draw();
+      body.append(field('Preview', prev, 'Redrawn as you type — this is the widget as customers meet it.'));
+      /* Live controls: oninput repaints only the preview, so the caret is
+         safe — the staged copy still saves or discards as one act. */
+      const live = (ctl, put) => {
+        ctl.oninput = () => { put(ctl.value); draw(); };
+        return ctl;
+      };
+      body.append(field('Logo',
+        live(inputCtl(st.logo, () => {}), v => { st.logo = v.slice(0, 2).toUpperCase(); }),
+        'Up to two letters, worn in the widget’s corner.'));
+      const row = el('div');
+      row.style.cssText = 'display:flex;gap:var(--s-2)';
+      const paint = () => $$('.swatch', row).forEach(x =>
+        x.setAttribute('aria-pressed', String(x.dataset.tone === st.tone)));
+      TONES.forEach(tn => {
+        const b = el('button','swatch');
+        b.type = 'button';
+        b.dataset.tone = tn;
+        b.setAttribute('data-accent', tn);
+        b.title = tn;
+        b.setAttribute('aria-label', tn);
+        b.onclick = () => { st.tone = tn; paint(); draw(); };
+        row.append(b);
+      });
+      paint();
+      body.append(field('Colour', row, 'The workspace accent schemes — the widget wears one.'));
+      body.append(field('Title', live(inputCtl(st.title, () => {}), v => { st.title = v; })));
+      body.append(field('Greeting', live(textareaCtl(st.greet, () => {}), v => { st.greet = v; })));
+      body.append(field('Input placeholder', live(inputCtl(st.placeholder, () => {}), v => { st.placeholder = v; })));
+      body.append(noteP('Design only. The questions it asks, the fields it records and where ' +
+        'entries land are the widget’s data structure, and it does not change here.'));
+    },
+    apply(st){ p.widget = st; } });
+}
+
 function editPjRun(p){
   openEdit({ title:'Auto program', sub:p.name, ico:'clock',
     staged:{ on:!!p.run, every:(p.run && p.run.every) || 'Every week',
@@ -4646,13 +4983,201 @@ function editPjRun(p){
       const prev = p.run && p.run.sched;
       p.run = st.on ? { every:st.every, ask:st.ask, sched:prev } : null;
       syncProjectRun(p, prev);
+      refreshDesc(p);
     } });
+}
+
+/* ------------------------------------------------------------- preset code
+   Granting copies the library row onto the project; the copy is what a page
+   runs and what Build may edit. The library is never edited from here — the
+   same one-way street as a connector grant, except the copy then lives its
+   own life. Ungranting removes the copy; a page left pointing at nothing says
+   so on the page rather than being cleaned up silently. */
+function editPjCodeGrant(p){
+  openEdit({ title:'Preset code', sub:p.name, ico:'code',
+    staged:{ from:(p.code || []).map(c => c.from) },
+    build(body, st){
+      body.append(pickList(
+        D.SNIPPETS.map(sn => ({ nm:sn.name, sub:sn.desc, meta:sn.lang, id:sn.id })),
+        it => st.from.indexOf(it.id) > -1,
+        (it, on) => {
+          st.from = on ? st.from.concat([it.id]) : st.from.filter(x => x !== it.id);
+        }));
+      body.append(noteP('A preset is platform code. Granting one copies it into this project, ' +
+        'where each row below becomes editable; the library copy stays as it ships.'));
+    },
+    apply(st){
+      p.code = (p.code || []).filter(c => st.from.indexOf(c.from) > -1);
+      st.from.forEach(id => {
+        if (p.code.some(c => c.from === id)) return;
+        const sn = find(D.SNIPPETS, id);
+        p.code.push({ id:'pc-n' + (++madeN), from:sn.id, edited:false,
+                      name:sn.name, lang:sn.lang, desc:sn.desc, code:sn.code });
+      });
+      refreshDesc(p);
+    } });
+}
+function editPjCode(p, c){
+  const shipped = D.SNIPPETS.filter(s => s.id === c.from)[0];
+  openEdit({ title:c.name, sub:p.name + ' · preset code', ico:'code',
+    staged:{ code:c.code },
+    build(body, st){
+      const t = el('textarea','textarea textarea--code');
+      t.value = st.code;
+      t.rows = 10;
+      /* The preview is the honest half of the pair: what the page will read is
+         shown highlighted as it is typed, not after. */
+      const prev = codeCard(st.code);
+      t.oninput = () => {
+        st.code = t.value;
+        $('pre', prev).innerHTML = highlight(st.code);
+      };
+      body.append(field('The code', t,
+        'This project\'s own copy. Pages here that pick ' + c.name + ' run exactly this.'));
+      body.append(prev);
+      if (shipped){
+        const back = el('button','btn btn--ghost btn--sm', ic('undo',13) + 'Restore the library copy');
+        back.type = 'button';
+        back.onclick = () => { st.code = shipped.code; t.value = shipped.code;
+                               $('pre', prev).innerHTML = highlight(shipped.code); };
+        body.append(rowActs([back]));
+      }
+    },
+    apply(st){
+      c.code = st.code;
+      c.edited = !shipped || st.code !== shipped.code;
+    } });
+}
+
+/* -------------------------------------------------------------- the pages
+   A page is three bindings: a result template for the layout, one of the
+   project's presets for the logic, and the tables the logic reads. The logic
+   list offers only what this project has granted — requirements change by
+   changing which preset the page picks, not by editing the page. */
+function editPjPage(p, pg){
+  const fresh = !pg;
+  if (!pg) pg = { id:'pg-n' + (++madeN), name:'Untitled page', template:null,
+                  logic:(p.code[0] || {}).id || null, sources:[], state:'draft' };
+  const tpls = D.DESIGNS.filter(d => d.kind === 'template');
+  openEdit({ title:fresh ? 'New page' : pg.name, sub:p.name + ' · output page', ico:'template',
+    staged:{ name:pg.name, template:pg.template, logic:pg.logic,
+             sources:pg.sources.slice(), live:pg.state === 'live' },
+    build(body, st){
+      body.append(field('Name', inputCtl(st.name, v => { st.name = v; })));
+      const tplNames = ['— none —'].concat(tpls.map(t => t.name));
+      const tplCur = (tpls.filter(t => t.id === st.template)[0] || {}).name || '— none —';
+      body.append(field('Layout', selectCtl(tplNames, tplCur, v => {
+        st.template = (tpls.filter(t => t.name === v)[0] || {}).id || null;
+      }), 'A result template — how the page looks. Made in Build → Result templates.'));
+      const lgNames = ['— none —'].concat(p.code.map(c => c.name));
+      const lgCur = (p.code.filter(c => c.id === st.logic)[0] || {}).name || '— none —';
+      body.append(field('Logic', selectCtl(lgNames, lgCur, v => {
+        st.logic = (p.code.filter(c => c.name === v)[0] || {}).id || null;
+      }), p.code.length ? 'One of this project\'s presets — how the page computes.'
+                        : 'Nothing to pick: grant a preset first, under Preset code.'));
+      body.append(field('Reads', pickList(
+        D.DATASETS.map(t => ({ nm:t.name,
+          sub:(p.sources || []).indexOf(t.name) > -1 ? t.desc : 'not on the project shelf — bind it under Knowledge',
+          meta:'table', id:t.name })),
+        it => st.sources.indexOf(it.id) > -1,
+        (it, on) => {
+          st.sources = on ? st.sources.concat([it.id]) : st.sources.filter(x => x !== it.id);
+        })));
+      const sw = switchCtl('Published — live at a URL, rebuilt on every run', st.live);
+      $('input', sw).onchange = e => { st.live = e.target.checked; };
+      body.append(sw);
+      if (!fresh){
+        const rm = el('button','btn btn--ghost btn--sm', ic('trash',13) + 'Remove the page');
+        rm.type = 'button';
+        rm.onclick = () => {
+          p.pages = p.pages.filter(x => x.id !== pg.id);
+          closeEdit(); render(); toast('Page removed — ' + pg.name);
+        };
+        body.append(rowActs([rm]));
+      }
+    },
+    apply(st){
+      pg.name = st.name.trim() || pg.name;
+      pg.template = st.template; pg.logic = st.logic; pg.sources = st.sources;
+      pg.state = st.live ? 'live' : 'draft';
+      pg.url = st.live
+        ? (pg.url || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.acme.app/' +
+                     pg.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+        : null;
+      if (fresh) p.pages.push(pg);
+      refreshDesc(p);
+    } });
+}
+
+/* The deploy line a page already has, the way a result template has one: the
+   command is read, not run, and it names all three bindings so the reader can
+   check them against the rows above it. */
+function pageSnippet(p, pg){
+  const t = pageTemplate(pg), lg = pageLogic(p, pg);
+  return [
+    'nebulas deploy ' + p.id + '/' + pg.id +
+      ' --template ' + (t ? t.id : '—') + ' --logic ' + (lg ? lg.name : '—'),
+    pg.state === 'live' && pg.url
+      ? '  live at ' + pg.url + ' · rebuilt on every run'
+      : '  draft — nothing is hosted until it is published'
+  ].join('\n');
+}
+
+/* A page rebuild files a result the way a scheduled run does: same column,
+   same attribution, so the project page's Results list carries both. */
+function runPage(p, pg){
+  const t = pageTemplate(pg), lg = pageLogic(p, pg);
+  const n = allResults().filter(a => a.from === p.name).length + 1;
+  const report = [
+    '**' + pg.name + '** was rebuilt' + (pg.state === 'live' && pg.url
+      ? ' and published to `' + pg.url + '`.' : ' as a draft — nothing is hosted yet.'),
+    '',
+    'Ran ' + stampFull(Date.now()) + ' · on request.',
+    '',
+    '- **Layout** — ' + (t ? t.name : 'none picked'),
+    '- **Logic** — ' + (lg ? lg.name + (lg.edited ? ', edited in this project' : ', as the library ships it')
+                           : 'none picked'),
+    '- **Read** — ' + (pg.sources.length ? pg.sources.join(', ') : 'nothing'),
+    '',
+    'The rebuild is simulated here, as every answer in this prototype is: a real one ' +
+    'would leave the rendered page behind this entry.'
+  ].join('\n');
+  fileResult({ id:'r-' + p.id + '-' + pg.id + '-' + n, title:pg.name + ' — page rebuilt',
+    from:p.name, shape:'doc', size:plural(5, 'line'), md:report });
+  state.projLoan = false;
+  state.artBefore = null;
+  p.when = 'now';
+  render();
 }
 
 /* The bench's reply for a project runs the question through what is bound —
    the assistant, the shelf, the grants — so the page's facts are the answer's
    ingredients, visibly. */
 function pjTestScript(text, p){
+  const low = text.toLowerCase();
+  /* Asking about a page runs the page: the reply names the template and the
+     preset it would run, so changing either on the left changes the next
+     answer — the dependency rehearsed, not described. */
+  const pg = (p.pages || []).filter(x => low.indexOf(x.name.toLowerCase()) > -1)[0] ||
+    (/\b(page|rebuild|publish)\b/.test(low) ? (p.pages || [])[0] : null);
+  if (pg){
+    const t = pageTemplate(pg), lg = pageLogic(p, pg);
+    const steps = pg.sources.length
+      ? [{ n:'shelf.read', d:'reading ' + pg.sources.join(', '), t:'0.6s' }] : [];
+    if (lg) steps.push({ n:lg.name, d:'executing the project\'s ' +
+      (lg.edited ? 'edited copy' : 'copy') + ' of the preset', t:'0.7s' });
+    steps.push({ n:'page.render', d:t ? 'laying it out on ' + t.name : 'no layout picked', t:'0.4s' });
+    const lines = ['Rebuilding **' + pg.name + '** — simulated, like everything here.', ''];
+    lines.push(lg
+      ? '- **Logic** — ' + lg.name + (lg.edited ? ', edited in this project.' : ', as the library ships it.')
+      : '- **No logic** — the page points at no preset, so there is nothing to run. Pick one under Preset code.');
+    lines.push(t ? '- **Layout** — ' + t.name + ', a ' + t.shape + ' template.'
+                 : '- **No layout** — pick a result template and the page has a shape.');
+    lines.push(pg.state === 'live' && pg.url
+      ? '- **Published** — the rebuild would land at ' + pg.url + '.'
+      : '- **Draft** — nothing is hosted until the page is published.');
+    return { steps:steps, md:lines.join('\n') };
+  }
   const reads = (p.kbs || []).concat(p.sources || []);
   const steps = [];
   if (p.assistant) steps.push({ n:'inst.read', d:'reading ' + p.assistant + '’s instructions', t:'0.3s' });
@@ -4691,7 +5216,10 @@ function projectBuildView(body, p){
   about.append(sectionHead('About', '<span class="t-mono">' + plural(threads.length, 'thread') + '</span>'));
   const l1 = el('div','setlist');
   l1.append(setRow('Name', esc(p.name), () => editPjAbout(p)));
-  l1.append(setRow('Who can see it', p.shared ? 'Shared — the workspace works here' : 'Personal', () => editPjAbout(p)));
+  l1.append(setRow('Who can see it',
+    p.shared ? 'Shared — the workspace works here'
+      : (p.people || []).length ? esc('Shared with ' + plural(p.people.length, 'coworker'))
+      : 'Personal', () => editPjShare(p)));
   l1.append(setRow('Icon', esc(p.icon), () => editPjAbout(p)));
   about.append(l1);
   s.main.append(about);
@@ -4699,8 +5227,9 @@ function projectBuildView(body, p){
   const work = el('section','section');
   work.append(sectionHead('The work'));
   const l2 = el('div','setlist');
-  l2.append(setRow('Assistant',
-    p.assistant ? esc(p.assistant) : 'none — threads here use the workspace model',
+  l2.append(setRow('Assistants',
+    (p.assistants || []).length ? esc(p.assistants.join(' · '))
+                                : 'none — threads here use the workspace model',
     () => editPjAsst(p)));
   const reads = (p.kbs || []).concat(p.sources || []);
   l2.append(setRow('Knowledge',
@@ -4731,6 +5260,79 @@ function projectBuildView(body, p){
   if (p.run) l3.append(setRow('What it produces', esc(p.run.ask), () => editPjRun(p)));
   prog.append(l3);
   s.main.append(prog);
+
+  /* ------------------------------------------------------------ preset code
+     The project's own copies of library presets: what its pages may run. The
+     rows edit; the folds below them read — the code belongs on the page it
+     governs, not behind a dialog only. Build is the only surface that edits
+     any of this; the chat page reports it and points here. */
+  const codeSec = el('section','section');
+  codeSec.append(sectionHead('Preset code',
+    p.code.length ? '<span class="t-mono">' + plural(p.code.length, 'preset') + '</span>' : ''));
+  const l4 = el('div','setlist');
+  p.code.forEach(c => l4.append(setRow(c.name,
+    esc(c.lang + (c.edited ? ' · edited here' : ' · as the library ships it')),
+    () => editPjCode(p, c))));
+  if (!p.code.length) l4.append(setRow('Presets', 'none granted — a page runs on one, so this comes first',
+    () => editPjCodeGrant(p)));
+  codeSec.append(l4);
+  p.code.forEach(c => codeSec.append(fold(c.name,
+    () => c.edited ? 'edited here' : 'as shipped',
+    b => b.append(codeCard(c.code)))));
+  const grant = el('button','btn btn--ghost btn--sm', ic('plus',13) + 'Grant a preset');
+  grant.type = 'button';
+  grant.onclick = () => editPjCodeGrant(p);
+  codeSec.append(rowActs([grant]));
+  s.main.append(codeSec);
+
+  /* ------------------------------------------------------------ output pages
+     What the project publishes: each page a template, a preset and its reads,
+     with the deploy line underneath so the three bindings can be checked
+     against the command that ships them. Gaps are stated the way a cold
+     connector is — a page pointing at a deleted preset stays on the page. */
+  const out = el('section','section');
+  out.append(sectionHead('Output pages',
+    p.pages.length ? '<span class="t-mono">' + plural(p.pages.length, 'page') + '</span>' : ''));
+  if (!p.pages.length){
+    const l5 = el('div','setlist');
+    l5.append(setRow('Pages', 'none — a page turns what this project knows into something hosted',
+      () => editPjPage(p, null)));
+    out.append(l5);
+  }
+  p.pages.forEach(pg => {
+    const t = pageTemplate(pg), lg = pageLogic(p, pg);
+    const l5 = el('div','setlist');
+    l5.append(setRow(pg.name,
+      esc((t ? t.name : 'no layout') + ' · ' + (lg ? lg.name : 'no logic') + ' · ' + pg.state),
+      () => editPjPage(p, pg)));
+    out.append(l5);
+    if (!lg){
+      const b = banner('warn', '<strong>' + esc(pg.name) + '</strong> has no logic — its preset was ' +
+        'never picked or has been ungranted. The page keeps its row; pick a preset to make it build again.');
+      b.style.margin = 'var(--s-3) 0 0';
+      out.append(b);
+    }
+    const off = pg.sources.filter(nm => (p.sources || []).indexOf(nm) < 0);
+    if (off.length){
+      const b = banner('warn', '<strong>' + esc(off.join(', ')) + '</strong> ' +
+        (off.length === 1 ? 'is' : 'are') + ' read by ' + esc(pg.name) +
+        ' but not on the project shelf. Bind ' + (off.length === 1 ? 'it' : 'them') +
+        ' under Knowledge, or the rebuild reads nothing.');
+      b.style.margin = 'var(--s-3) 0 0';
+      out.append(b);
+    }
+    out.append(codeCard(pageSnippet(p, pg)));
+    const run = el('button','btn btn--secondary btn--sm',
+      '<span style="display:flex">' + ic('play',13) + '</span>Rebuild now');
+    run.type = 'button';
+    run.onclick = () => runPage(p, pg);
+    out.append(rowActs([run]));
+  });
+  const addPg = el('button','btn btn--ghost btn--sm', ic('plus',13) + 'Add a page');
+  addPg.type = 'button';
+  addPg.onclick = () => editPjPage(p, null);
+  out.append(rowActs([addPg]));
+  s.main.append(out);
 
   if (p.channels && p.channels.length){
     const chSec = el('section','section');
@@ -4763,7 +5365,9 @@ function projectBuildView(body, p){
     th:testThread(p), who:p.assistant || state.model,
     placeholder:'Ask inside ' + p.name + '…',
     hint:'Ask what you would ask in the project. The reply runs through what is bound on the left — the assistant, the shelf, the grants.',
-    starters:(p.run ? [p.run.ask] : []).concat(['What changed in ' + p.name + ' this week?']).slice(0, 2),
+    starters:(p.pages.length ? ['Rebuild the ' + p.pages[0].name + ' page'] : [])
+      .concat(p.run ? [p.run.ask] : [])
+      .concat(['What changed in ' + p.name + ' this week?']).slice(0, 2),
     script:v => pjTestScript(v, p)
   });
 
@@ -4789,9 +5393,9 @@ const MAKER_KIND = {
     starters:['An assistant that answers billing questions from the Finance corpus and can query the warehouse',
               'Make it stricter — always confirm before writing anywhere'] },
   pj:{ noun:'project', icon:'folder',
-    hint:'Describe the work and what it reads. Knowledge and connectors are matched by name; "every week" and friends set the program.',
+    hint:'Describe the work and what it reads. Knowledge, connectors and presets are matched by name; "every week" sets the program; "a page" drafts one.',
     starters:['A churn watch project reading the Support corpus and HubSpot, reporting every week',
-              'Share it with the workspace'] },
+              'Grant watchlist_rows and add an accounts page'] },
   wg:{ noun:'widget', icon:'widget',
     hint:'Describe the tile. Shapes are read from the words — a value, a trend, a question box, a list — and colours, corners and width by name.',
     starters:['A KPI tile for open tickets, 47 against a 100 goal',
@@ -4884,7 +5488,9 @@ function renderMakerSide(){
       ['Knowledge', esc((rec.kbs || []).concat(rec.sources || []).join(', ') || 'none')],
       ['Connections', (rec.conn || []).length
         ? esc(rec.conn.map(id => (connById(id) || {}).name).join(', ')) : 'none'],
-      ['Schedule', rec.run ? esc(rec.run.every.toLowerCase()) : '—']
+      ['Schedule', rec.run ? esc(rec.run.every.toLowerCase()) : '—'],
+      ['Preset code', (rec.code || []).length ? esc(rec.code.map(c => c.name).join(', ')) : 'none'],
+      ['Pages', (rec.pages || []).length ? esc(rec.pages.map(x => x.name).join(', ')) : '—']
     ]));
     if (rec.run && rec.run.ask){
       const q = el('div');
@@ -5124,8 +5730,11 @@ function makerProjRead(text, low, p, m, say, removing){
       () => { (p.conn = p.conn || []).push(c.id); });
   });
   D.ASSISTANTS.forEach(x => {
-    if (low.indexOf(x.name.toLowerCase()) > -1 && p.assistant !== x.name)
-      say('bound the **' + x.name + '** assistant', () => { p.assistant = x.name; });
+    if (low.indexOf(x.name.toLowerCase()) > -1 && (p.assistants || []).indexOf(x.name) < 0)
+      say('bound the **' + x.name + '** assistant', () => {
+        (p.assistants = p.assistants || []).push(x.name);
+        p.assistant = p.assistants[0];
+      });
   });
   const every = /\b(daily|every day|each morning|every morning)\b/.test(low) ? 'Every day'
     : /\b(weekly|every week|on mondays?)\b/.test(low) ? 'Every week'
@@ -5145,6 +5754,33 @@ function makerProjRead(text, low, p, m, say, removing){
       p.run = null;
       syncProjectRun(p, prev);
     });
+  /* Presets by name, the way connectors are: a grant copies the library row
+     onto the project, and Build is where the copy gets edited. */
+  D.SNIPPETS.forEach(sn => {
+    if (low.indexOf(sn.name.toLowerCase()) < 0) return;
+    const has = (p.code || []).some(c => c.from === sn.id);
+    if (removing && has) say('ungranted the **' + sn.name + '** preset',
+      () => { p.code = p.code.filter(c => c.from !== sn.id); });
+    if (!removing && !has) say('granted the **' + sn.name + '** preset — its copy is editable in Build',
+      () => { (p.code = p.code || []).push({ id:'pc-n' + (++madeN), from:sn.id, edited:false,
+        name:sn.name, lang:sn.lang, desc:sn.desc, code:sn.code }); });
+  });
+  /* "A page" drafts one, bound to whatever logic and layout the sentence
+     names — or the first of each, said out loud so the guess is checkable. */
+  if (!removing && /\b(page|portal site|dashboard page|watchlist page)\b/.test(low) &&
+      !(p.pages || []).length){
+    say('drafted a page — it binds a layout and one granted preset; Build finishes it', () => {
+      p.pages = p.pages || [];
+      const tpl = D.DESIGNS.filter(d => d.kind === 'template' &&
+        low.indexOf(d.shape) > -1)[0] || D.DESIGNS.filter(d => d.kind === 'template')[0];
+      const mt = text.match(/\b(?:a|an|the)\s+(.{2,36}?)\s+page\b/i);
+      p.pages.push({ id:'pg-n' + (++madeN),
+        name:titleCase(((mt && mt[1]) || p.name + ' page').trim()),
+        template:tpl ? tpl.id : null,
+        logic:((p.code || [])[0] || {}).id || null,
+        sources:(p.sources || []).slice(0, 1), state:'draft' });
+    });
+  }
 }
 
 /* widget / template: a first sentence goes through the same parser Auto
@@ -6415,7 +7051,89 @@ function artPanes(a){
     { label:'Source', render:() => artCodeNode(a.code) }
   ];
   if (a.kind === 'diff') return [{ label:'Diff', render:() => artCodeNode(a.code) }];
+  if (a.kind === 'channel') return [
+    { label:'Today',    render:() => artChannelNode(a) },
+    { label:'The page', render:() => artProseNode(a.md) }
+  ];
+  if (a.kind === 'page') return [
+    { label:'Page',    render:() => artPageNode(a) },
+    { label:'Content', render:() => artProseNode(a.md) }
+  ];
+  if (a.kind === 'form') return [
+    { label:'Entries',  render:() => artFormNode(a, 'entries') },
+    { label:'The form', render:() => artFormNode(a, 'shape') }
+  ];
   return [{ label:'Document', render:() => artProseNode(a.md) }];
+}
+/* A page result renders live from the project record it names — its three
+   bindings, the deploy line, and the rebuild — so repointing the page in
+   Build changes this pane, not a stale copy. The Content tab is the page as
+   it renders. */
+function artPageNode(a){
+  const p = byId(D.PROJECTS, a.pid);
+  const pg = p && (p.pages || []).filter(x => x.id === a.pg)[0];
+  if (!pg) return helpNote('This page is no longer on the project.');
+  const t = pageTemplate(pg), lg = pageLogic(p, pg);
+  const wrap = el('div');
+  const sec = el('section','section');
+  sec.append(sectionHead('The page', '<span class="t-mono">' + esc(pg.state) + '</span>'));
+  sec.append(defList([
+    ['State', esc(pg.state) + (pg.url ? ' · ' + esc(pg.url) : '')],
+    ['Layout', esc(t ? t.name : 'none picked')],
+    ['Logic', lg ? esc(lg.name + (lg.edited ? ' — edited in this project' : '')) : 'none picked'],
+    ['Reads', esc(pg.sources.join(', ') || 'nothing')]
+  ]));
+  wrap.append(sec);
+  const dep = el('section','section');
+  dep.append(sectionHead('Deploy'));
+  dep.append(codeCard(pageSnippet(p, pg)));
+  wrap.append(dep);
+  const run = el('button','btn btn--secondary btn--sm',
+    '<span style="display:flex">' + ic('play',13) + '</span>Rebuild now');
+  run.type = 'button';
+  run.onclick = () => runPage(p, pg);
+  const def = el('button','btn btn--ghost btn--sm', ic('build',13) + 'Define in Build');
+  def.type = 'button';
+  def.onclick = () => select('build', key('pj', p.id));
+  wrap.append(rowActs([run, def]));
+  return wrap;
+}
+/* A form result renders live from the project record: the entries as a table,
+   the shape as a read-only fact. The widget dialog restyles the widget that
+   feeds these forms; it never touches what they record — which is why the
+   shape tab states the structure instead of offering to edit it. */
+function artFormNode(a, tab){
+  const p = byId(D.PROJECTS, a.pid);
+  const fm = p && (p.forms || []).filter(x => x.id === a.fm)[0];
+  if (!fm) return helpNote('This form is no longer on the project.');
+  const wrap = el('div');
+  if (tab === 'shape'){
+    const sec = el('section','section');
+    sec.append(sectionHead('The fields', '<span class="t-mono">' + fm.fields.length + '</span>'));
+    sec.append(defList(fm.fields.map(f => [f[0], esc(f[1])])));
+    wrap.append(sec);
+    wrap.append(helpNote('The structure is fixed. Widget design changes how it looks — the logo, the colours, the fixed text — never what it records.'));
+    return wrap;
+  }
+  if (fm.desc) wrap.append(noteP(fm.desc));
+  const t = el('table','table table--rows');
+  t.innerHTML =
+    '<thead><tr>' + fm.fields.map(f => '<th>' + esc(f[0]) + '</th>').join('') + '</tr></thead>' +
+    '<tbody>' + fm.entries.map(r =>
+      '<tr>' + r.map(v => '<td>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';
+  const sx = el('div','scroll-x');
+  sx.append(t);
+  wrap.append(sx);
+  return wrap;
+}
+
+/* A channel result renders live from the project record it names, so editing a
+   draft or connecting the channel changes this pane, not a stale copy. */
+function artChannelNode(a){
+  const p = byId(D.PROJECTS, a.pid);
+  const c = p && (p.channels || []).filter(x => x.id === a.ch)[0];
+  if (!c) return helpNote('This channel is no longer on the project.');
+  return channelDayNode(p, c);
 }
 
 function openArtifact(id, quiet){
@@ -6435,14 +7153,33 @@ function closeResult(){
   syncArtRefs();
 }
 
+/* The project a result could be filed into: the one it is already filed in,
+   else the one whose page is open, else the one the producing thread belongs
+   to. Chat output lands in this global store either way — filing is the
+   explicit act that ALSO lists it in that project's own Results section, and
+   the record itself moves nowhere. A result the project produced (a scheduled
+   run, a page run) is listed there already, so it offers no filing. */
+function artFileTarget(a){
+  if (a.pj) return byId(D.PROJECTS, a.pj);
+  let p = null;
+  if (state.section === 'chat' && kindOf(state.item.chat) === 'p')
+    p = byId(D.PROJECTS, idOf(state.item.chat));
+  if (!p){
+    const th = D.THREADS.filter(x => x.title === a.from)[0];
+    if (th && th.project) p = byId(D.PROJECTS, th.project);
+  }
+  return p && p.name !== a.from ? p : null;
+}
+
 function renderArtifact(){
   const a = state.art.id ? D.ARTIFACT_BY_ID(state.art.id) : null;
   const tabs = $('#artTabs'), body = $('#artBody'), foot = $('#artFoot');
   tabs.innerHTML = ''; body.innerHTML = ''; foot.innerHTML = '';
   $('#artBack').hidden = !a;
-  /* Both act on the result being read, so neither exists in the list. */
+  /* All act on the result being read, so none exists in the list. */
   $('#artDl').hidden = !a;
   $('#artShare').hidden = !a;
+  $('#artFile').hidden = !a || !artFileTarget(a);
 
   /* ------------------------------------------------------------- the index
      With no result open the pane lists everything the workspace has produced,
@@ -6507,6 +7244,19 @@ function renderArtifact(){
   $('#artShare').setAttribute('aria-pressed', String(!!a.share));
   $('#artShare').title = a.share ? 'Shared — ' + shareLine(a.share) : 'Share…';
   $('#artDl').title = 'Download… (' + formatsFor(a).map(f => f.ext).join(' · ') + ')';
+
+  /* Filing into a project's Results — a toggle, so a mis-file is one more
+     click. The panel count changes, so the page re-renders too. */
+  const fp = artFileTarget(a);
+  if (fp){
+    const filed = a.pj === fp.id;
+    const fb = $('#artFile');
+    fb.setAttribute('aria-pressed', String(filed));
+    fb.title = filed ? 'In ' + fp.name + '’s results — click to remove'
+                     : 'Add to ' + fp.name + '’s results';
+    fb.setAttribute('aria-label', fb.title);
+    fb.onclick = () => toggleArtFile(a, fp);
+  }
 
   /* Who can open this, said where the result is read. */
   if (a.share){
@@ -8309,11 +9059,38 @@ function boot(){
     const t0 = state.section === 'chat' ? byId(D.THREADS, state.item.chat) : null;
     const auto = !!t0 && !t0.msgs.length && heroMode === 'Auto program' &&
                  kindOf(state.item.chat) !== 'p';
-    /* Typed on a project page, where there is no thread yet: one is opened in
-       the project, which is also what binds its assistant, and the turn lands
-       there. Every other surface already has the thread it belongs to. */
-    if (state.section === 'chat' && kindOf(state.item.chat) === 'p')
-      newThread(idOf(state.item.chat));
+    /* Typed on a project page: the chat stays ON the project page. A first
+       message opens a thread in the project (which binds its assistant) and
+       the project's own chat area hosts the turn — runTurn streams into it
+       and records onto the thread, exactly as the test bench does. */
+    if (state.section === 'chat' && kindOf(state.item.chat) === 'p'){
+      const pid = idOf(state.item.chat);
+      if (!projThread){
+        const t = { id:'n' + (++newThreadN), title:'New chat', when:'now', group:'Today',
+                    project:pid, msgs:[] };
+        D.THREADS.unshift(t);
+        const p = find(D.PROJECTS, pid);
+        if (p && p.assistant){
+          const a = D.ASSISTANTS.filter(x => x.name === p.assistant)[0];
+          if (a) state.assistant = a.id;
+        }
+        projThread = t.id;
+      }
+      render();
+      syncAssistantChip();
+      const th = byId(D.THREADS, projThread);
+      const scroll = () => {
+        const sc = $('.projmain');
+        if (sc && sc.scrollHeight - sc.scrollTop - sc.clientHeight < 260)
+          sc.scrollTo({ top:sc.scrollHeight, behavior:'instant' });
+      };
+      runTurn(v, undefined, { host:$('.projmain .pane__measure'), thread:th, scroll:scroll })
+        .then(() => {
+          /* The first turn names the thread; the bar and the panel say so. */
+          if (state.section === 'chat' && state.item.chat === key('p', pid)) render();
+        });
+      return;
+    }
     syncAssistantChip();
     runTurn(v, auto ? autoScript(v) : undefined);
   });

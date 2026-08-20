@@ -106,6 +106,8 @@ const SECTIONS = [
     { cls:'.textarea', block:true, html:'<textarea class="textarea" rows="2">Bounded, and it grows.</textarea>' },
     { cls:'.textarea--prose', block:true, html:'<textarea class="textarea textarea--prose" rows="3">Rebuild the forecast bridge and flag every line that moved more than 5% against plan.</textarea>',
       note:'For text a person writes for the model to read: the interface font, at reading size.' },
+    { cls:'.textarea--code', block:true, html:'<textarea class="textarea textarea--code" rows="6">def render(page, table, score):\n    rows = table.sort(by=score, descending=True)\n    for r in rows.head(10):\n        page.row(r.name, value=r[score])\n    return page</textarea>',
+      note:'For a preset a project has made its own: taller, never wrapped, and paired with a highlighted preview where it is edited.' },
     { cls:'.select', html:'<select class="select"><option>Every week</option></select>' },
     { cls:'.switch', block:true, html:
       '<label class="switch"><input type="checkbox" checked><span>Require citations in answers</span><span class="switch__track"></span></label>' +
@@ -281,6 +283,32 @@ const SECTIONS = [
     { cls:'.section', wide:true, block:true, html:
       '<div class="section"><div class="section__head"><span class="t-eyebrow">Channels</span></div>' +
       '<div class="field__help">A labelled block of a page.</div></div>' },
+    { cls:'.section--fold', wide:true, block:true, html:
+      '<details class="section section--fold" open><summary class="section__head">' +
+      '<span class="section__chev">' + ic13('chevR') + '</span>' +
+      '<span class="t-eyebrow">Knowledge</span></summary>' +
+      '<div class="field__help">A section that folds: the head is the summary, the chevron turns when open.</div></details>' +
+      '<details class="section section--fold"><summary class="section__head">' +
+      '<span class="section__chev">' + ic13('chevR') + '</span>' +
+      '<span class="t-eyebrow">Connections</span></summary>' +
+      '<div class="field__help">Folded shut.</div></details>',
+      note:'The project panel\'s sections. The chevron leads, the way the fold and the trace draw theirs.' },
+    { cls:'.chatwig', wide:true, block:true, html:
+      '<div class="chatwig" data-accent="ocean"><div class="chatwig__head">' +
+      '<span class="chatwig__logo">GD</span><span class="chatwig__title">Gnomon support</span>' +
+      '<span class="dot dot--ok"></span></div>' +
+      '<div class="chatwig__body"><div class="chatwig__msg">Hi — ask me anything about your account.</div>' +
+      '<div class="chatwig__msg chatwig__msg--user">Where do I find my invoices?</div></div>' +
+      '<div class="chatwig__ask">Type your question…</div></div>',
+      note:'The customer-facing widget, as previewed in its design dialog. data-accent picks its tone, so every colour is a scheme token.' },
+    { cls:'.swatch', block:true, html:
+      '<div style="display:flex;gap:var(--s-2)">' +
+      '<button class="swatch" data-accent="nebula" aria-pressed="true" aria-label="nebula"></button>' +
+      '<button class="swatch" data-accent="ocean" aria-pressed="false" aria-label="ocean"></button>' +
+      '<button class="swatch" data-accent="forest" aria-pressed="false" aria-label="forest"></button>' +
+      '<button class="swatch" data-accent="ember" aria-pressed="false" aria-label="ember"></button>' +
+      '<button class="swatch" data-accent="plum" aria-pressed="false" aria-label="plum"></button></div>',
+      note:'A tone picker where each swatch IS its accent scheme — adding a scheme in tokens.css is the whole act of adding a swatch.' },
     { cls:'.pagehead', wide:true, block:true, html:
       '<div class="pagehead"><div class="pagehead__row">' +
       '<h2 class="t-display pagehead__title">Cloud Usage</h2>' +

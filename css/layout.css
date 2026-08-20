@@ -240,10 +240,25 @@
 .projwrap{ display:flex; align-items:stretch; height:100%; min-height:0 }
 .projpanel{
   flex:0 1 268px; min-width:0; min-height:0;
-  overflow:hidden auto;
-  padding:var(--s-5) var(--s-4);
+  display:flex; flex-direction:column;
+  overflow:hidden;
   background:var(--surface);
   border-right:var(--border) solid var(--line);
+}
+/* Two zones, each its own scroller. The options take what is left; the log —
+   Results and Chat History — is pinned to the foot at a fixed height, so
+   however far the options above are expanded, the record of what happened
+   keeps its place and its size. The zone's top border is the full divider. */
+.projpanel__opts{
+  flex:1 1 auto; min-height:0;
+  overflow:hidden auto;
+  padding:var(--s-5) var(--s-4) var(--s-3);
+}
+.projpanel__log{
+  flex:0 0 50%; min-height:0;
+  overflow:hidden auto;
+  padding:var(--s-4) var(--s-4) var(--s-5);
+  border-top:var(--border) solid var(--line);
 }
 /* The right-hand side is one column of one thing, so it is centred in whatever
    room is left — horizontally by the flex box, vertically by `margin:auto 0`
@@ -253,16 +268,44 @@
   flex:1 1 auto; min-width:0; min-height:0;
   overflow:hidden auto;
   display:flex; flex-direction:column; align-items:center;
+}
+/* The column's padding lives on the inner block, not the column: the bar above
+   owns the top edge, and a sticky bar inside a padded scroller sits the
+   padding's height too low — its hairline must meet the sidebar head's. The
+   max-width absorbs the padding so the content keeps its measure. */
+.projmain__inner{
+  width:100%; max-width:calc(var(--ask-max) + 2 * var(--s-6));
+  margin:auto 0;
   padding:var(--s-6);
 }
-.projmain__inner{ width:100%; max-width:var(--ask-max); margin:auto 0 }
+/* On a project the shell's topbar withdraws so the panel runs to the very top
+   like the sidebar does, and the chat column carries a bar of its own — the
+   bar belongs to the conversation, not to the page around it. Sticky, because
+   .projmain is the scroll container and a bar that scrolls away is not a bar. */
+.pane:has(.projwrap) > .topbar{ display:none }
+.projmain__bar{
+  flex:none; align-self:stretch;
+  position:sticky; top:0; z-index:2;
+  display:flex; align-items:center; gap:var(--s-2);
+  height:var(--topbar-h);
+  padding:0 var(--s-3) 0 var(--s-4);
+  background:var(--bg);
+  border-bottom:var(--border) solid var(--line);
+}
+.projmain__bartitle{
+  margin:0;
+  font-size:var(--t-13); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.projmain__bar .tip:first-of-type{ margin-left:auto }
 .projwrap .section{ margin-bottom:var(--s-6) }
 .projwrap .section:last-child{ margin-bottom:0 }
 /* Rows in the panel sit flush with its padding, the way the sidebar's do. */
 .projpanel .row{ padding-left:var(--s-2); padding-right:var(--s-2) }
 
-/* The project, named. The one place its own glyph is shown at size, since it is
-   the glyph its owner picked to recognise it by. */
+/* The project, named. The panel runs to the top of the pane, so it is the one
+   place the name and its glyph appear — the chat column's bar names the act
+   (New Chat / Task), not the container. */
 .projid{ margin-bottom:var(--s-6) }
 .projid__top{ display:flex; align-items:center; gap:var(--s-2); margin-bottom:var(--s-2) }
 .projid__ico{ display:flex; flex:none; color:var(--text-3) }
@@ -271,19 +314,9 @@
   font-size:var(--t-15); font-weight:var(--w-medium); letter-spacing:var(--ls-snug);
 }
 .projid__desc{ margin:0 0 var(--s-3); font-size:var(--t-12); line-height:1.55; color:var(--text-3) }
-.projid__row{ display:flex; align-items:center; gap:var(--s-2) }
-/* Who can see it, as the control that changes it. */
-.projid__vis{
-  display:inline-flex; align-items:center; gap:5px;
-  height:var(--ctl-xs); padding:0 var(--s-2);
-  border-radius:var(--r-sm);
-  background:var(--raised); color:var(--text-3);
-  font-size:var(--t-11); font-weight:var(--w-medium);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
-}
-.projid__vis:hover{ background:var(--raised-2); color:var(--text) }
-.projid__row .iconbtn{ margin-left:auto; flex:none }
+/* The two small acts beside the name overhang the line the way the section
+   heads' controls do, so the name row stays one text line tall. */
+.projid__top .iconbtn{ flex:none; margin-block:calc(-1 * var(--s-1)) }
 
 /* The workflow's script: what the model is given on every run. A sentence, so
    it wraps — but monospace, because it is a stored instruction and not prose

@@ -117,8 +117,13 @@
       <span class="artpane__ico" id="artIcon"></span>
       <span class="artpane__title" id="artTitle">Results</span>
       <div class="seg" id="artTabs"></div>
-      <!-- A result is only useful if it can leave. Both act on the result being
-           read, so both are hidden while the pane is showing the list. -->
+      <!-- A result is only useful if it can leave. All three act on the result
+           being read, so all are hidden while the pane is showing the list.
+           Filing appears only when there is a project to file into: the one
+           whose page is open, or the one the producing thread belongs to. -->
+      <button class="iconbtn iconbtn--sm" id="artFile" title="Add to project results" aria-label="Add to project results" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V6a1.5 1.5 0 0 1 1.5-1.5H9l2 2h8.5A1.5 1.5 0 0 1 21 8v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18Z"/><path d="M12 10.5v5"/><path d="M9.5 13h5"/></svg>
+      </button>
       <button class="iconbtn iconbtn--sm" id="artDl" title="Download" aria-label="Download result" hidden>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7.5 11 4.5 4.5L16.5 11"/><path d="M5 20h14"/></svg>
       </button>

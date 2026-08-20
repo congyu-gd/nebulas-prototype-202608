@@ -190,6 +190,9 @@ button.chip--plain:hover{ background:var(--raised) }
 /* A value a machine will read back: an address, a CIDR, a token budget. */
 .input--mono{ font-family:var(--mono) }
 .textarea--prose{ font-family:var(--font); font-size:var(--t-13); line-height:1.6 }
+/* Code being edited: the same mono box, sized for a function rather than a
+   sentence, and never wrapped — code that wraps lies about its lines. */
+.textarea--code{ min-height:calc(var(--ctl-md) * 6); white-space:pre; overflow-x:auto }
 .select{
   padding-right:26px;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
@@ -1967,6 +1970,18 @@ button.chip--plain:hover{ background:var(--raised) }
   display:flex; align-items:center; gap:var(--s-2);
   margin-bottom:var(--s-3);
 }
+/* A section that folds: native <details>, the head it already had as the
+   summary, and the chevron as the affordance — turning when open, the same
+   grammar the fold and the trace use. */
+details.section--fold > .section__head{ cursor:pointer; user-select:none; list-style:none; margin-bottom:var(--s-1) }
+details.section--fold > .section__head::-webkit-details-marker{ display:none }
+/* The head's controls are taller than its text; they overhang the line rather
+   than inflate it, so the head stays one text line tall and the first row sits
+   close under its title. The chevron sits at the right edge — the title and
+   the content below it share the left one. */
+details.section--fold > .section__head .iconbtn{ margin-block:calc(-1 * var(--s-2)) }
+.section__chev{ display:flex; flex:none; color:var(--text-4); transition:rotate var(--fast) var(--ease) }
+details.section--fold[open] > .section__head .section__chev{ rotate:90deg }
 
 /* --kpis--auto: as many tiles as fit rather than three across. The workspace's
    stat rows are four short readings, not six headline numbers. */
@@ -1977,3 +1992,61 @@ button.chip--plain:hover{ background:var(--raised) }
    the stats are a header, not the content, and wrapping would push the content
    they introduce below the fold. Pair with .kpi__v--sm so the tiles stay flat. */
 .kpis--row.kpis--row{ grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr) }
+
+/* ===================================================== chat widget preview
+   The customer-facing widget, previewed in its design dialog. It wears one of
+   the accent schemes via data-accent, so every colour here is a token's own —
+   the dialog picks a scheme, never a colour value. Sizes lean on the control
+   scale for the same reason. */
+.chatwig{
+  max-width:calc(var(--ctl-lg) * 8);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-2xl);
+  background:var(--bg);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+}
+.chatwig__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-3);
+  background:var(--accent); color:var(--accent-fg);
+}
+.chatwig__logo{
+  display:grid; place-items:center; flex:none;
+  width:var(--ctl-xs); height:var(--ctl-xs);
+  border-radius:var(--r-full);
+  background:var(--accent-fg-soft);
+  font-size:var(--t-11); font-weight:var(--w-semi); letter-spacing:.04em;
+}
+.chatwig__title{ flex:1; min-width:0; font-size:var(--t-12); font-weight:var(--w-medium);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.chatwig__body{ display:grid; gap:var(--s-2); padding:var(--s-3) }
+.chatwig__msg{
+  justify-self:start; max-width:85%;
+  padding:var(--s-2) var(--s-3);
+  border-radius:var(--r-lg);
+  background:var(--surface);
+  border:var(--border) solid var(--line);
+  font-size:var(--t-12); color:var(--text-2);
+}
+.chatwig__msg--user{
+  justify-self:end;
+  background:var(--accent-soft); border-color:var(--accent-line); color:var(--text);
+}
+.chatwig__ask{
+  margin:0 var(--s-3) var(--s-3);
+  padding:var(--s-2) var(--s-3);
+  border:var(--border) solid var(--line);
+  border-radius:var(--r-full);
+  font-size:var(--t-12); color:var(--text-4);
+}
+
+/* The tone picker beside it: each swatch IS its scheme (data-accent again),
+   so adding a scheme in tokens.css is the whole act of adding a swatch. */
+.swatch{
+  width:var(--ctl-xs); height:var(--ctl-xs); flex:none;
+  border-radius:var(--r-full);
+  background:var(--accent);
+  border:var(--border) solid var(--line);
+}
+.swatch[aria-pressed="true"]{ outline:calc(var(--border) * 2) solid var(--accent-line); outline-offset:calc(var(--border) * 2) }

@@ -61,7 +61,9 @@ const ARTIFACTS = [
   },
   {
     id:'a3', kind:'chart', title:'Churn model — feature importance',
-    from:'Churn signals in enterprise accounts', when:'1d 3h', size:'8 features',
+    /* `pj` files a chat's result into a project's Results section by hand —
+       the record stays here, in the one global store. */
+    from:'Churn signals in enterprise accounts', when:'1d 3h', size:'8 features', pj:'p3',
     bars:[
       ['admin_changed_90d', 100],
       ['seats_active_delta', 61],
@@ -205,6 +207,123 @@ const ARTIFACTS = [
       'The word *revolutionary* appears in the source deck four times. It is on the avoid list, and the numbers do the work without it.'
     ].join('\n'),
     code:'— document artifact, no source —'
+  },
+  /* What a page run files: the Churn program's live page, rebuilt. The page's
+     logic is the project's own copy of watchlist_rows, and the result says so —
+     a page run is attributable the same way a scheduled run is. */
+  {
+    id:'a9', kind:'doc', title:'Account watchlist — page rebuilt',
+    from:'Churn program', when:'1d 1h', size:'10 rows',
+    md:[
+      'The **Account watchlist** page was rebuilt and published to <code>churn.acme.app/watchlist</code>.',
+      '',
+      '- **Layout** — Internal portal',
+      '- **Logic** — watchlist_rows, edited in this project (CRM owner joined onto every row)',
+      '- **Read** — accounts_health, 10 rows ranked by churn signal',
+      '',
+      'Northwind Traders leads at 0.81 with Contoso Retail at 0.74; both moved up since the last rebuild. The page itself carries the full ranked list.'
+    ].join('\n'),
+    code:'— page run, logic shown on the project\'s Build page —'
+  },
+  /* One result per output page: the page itself, read in the results column.
+     `kind:'page'` renders live from the project record (`pid`/`pg`) — its
+     bindings, its deploy line, the rebuild — and `md` is its second pane: the
+     content as the page renders it. */
+  {
+    id:'a13', kind:'page', pid:'p3', pg:'pg1', title:'Account watchlist — page',
+    from:'Churn program', when:'1d', size:'live',
+    md:[
+      'The **Account watchlist** page, as it renders at <code>churn.acme.app/watchlist</code> — ' +
+      'the project\'s edited copy of <code>watchlist_rows</code> over <code>accounts_health</code>, laid out on the Internal portal.',
+      '',
+      '### Accounts at risk',
+      '- **Northwind Traders** — 0.81 · Dana Cole',
+      '- **Contoso Retail** — 0.74 · Priya Nair',
+      '- **Fabrikam** — 0.63 · Jon Alvarez',
+      '- **Tailspin Toys** — 0.61 · Dana Cole',
+      '- **Adventure Works** — 0.22 · Priya Nair',
+      '',
+      'Ranked by churn probability, next quarter; the owner joined from the CRM is on every row — that is what the edit to the preset added.'
+    ].join('\n'),
+    code:'— a page result renders live from the project —'
+  },
+  {
+    id:'a14', kind:'page', pid:'p1', pg:'pg2', title:'Close pack — page',
+    from:'Q3 close', when:'2d', size:'draft',
+    md:[
+      'The **Close pack** page, still a draft — <code>kpi_rollup</code> over <code>q3_ledger</code>, set on the Monthly report layout. Nothing is hosted until it is published.',
+      '',
+      '### Headline numbers',
+      '- **Q3 revenue** — $41.2M · +12.4% against plan',
+      '- **Recurring** — $39.8M after stripping one-offs',
+      '',
+      'The draft renders from the last rebuild; publishing gives it a URL.'
+    ].join('\n'),
+    code:'— a page result renders live from the project —'
+  },
+  /* One result per publishing channel: its day, read in the results column.
+     `kind:'channel'` renders live from the project record (`pid`/`ch`) — the
+     numbers, what went out, what is waiting — and `md` is its second pane:
+     the page of prepared content, as it will read when it goes out. */
+  {
+    id:'a10', kind:'channel', pid:'p4', ch:'fb', title:'Facebook — today',
+    from:'Social publishing', when:'30m', size:'3 posts · 1 prepared',
+    md:[
+      'Everything written for **Facebook** (@acmeindustrial) and not yet out, as it will read.',
+      '',
+      '### Open day, 12 September',
+      '*Wednesday 12:00 · draft*',
+      '',
+      'We are opening the Rotterdam floor on 12 September. Bring a line problem you have not solved and an engineer who has tried.',
+      '',
+      'Places are limited: acme.com/openday'
+    ].join('\n'),
+    code:'— a channel result renders live from the project —'
+  },
+  {
+    id:'a11', kind:'channel', pid:'p4', ch:'ig', title:'Instagram — today',
+    from:'Social publishing', when:'45m', size:'3 posts · 1 prepared',
+    md:[
+      'Everything written for **Instagram** (@acme.industrial) and not yet out, as it will read.',
+      '',
+      '### Retrofit carousel — 5 frames',
+      '*Tuesday 17:30 · needs review*',
+      '',
+      '- Frame 1 — Same frame. New drives.',
+      '- Frame 2 — 31% less energy per unit',
+      '- Frame 3 — 9 days of downtime, not 11 weeks',
+      '- Frame 4 — What we would do differently',
+      '- Frame 5 — Read the write-up (link in bio)'
+    ].join('\n'),
+    code:'— a channel result renders live from the project —'
+  },
+  {
+    id:'a12', kind:'channel', pid:'p4', ch:'li', title:'LinkedIn — today',
+    from:'Social publishing', when:'1h 10m', size:'not connected · 1 prepared',
+    md:[
+      'Everything written for **LinkedIn** (Acme Industrial) and not yet out, as it will read. The channel is not connected: the post keeps its slot and nothing leaves.',
+      '',
+      '### Fleet retrofit case study',
+      '*Tuesday 09:00 · scheduled*',
+      '',
+      'Retrofitting a 40-year-old line beats replacing it more often than the brochures admit. Northwind kept the frames, changed the drives, and took **31%** off energy per unit.',
+      '',
+      'The write-up, including what did not work: acme.com/stories/northwind'
+    ].join('\n'),
+    code:'— a channel result renders live from the project —'
+  },
+  /* The support bot's two forms — results that are FORMS, not pages: one is
+     everything customers asked the widget, the other what they left behind
+     when the bot handed off. Rendered live from the project record. */
+  {
+    id:'a15', kind:'form', pid:'p5', fm:'fm1', title:'Inquiries — what the bot was asked',
+    from:'Support chatbot', when:'25m', size:'5 today',
+    code:'— a form result renders live from the project —'
+  },
+  {
+    id:'a16', kind:'form', pid:'p5', fm:'fm2', title:'Escalations — left for a human',
+    from:'Support chatbot', when:'25m', size:'2 open',
+    code:'— a form result renders live from the project —'
   }
 ];
 const ARTIFACT_BY_ID = id => ARTIFACTS.filter(a => a.id === id)[0] || null;
@@ -327,7 +446,70 @@ const THREADS = [
   { id:'t5', title:'Pricing page rewrite', when:'4d', group:'Earlier', project:null, msgs:[] },
   { id:'t6', title:'Cohort retention v2', when:'1w', group:'Earlier', project:'p3', msgs:[] },
   { id:'t7', title:'September social calendar', when:'20m', group:'Today', project:'p4', msgs:[] },
-  { id:'t8', title:'Why the reel beat the carousel', when:'2d', group:'Earlier', project:'p4', msgs:[] }
+  { id:'t8', title:'Why the reel beat the carousel', when:'2d', group:'Earlier', project:'p4', msgs:[] },
+  { id:'t9', title:'Why did satisfaction dip on Tuesday?', when:'3h', group:'Today', project:'p5', msgs:[] }
+];
+
+/* ------------------------------------------------------------ preset code
+   The execution logic a project's output pages can run on. Shipped as a
+   workspace library the way skills are: a project GRANTS a preset (which
+   copies it onto the project, where Build may edit it), and each of its pages
+   picks one as its logic. The library itself is never edited — what a project
+   changes is its own copy, so two projects can run the same preset two ways.
+   Python, because that is what the runtime executes and the highlighter reads. */
+const SNIPPETS = [
+  { id:'sn1', name:'watchlist_rows', lang:'python',
+    desc:'Ranks rows from a table by a score column and renders them as a scored list.',
+    code:[
+      '# rank rows by a score column, render as a scored list',
+      'def render(page, table, score):',
+      '    rows = table.sort(by=score, descending=True)',
+      '    for r in rows.head(page.limit or 10):',
+      '        page.row(r.name, value=r[score], bar=r[score])',
+      '    return page'
+    ].join('\n') },
+  { id:'sn2', name:'kpi_rollup', lang:'python',
+    desc:'Aggregates one measure into headline numbers with movement against plan.',
+    code:[
+      '# one number, its movement, and the period it covers',
+      'def render(page, table, measure, plan=None):',
+      '    total = table[measure].sum()',
+      '    page.kpi(measure, total)',
+      '    if plan is not None:',
+      '        page.delta(total - plan, against="plan")',
+      '    return page'
+    ].join('\n') },
+  { id:'sn3', name:'series_chart', lang:'python',
+    desc:'Reads a time column and a value column into a bar series, latest bar accented.',
+    code:[
+      '# a series and its latest value',
+      'def render(page, table, by, value):',
+      '    series = table.groupby(by)[value].sum()',
+      '    page.chart(series, accent="last")',
+      '    page.caption(f"{value} by {by}, last {len(series)} periods")',
+      '    return page'
+    ].join('\n') },
+  { id:'sn4', name:'markdown_page', lang:'python',
+    desc:'Composes prose sections into one document, in reading order.',
+    code:[
+      '# prose sections, in reading order',
+      'def render(page, sections):',
+      '    for title, body in sections:',
+      '        page.heading(title)',
+      '        page.prose(body)',
+      '    return page'
+    ].join('\n') },
+  { id:'sn5', name:'form_intake', lang:'python',
+    desc:'Renders a form from named fields and files each submission as a table row.',
+    code:[
+      '# a form in, a table row out',
+      'def render(page, fields, into):',
+      '    form = page.form(fields)',
+      '    if form.submitted:',
+      '        into.append(form.values)',
+      '        page.note("Filed. Someone will read it.")',
+      '    return page'
+    ].join('\n') }
 ];
 
 /* --------------------------------------------------------------- projects
@@ -344,7 +526,16 @@ const THREADS = [
      kbs     knowledge bases it draws on, by name
      sources datasets it draws on, by name
      run     null, or { every, ask, sched } — the schedule that makes it an app
-             (`sched` points at the SCHEDULE row so the two cannot drift) */
+             (`sched` points at the SCHEDULE row so the two cannot drift)
+     people  coworkers it is shared with by email — sharing to the whole
+             workspace stays the `shared` flag; both can be true
+     code    presets granted from SNIPPETS, copied onto the project so Build
+             can edit them: { id, from, edited, code? } — name/lang/desc and an
+             unedited body are filled in from the library below, not stored
+     pages   what it publishes: each one binds a result template (the layout),
+             one entry of `code` (the logic) and sources (what the logic reads).
+             Both fields are optional like the rest — a project without them is
+             exactly what it was, and only these two make it more. */
 const PROJECTS = [
   /* `conn` is the external systems a project is granted — connector ids, the
      same grant-not-connection language an assistant uses. Granting names what
@@ -355,6 +546,11 @@ const PROJECTS = [
     conn:['cn1'],
     run:{ every:'Every week', sched:'sc6',
           ask:'Rebuild the forecast bridge and flag every line that moved more than 5% against plan.' },
+    code:[ { id:'pc3', from:'sn2', edited:false } ],
+    pages:[
+      { id:'pg2', name:'Close pack', template:'de8', logic:'pc3',
+        sources:['q3_ledger'], state:'draft' }
+    ],
     when:'2m' },
   { id:'p2', name:'Pipeline health', icon:'code', shared:true,
     desc:'Ingestion reliability work — backpressure, adapter budgets, the ADR-014 follow-through.',
@@ -362,19 +558,46 @@ const PROJECTS = [
     conn:['cn5','cn6'],
     run:null, when:'1h' },
   { id:'p3', name:'Churn program', icon:'users', shared:false,
+    people:['maya.chen@gnomondigital.com','t.riva@gnomondigital.com'],
     desc:'Enterprise retention: signals, the account watchlist, and what the CRM knows before usage does.',
-    assistant:'Revenue analyst', kbs:['Support corpus'], sources:['accounts_health','support_tickets'],
+    assistant:'Revenue analyst', assistants:['Revenue analyst','Support triage','Renewals desk'],
+    kbs:['Support corpus'], sources:['accounts_health','support_tickets'],
     conn:['cn1','cn9'],
     run:{ every:'Every day', sched:'sc3',
           ask:'Refresh the watchlist and name the accounts whose churn signal moved since yesterday.' },
+    /* The advanced case: presets granted and one edited — the copy is the
+       project's own, so the library's watchlist_rows is untouched — and a live
+       page running that copy over the account table, laid out on de5. */
+    code:[
+      { id:'pc1', from:'sn1', edited:true, code:[
+        '# rank rows by a score column, render as a scored list',
+        '# edited here: join the CRM owner so a name is on every row',
+        'def render(page, table, score):',
+        '    owners = crm.read("account_owners")',
+        '    rows = table.join(owners, on="account_id")',
+        '    rows = rows.sort(by=score, descending=True)',
+        '    for r in rows.head(page.limit or 10):',
+        '        page.row(r.name, value=r[score], bar=r[score], sub=r.owner)',
+        '    return page'
+      ].join('\n') },
+      { id:'pc2', from:'sn3', edited:false }
+    ],
+    pages:[
+      { id:'pg1', name:'Account watchlist', template:'de5', logic:'pc1',
+        sources:['accounts_health'], state:'live', url:'churn.acme.app/watchlist' }
+    ],
     when:'1d' },
-  /* A project that publishes as well as reads. Two extra fields, and both are
-     optional like the rest — a project without them is exactly what it was:
+  /* A project that publishes as well as reads. One extra field, optional like
+     the rest — a project without it is exactly what it was:
 
-       channels  where it posts, each one pointing at the CONNECTORS row that
+       channels  where it posts. Each one points at the CONNECTORS row that
                  holds the credential (`cn`), so connecting is done in one place
-                 and the project reports the state rather than owning it
-       queue     what is written but not yet out, per channel
+                 and the project reports the state rather than owning it. A
+                 channel opens as a RESULT (see `art`, its row in ARTIFACTS),
+                 so it carries what that result shows: `today` (the day's
+                 numbers), `sent` (today's posts and whether they left), and
+                 `drafts` (written, not yet out — the queue lives per channel
+                 now).
 
      The three insight tables under `sources` are the monitoring half: the posts
      go out through the channels and the numbers come back through the tables. */
@@ -383,27 +606,48 @@ const PROJECTS = [
     assistant:'Social editor', kbs:['Brand & social kit'],
     sources:['fb_page_insights','ig_media_insights','li_page_analytics'],
     channels:[
-      { id:'fb', nm:'Facebook', cn:'cn10', handle:'@acmeindustrial', posts:'18 / 30d' },
-      { id:'ig', nm:'Instagram', cn:'cn11', handle:'@acme.industrial', posts:'22 / 30d' },
-      { id:'li', nm:'LinkedIn', cn:'cn12', handle:'Acme Industrial', posts:'12 / 30d' }
-    ],
-    queue:[
-      { id:'q1', ch:'li', when:'Tue 09:00', state:'scheduled',
-        title:'Fleet retrofit case study',
-        text:'Retrofitting a 40-year-old line beats replacing it more often than the ' +
-             'brochures admit. Northwind kept the frames, changed the drives, and took ' +
-             '31% off energy per unit.\n\nThe write-up, including what did not work: ' +
-             'acme.com/stories/northwind' },
-      { id:'q2', ch:'ig', when:'Tue 17:30', state:'needs review',
-        title:'Retrofit carousel — 5 frames',
-        text:'Frame 1 — Same frame. New drives.\nFrame 2 — 31% less energy per unit\n' +
-             'Frame 3 — 9 days of downtime, not 11 weeks\nFrame 4 — What we would do ' +
-             'differently\nFrame 5 — Read the write-up (link in bio)' },
-      { id:'q3', ch:'fb', when:'Wed 12:00', state:'draft',
-        title:'Open day, 12 September',
-        text:'We are opening the Rotterdam floor on 12 September. Bring a line ' +
-             'problem you have not solved and an engineer who has tried.\n\n' +
-             'Places are limited: acme.com/openday' }
+      { id:'fb', nm:'Facebook', cn:'cn10', handle:'@acmeindustrial', posts:'18 / 30d',
+        art:'a10',
+        today:{ reach:'24.1k', eng:'3.1%', follows:'+38', posted:'2 of 3' },
+        sent:[
+          { title:'Open day teaser — the Rotterdam floor', when:'09:10', state:'sent' },
+          { title:'Retrofit photo set — same frame, new drives', when:'12:30', state:'sent' },
+          { title:'Open day, 12 September', when:'17:00', state:'due' }
+        ],
+        drafts:[
+          { id:'q3', when:'Wed 12:00', state:'draft',
+            title:'Open day, 12 September',
+            text:'We are opening the Rotterdam floor on 12 September. Bring a line ' +
+                 'problem you have not solved and an engineer who has tried.\n\n' +
+                 'Places are limited: acme.com/openday' }
+        ] },
+      { id:'ig', nm:'Instagram', cn:'cn11', handle:'@acme.industrial', posts:'22 / 30d',
+        art:'a11',
+        today:{ reach:'31.6k', eng:'4.8%', follows:'+204', posted:'2 of 3' },
+        sent:[
+          { title:'Reel — nine days of downtime, not eleven weeks', when:'08:30', state:'sent' },
+          { title:'Story — open day countdown', when:'11:00', state:'sent' },
+          { title:'Retrofit carousel — 5 frames', when:'17:30', state:'due' }
+        ],
+        drafts:[
+          { id:'q2', when:'Tue 17:30', state:'needs review',
+            title:'Retrofit carousel — 5 frames',
+            text:'Frame 1 — Same frame. New drives.\nFrame 2 — 31% less energy per unit\n' +
+                 'Frame 3 — 9 days of downtime, not 11 weeks\nFrame 4 — What we would do ' +
+                 'differently\nFrame 5 — Read the write-up (link in bio)' }
+        ] },
+      { id:'li', nm:'LinkedIn', cn:'cn12', handle:'Acme Industrial', posts:'12 / 30d',
+        art:'a12',
+        today:{ reach:'—', eng:'—', follows:'—', posted:'0 of 1' },
+        sent:[],
+        drafts:[
+          { id:'q1', when:'Tue 09:00', state:'scheduled',
+            title:'Fleet retrofit case study',
+            text:'Retrofitting a 40-year-old line beats replacing it more often than the ' +
+                 'brochures admit. Northwind kept the frames, changed the drives, and took ' +
+                 '31% off energy per unit.\n\nThe write-up, including what did not work: ' +
+                 'acme.com/stories/northwind' }
+        ] }
     ],
     conn:['cn10','cn11','cn12'],
     run:{ every:'Every week', sched:'sc7',
@@ -411,11 +655,82 @@ const PROJECTS = [
               'engagement rate and follower change per channel, name the post that beat ' +
               'its channel average and say what it did differently, and flag anything ' +
               'that fell more than 20% against the four-week mean.' },
-    when:'20m' }
+    when:'20m' },
+
+  /* The service case: a customer-facing chatbot. Knowledge is the product
+     Q&A it answers from, the assistant is the bot itself, Gmail is how the
+     daily report and follow-ups leave, and the results are two FORMS — what
+     the widget was asked, and what was left for a human. `widget` is design
+     only: the dialog restyles it and never touches the data structure. */
+  { id:'p5', name:'Support chatbot', icon:'chat', shared:true,
+    desc:'The customer-facing service bot: answers from the Product Q&A, hands off what it cannot resolve, and reports every morning by email.',
+    assistant:'Customer service bot', assistants:['Customer service bot'],
+    kbs:['Product Q&A'], sources:[],
+    conn:['cn13'],
+    run:{ every:'Every day', sched:'sc9',
+          ask:'Email me yesterday\'s service summary: users served, completion rate, ' +
+              'satisfaction, hand-offs to a human, and any questions or suggested ' +
+              'solutions customers left behind.' },
+    widget:{ logo:'GD', tone:'nebula', title:'Gnomon support',
+             greet:'Hi — ask me anything about your account or our products.',
+             placeholder:'Type your question…' },
+    forms:[
+      { id:'fm1', name:'Inquiries — what the bot was asked',
+        desc:'One row per conversation the widget opened. The bot files them; nobody types into this by hand.',
+        fields:[
+          ['asked_at','when the conversation opened'],
+          ['user','email, or anonymous'],
+          ['question','as the customer typed it'],
+          ['topic','billing · onboarding · bugs · plans'],
+          ['resolved','no opens an escalation'],
+          ['satisfaction','1–5, asked at close']
+        ],
+        entries:[
+          ['09:41','anna@keller-gmbh.de','Can I move from monthly to annual mid-cycle?','billing','yes','5'],
+          ['09:12','anonymous','Where is the API key for a sandbox project?','onboarding','yes','4'],
+          ['08:56','t.moreau@vexa.fr','CSV export drops rows with accented names','bugs','no','—'],
+          ['08:31','anonymous','Do you offer a nonprofit discount?','plans','yes','5'],
+          ['07:58','j.smit@arboreal.nl','Invoice 4211 shows the old VAT number','billing','no','2']
+        ] },
+      { id:'fm2', name:'Escalations — left for a human',
+        desc:'What the bot could not resolve: the question, what it tried, and how the customer asked to be answered.',
+        fields:[
+          ['left_at','when the bot handed off'],
+          ['user','where the reply goes'],
+          ['question','as the customer typed it'],
+          ['bot_tried','the answers offered before handing off'],
+          ['wants','the follow-up the customer asked for'],
+          ['state','open · answered']
+        ],
+        entries:[
+          ['08:57','t.moreau@vexa.fr','CSV export drops rows with accented names','linked the export guide twice','a fix, not a workaround — email when patched','open'],
+          ['07:59','j.smit@arboreal.nl','Invoice 4211 shows the old VAT number','explained where VAT is set','a corrected invoice by email','open'],
+          ['Yesterday','k.osei@lumendata.io','Need SSO before the security review on Friday','shared the SSO setup doc','a call with an engineer','answered']
+        ] }
+    ],
+    when:'35m' }
 ];
 /* Build lists projects as a lane; every lane row is yours — this is a personal
    workspace, so records carry no owner. `shared` is visibility, not ownership. */
-PROJECTS.forEach(p => { if (!p.conn) p.conn = []; });
+PROJECTS.forEach(p => {
+  if (!p.conn) p.conn = [];
+  if (!p.people) p.people = [];
+  /* A project takes as many assistants as the work needs; the list is ordered
+     and the first one answers. The old single field stays derived from it. */
+  if (!p.assistants) p.assistants = p.assistant ? [p.assistant] : [];
+  if (!p.code) p.code = [];
+  if (!p.pages) p.pages = [];
+  /* A granted preset is a copy of its library row. Only what diverged is
+     stored — everything else is read from SNIPPETS here, once. */
+  p.code.forEach(c => {
+    const sn = SNIPPETS.filter(s => s.id === c.from)[0];
+    if (!sn) return;
+    if (!c.name) c.name = sn.name;
+    if (!c.lang) c.lang = sn.lang;
+    if (!c.desc) c.desc = sn.desc;
+    if (!c.code) c.code = sn.code;
+  });
+});
 
 /* ------------------------------------------------------------- assistants
    An assistant is a named binding of model, skills and knowledge. The rail
@@ -474,7 +789,10 @@ const ASSISTANTS = [
     skills:['doc.write','classify'], kb:'Engineering docs', threads:3 },
   { id:'as17', name:'Social editor', state:'ok', model:'Nebula Pro', team:'Marketing', fav:true,
     desc:'Writes for one channel at a time rather than posting the same paragraph three times. Reads the numbers before suggesting the next one.',
-    skills:['doc.write','social.publish','social.insights'], kb:'Brand & social kit', threads:2 }
+    skills:['doc.write','social.publish','social.insights'], kb:'Brand & social kit', threads:2 },
+  { id:'as18', name:'Customer service bot', state:'ok', model:'Nebula Fast', team:'Support', fav:false,
+    desc:'Answers customers from the Product Q&A only, and hands off with a full transcript the moment it is unsure. Never invents policy.',
+    skills:['search.docs','classify'], kb:'Product Q&A', threads:1 }
 ];
 const ASSISTANT_TEAMS = ['Revenue','Engineering','Support','Product','Marketing'];
 
@@ -544,6 +862,9 @@ const SKILL_DESC = {
    composer, so each has to be a question this assistant would actually answer
    well. Written per assistant, because "run a query" is not an example. */
 const ASSISTANT_EX = {
+  as18:{ 'search.docs':['What does the refund policy say about annual plans?',
+                        'Answer "where are my invoices?" the way a customer would hear it'],
+         'classify':['Which topics were escalated most this week?'] },
   as1:{ 'warehouse.query':['Q3 ARR by segment, plan vs actual', 'Which segments missed plan, and by how much?'],
         'code.run':['Strip non-recurring lines and re-attribute the growth'],
         'chart.build':['Chart the Q3 variance by segment'] },
@@ -638,6 +959,12 @@ ASSISTANTS.forEach((a, i) => {
    Chat cell says where the work goes instead of pretending there is a
    conversation to open. */
 const SCHEDULE = [
+  { id:'sc9', name:'Daily service report', cron:'daily 07:30', next:'in 14 h', state:'ok',
+    target:'Support chatbot', assistant:'Customer service bot', last:'0:12',
+    history:[
+      { when:'Today · 07:30',     dur:'0:12', state:'ok', out:'Email → cong.yu@gnomondigital.com · 182 served, 76% resolved, 4.4 satisfaction, 9 hand-offs, 3 left notes' },
+      { when:'Yesterday · 07:30', dur:'0:11', state:'ok', out:'Email → cong.yu@gnomondigital.com · 168 served, 74% resolved, 4.3 satisfaction, 12 hand-offs, 5 left notes' }
+    ] },
   { id:'sc1', name:'Weekly revenue digest', cron:'Mon 07:00', next:'in 2 d', state:'ok',
     target:'#leadership', thread:'t1', assistant:'Board writer', last:'1:12',
     steps:[
@@ -928,6 +1255,29 @@ const KBS = [
       ['04:00','Warehouse sync','refreshed tickets-90d.jsonl','ok'],
       ['Aug 01','Nebulas','backfill failed — quota exceeded','err'],
       ['Jul 28','Ana','added macros.json','ok']
+    ] },
+
+  { id:'k5', name:'Product Q&A', docs:'428', updated:'35 min ago', health:'ok', embed:'nebula-embed-3',
+    desc:'Every question the products get asked, with the answers support actually gives — the only corpus the service bot may answer from.',
+    files:[
+      { n:'faq-billing.md',          from:'Repo',  size:'26 KB',  b:26624,  added:'Aug 14, 2026 09:20', ts:20260814.0920, st:'indexed' },
+      { n:'faq-onboarding.md',       from:'Repo',  size:'31 KB',  b:31744,  added:'Aug 14, 2026 09:21', ts:20260814.0921, st:'indexed' },
+      { n:'troubleshooting-tree.md', from:'Repo',  size:'44 KB',  b:45056,  added:'Aug 12, 2026 15:02', ts:20260812.1502, st:'indexed' },
+      { n:'service-plans.docx',      from:'Drive', size:'188 KB', b:192512, added:'Aug 10, 2026 11:30', ts:20260810.1130, st:'indexed' },
+      { n:'refund-policy.pdf',       from:'Drive', size:'240 KB', b:245760, added:'Aug 08, 2026 10:05', ts:20260808.1005, st:'indexed' }
+    ],
+    tables:[ ['answered_questions','1,982 rows','6 cols','Aug 14, 2026'] ],
+    series:[ { n:'deflection_rate', cadence:'daily', span:'last 30 days', bars:[62,64,61,68,71,70,74,76] } ],
+    analysis:[ ['Top unanswered intents','table · Support chatbot','1d'] ],
+    access:[
+      ['Cong Yu','Owner','every document'],
+      ['Customer service bot','Reader','every document'],
+      ['Support team','Editor','FAQs and the troubleshooting tree']
+    ],
+    activity:[
+      ['09:21','Support team','added faq-onboarding.md','ok'],
+      ['Aug 12','Nebulas','re-indexed the troubleshooting tree','ok'],
+      ['Aug 08','Cong Yu','added refund-policy.pdf','ok']
     ] }
 ];
 
@@ -1171,7 +1521,11 @@ CONNECTORS.push(
     scope:'1 business account · content_publish, insights', writes:true, calls:'196 / 7d', last:'14 min ago' },
   { id:'cn12', name:'LinkedIn', kind:'social', state:'off',
     desc:'The company page. Posts are drafted and queued without it; nothing leaves until it is connected.',
-    endpoint:'—', auth:'OAuth', scope:'—', writes:true, calls:'—', last:'—' }
+    endpoint:'—', auth:'OAuth', scope:'—', writes:true, calls:'—', last:'—' },
+  { id:'cn13', name:'Gmail', kind:'messaging', state:'ok',
+    desc:'Sends as support@gnomondigital.com: the daily service report, and follow-ups on what the bot handed off.',
+    endpoint:'gmail.googleapis.com/v1/users/support', auth:'OAuth',
+    scope:'send-only, 1 mailbox', writes:true, calls:'34 / 7d', last:'6 h ago' }
 );
 const CONNECTOR_AUTHS = ['OAuth','Service account','API key','Integration token','App installation','Signed webhook'];
 
@@ -2116,7 +2470,7 @@ const REPLIES = [
 return {
   ARTIFACTS, ARTIFACT_BY_ID, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SKILL_DESC, SCHEDULE,
   KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, APPS, APP_PANELS, CLOUD,
-  CONNECTORS, CONNECTOR_AUTHS, DESIGNS, DESIGN_ACCENTS,
+  CONNECTORS, CONNECTOR_AUTHS, DESIGNS, DESIGN_ACCENTS, SNIPPETS,
   ACCOUNT, MODELS, CASES, REPLIES
 };
 })();

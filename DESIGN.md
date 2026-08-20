@@ -523,47 +523,56 @@ project is a small application: it runs without being asked and files what it
 produces in the results column. Nothing in the interface announces which kind it
 is, because the switch is the only difference.
 
-**One screen, not a wizard.** A wizard implies the answers arrive in an order
-that matters. Here only the name is required, so the form is ordered by how much
-it changes what the project does:
+**Advanced is two more switches, not another kind.** The same rule scales past
+the schedule. Grant a project **preset code** — library snippets copied onto
+the project, where its Build page may edit the copy — and add an **output
+page** that binds a result template (the layout), one granted preset (the
+logic) and the tables it reads, and the project now publishes something hosted.
+There is still no `kind` field and no picker at creation: `basic` and
+`advanced` are words for prose, derived from whether pages exist, and the only
+announcements are a `code` flag on the sidebar row and a clause in the written
+description — exactly how `run` announces itself. The split of surfaces is the
+doctrine's other half: the chat page configures the basic facts, and each page
+lives in the results column as a `page` artifact rendered live from the record;
+Build is the only place code is edited and pages are composed, because that is
+where the bench can rehearse a rebuild the moment the logic changes. Requirements change by repointing a page at a
+different preset, not by editing the page.
 
-| Answer | Why it is there |
-|---|---|
-| **Name** | the only required one, and the only text anyone types |
-| **Icon** | eight glyphs naming kinds of work — General · Analysis · Engineering · Team · Ideas · Planning · Writing · Money |
-| **Who can see it** | Personal or shared with the workspace, with the consequence stated under whichever is picked, and *this can change afterwards* said out loud |
-| **Knowledge** *(folded)* | bases and datasets in one list, because both are "things it may read" |
-| **Assistant** *(folded)* | bound to new threads here; a thread can still pick another |
-| **Runs by itself** | the switch that decides which of the two things this is |
+**The dialog asks two things: a name and an icon.** It used to ask six. The
+other four — who can see it, knowledge, assistant, the schedule — were all
+answerable later, and a form that asks what can wait is a form that feels like
+work. So creation is the irreducible pair (the name to file it under, the glyph
+to find it by), and every other setting lives where its consequences are
+visible: on the project page itself. Each panel section there carries a small
+`+` that opens the same staged popup editors the Build page uses — one dialog
+per fact, Escape discards, Save toasts. Configuration moved to the panel
+because the panel is where you can see what the setting changed the moment you
+saved it.
 
-`Icon` and `Who can see it` sit side by side: stacked, two one-line choices push
-the rest of the form another 90px down for no gain.
-
-**The two list-shaped settings are folded shut**, because a list is tall and a
-form you have to scroll before you can name the thing is a form that feels like
-work. Closed, each row carries its name and *what is currently chosen* —
-`Knowledge · Finance corpus · q3_ledger`, `Assistant · Board writer` — which is
-the only thing a reader needs before deciding whether to open it. Native
-`<details>`, so the keyboard and the accessibility tree get it for free, and the
-summary is rewritten the moment the list inside is touched. Everything shut, the
-dialog is 334px of body: one screen, no scrolling.
+**The name row carries two small acts: share and rename.** Beside the project's
+name sit a share icon and a pencil. The pencil edits the name and the icon —
+nothing else. Share is a dialog of its own: invite coworkers by email (each one
+a removable chip), or flip one switch to share with the whole workspace — so
+visibility is a fact *inside* sharing rather than a label the panel repeats on
+every visit, and the sidebar's flag says which kind of shared a project is
+(`Shared with Gnomon Digital` / `Shared with 2 coworkers`). Invitations are
+simulated, like everything that would leave the page.
 
 **Nobody writes the description.** By the time someone has said what a project
 reads, who answers in it and whether it runs, they have already said what it is
 for — a text field asking again is asking twice. So the description is composed
 from the settings (`Produces a result every week, written by Board writer, from
-Finance corpus and accounts_health.`) and rewritten on every save while it stays
-automatic, which means it cannot describe a project that has since changed. The
-project page marks it with one `?` naming its author. A description that came
-from somewhere else — the fixtures' hand-written ones — is left alone.
+Finance corpus and accounts_health.`) and rewritten by every popup save while it
+stays automatic, which means it cannot describe a project that has since
+changed. The project page marks it with one `?` naming its author. A description
+that came from somewhere else — the fixtures' hand-written ones — is left alone.
 
-**Instructions expire.** Each setting can carry one line saying what it does, and
-that line is worth its space exactly once. So every hint has an `×`, the concept
-banner has one too, and the whole set retires when the dialog is first closed —
-one flag in `localStorage`, not a count of visits. The `?` in the dialog header
+**Instructions expire.** A setting can carry one line saying what it does, and
+that line is worth its space exactly once. So the hint has an `×`, the concept
+banner has one too, and the set retires when the dialog is first closed — one
+flag in `localStorage`, not a count of visits. The `?` in the dialog header
 brings them back for anyone who wants the tour again, which is why they are
-hidden rather than deleted. First open: 609px and five hints. Second: 334px and
-none.
+hidden rather than deleted.
 
 **Icons, not colours.** A glyph that names a kind of work is the cheapest way to
 say what a project is for, and nine of them are a vocabulary. A colour picker
@@ -593,11 +602,75 @@ does not wrap under the content when the pane narrows — a panel that becomes a
 full-width band is no longer a panel — it shrinks, and the composer's toolbar
 wraps if the remainder gets tight.
 
+**The panel runs to the very top, and the bar belongs to the chat column.** The
+shell's topbar withdraws on a project (`.pane:has(.projwrap)`), so the panel
+reads as a full-height column the way the sidebar does, and it opens with the
+project's own name and glyph — the one place they appear. The chat column
+carries a bar of its own, sticky at its top, titled **New Chat / Task**: the bar
+names the act, not the container, and the moment a message is sent the thread
+opens with the shell topbar back and the chat's own title in it. The bar is
+exactly the sidebar head's height (`--topbar-h`), so the two hairlines meet as
+one line across the shell — which is why the column's padding lives on the
+inner block rather than the column: a sticky bar inside a padded scroller sits
+the padding's height too low.
+
+**A project's chats live on the project page.** Sending a message does not
+leave for the main chat: the thread opens in the project's own chat column —
+runTurn streams into it the way it streams into the test bench, recording every
+turn on the thread — and a row in the panel's Chat History swaps the column to
+that conversation in place, marked current the way the sidebar marks the thread
+you are in. The bar carries the chat's title with a way back to New Chat /
+Task; the composer rides under the conversation, sticky, so a long chat still
+has its box. The global History keeps listing every thread — the project page
+is another door to the same records, not another store. The two panel
+toggles the shell bar carried (results, apps) move into this bar, wired to the
+same acts.
+
+**Every panel section folds, and the panel has one architecture.** Every project
+reads the same way: the four basic options — **Assistants, Knowledge,
+Connections, Schedule** — then Channels on a publishing project, then a full
+divider, and below it what has happened: **Results** and **Chat History**.
+Pages are not a section at all: a page is a *result* of the project, so each
+one is a `page` artifact in the results column — rendered live from the record
+(bindings, deploy line, rebuild) with the page's content as its second tab —
+and Build stays the only place a page is authored. Each section is a native `<details>` whose
+summary is the head it already had — the chevron leading at the left, the way
+the fold and the trace draw theirs, then the eyebrow, then the count of what is
+inside, and one small `+` at the right that opens its popup editor (the plus
+stops propagation, so editing never toggles the fold). The option sections ship
+folded: the count is on the head, so a shut section still says its size, and a
+project's panel opens as a table of contents rather than a scroll. Results and
+Chat History open, because activity is what you came back for. The head stays
+one text line tall: its controls overhang the line instead of inflating it. A
+toggle is remembered per project for the session — a reading preference, not a
+fact about the project. The panel itself is two zones, each its own scroller:
+the options take what is left, and the log — Results and Chat History — is
+pinned to the foot at a fixed height, so however far the options are expanded,
+the record of what happened keeps its place and its size. The full divider
+between what a project *is* and what has *happened* in it is the log zone's own
+top border.
+
+**Assistants and knowledge are checklists, and neither has a cap.** Both `+`
+dialogs are the same multi-pick list: check as many as the work needs. The
+project keeps its assistants in the order they were picked, and the first one
+answers new threads unless a thread picks another — the panel marks it
+`answers` once there is a second to be told apart from, and the schedule row
+and auto-description keep naming it. One choice would have been a dropdown;
+a list you extend is checkboxes, and the same control both times means learning
+it once.
+
+**One plus per section, and nothing inside an empty one.** The `+` on the head
+is the whole add-and-change affordance — the same slot and glyph the sidebar's
+group label and Build's lane head already use, so a reader who has added a
+project knows how to add an assistant. An empty section carries no invitation
+link inside: its count already says `0`, and leaving an option empty is a fine
+way to keep a project.
+
 **Each column is the height of the pane and scrolls inside itself**, the way the
 sidebar does, so `.pane__body` gives up its own scrolling for this view
 (`.pane__body--split`, reset on every render so the modifier belongs to the view
 that asked for it). One scrollbar for the whole page would tie the two halves
-together: reading to the bottom of a panel carrying channels, a queue, a
+together: reading to the bottom of a panel carrying channels, a
 workflow, threads and results would drag the box off the screen, and the box is
 what the page is for. Vertical centring stays `margin:auto 0` rather than
 `justify-content:center` for the same reason it always did — auto margins
@@ -612,11 +685,17 @@ changes it — then the three that decide what an answer will be: the
 the row says which), and the **workflow**: when it runs, the script it runs, and
 `Run now`. Then what has happened: **threads**, then **results**.
 
-**Every row is a door.** The assistant opens its record, a base opens in
-Knowledge, a dataset opens beside it, a thread opens, a result opens in the
-results column, and anything the project has not got — no assistant, no
-knowledge, no workflow — opens the settings dialog at the place that would fix
-it. A fact you can act on is worth more than a fact you can read.
+**Every row answers here.** A row under a subheading opens a modal with the
+thing's content — the assistant its record, a base its files, a dataset its
+schema and first rows, a connection its scope and endpoint — instead of leaving
+the project for the page that manages it. You came to read what the project
+has, and a redirect trades the project for one of its parts; the modal shows
+the part and gives the project back on close. Managing the thing still lives on
+its own page, and the connection peek says where. Read-only is visible: the
+peek is the same edit dialog with the foot withdrawn — no `Save` where nothing
+is staged — and anything the project has not got — no assistant, no knowledge,
+no workflow — opens the settings dialog at the place that would fix it. A fact
+you can act on is worth more than a fact you can read.
 
 **The results column closes when you arrive.** A project page already has a panel
 and a box; the results column is the third column too many, and it is the one
@@ -625,6 +704,25 @@ open app makes — and leaving hands back exactly what was borrowed, including a
 explicit choice made before the loan. `⌘.` on a project page ends the loan, and so
 does a result filed by `Run now`: the reader has just been given the column, and
 leaving should not take it away.
+
+**A chat's result is filed into the project by hand, not by default.** There is
+one store of results — the global column — and a project's Results section is a
+view of it: what the project itself produced (scheduled runs, page runs) is
+listed there by that fact alone, but what a *conversation* produced stays
+global until someone says it belongs here. The saying happens where the result
+is met: a weak button directly under the reference card in the chat — `Add to
+<project>'s results`, reading `In <project>'s results` once filed — and the
+same act as a folder glyph beside Download and Share on the result being read
+in the column. Both appear only when there is a project to file into: the one
+whose page is open, or the one the producing thread belongs to, so a
+project-born thread read from the main chat offers it too. Filing sets a mark
+(`pj`) on the record; nothing
+moves, nothing is copied, and a second click takes the mark back off — a
+mis-file costs one click. A result the project produced offers no filing,
+because it is already listed. Automatic filing was rejected on purpose: a chat
+inside a project produces drafts, dead ends and side-tables, and a Results
+section that collects all of them stops being the record of what the project
+settled on.
 
 **Three modes, because a project is asked for three kinds of thing.** The
 right-hand side is one column of one thing, centred in whatever room is left, and
@@ -694,33 +792,37 @@ follows.
 
 *Social publishing* is the worked example of a project that writes outward as well
 as reading inward: posts for Facebook, Instagram and LinkedIn, and the weekly read
-on what any of it did. Two optional fields carry it, and a project without them is
+on what any of it did. One optional field carries it, and a project without it is
 exactly what it was before.
 
 **A channel names a credential; it does not hold one.** `channels` points at the
 `CONNECTORS` row that holds the endpoint, the auth and the scope, because
 connecting a system is administrative and Cloud → Connections is where that lives.
 The project reports the state of the connection rather than owning it: one fact in
-one place, the rule the schedule row already follows. Clicking a channel opens its
-connector page; the state travels back the other way, so connecting from the
-project updates Connections and connecting in Connections updates the project.
+one place, the rule the schedule row already follows.
 
-**The connect action is where the problem is noticed.** LinkedIn ships
-disconnected, and the person who sees that is looking at the project, not at the
-admin surface — so `Connect LinkedIn` is offered in the panel and again inside the
-post that cannot go out, rather than a sentence telling somebody to go elsewhere.
-Undoable for six seconds, like everything else that changes state.
+**A channel opens in the results column, because its day is a result.** Clicking
+Facebook in the panel opens `Facebook — today` in the results pane: today's
+numbers, today's posts each marked *sent* or *not sent yet*, and what is written
+and waiting — rendered live from the project record, so editing a draft or
+connecting the channel changes the pane rather than a stale copy. Its second tab
+is **the page**: everything prepared for the channel as it will read when it
+goes out. The chat modes stay what they were — Work · Data · Auto program — and
+the composer stays with them; a channel is a reading of the project, and
+readings live where the project's other products do. A channel that cannot post
+says so at the top of its own result, with `Connect` offered right there rather
+than a sentence telling somebody to go elsewhere; undoable for six seconds, like
+everything else that changes state.
 
-**A queue, because writing and sending are different acts.** A post is drafted,
-reviewed and only then scheduled, and the gap between those is where a review
-happens — so `queue` holds each post with its channel, its time and one of
-*draft · needs review · scheduled*. Opening one is the only thing on this page
+**The waiting posts live with their channel, not in a panel list.** Writing and
+sending are different acts, and the gap between them — where a review happens —
+is shown where the sending will happen. Each draft keeps its time and one of
+*draft · needs review · scheduled*; opening one is the only thing on this page
 that is neither a question nor a setting, which is why it gets a dialog: the text,
-the channel it was written for, when it leaves, and the button that lets it. The
-character count is that channel's limit rather than a generic one, because a post
-written for one channel is the only one that can be counted honestly. `Rewrite it
-in the box` hands the draft to the composer, so editing by asking and editing by
-typing are the same door.
+when it leaves, and the button that lets it. The character count is that channel's
+limit rather than a generic one, because a post written for one channel is the
+only one that can be counted honestly. `Rewrite it in the box` hands the draft to
+the composer, so editing by asking and editing by typing are the same door.
 
 **A channel that is not connected reports nothing, not zero.** The weekly result
 says `not measured` for LinkedIn and `li_page_analytics` is marked stale, because a
@@ -733,6 +835,33 @@ insight tables (compare reach and engagement, which post beat its channel averag
 why one source is stale), and Auto program is the Monday report. The suggestions
 name this project's own channels and tables, because "draft a post" is a tutorial
 and "draft this week's three posts" is the job.
+
+### The service case: a chatbot whose results are forms
+
+*Support chatbot* is the worked example of a project that faces customers. The
+same four basics carry it whole: Knowledge is the product Q&A — the only corpus
+the bot may answer from; the Assistant IS the bot; Connections is Gmail,
+because the report and the follow-ups leave by email; the Schedule is one
+sentence — every morning, yesterday's users served, completion rate,
+satisfaction, hand-offs, and what customers left behind.
+
+**A result is not necessarily a page — this project's are forms.** Two `form`
+artifacts, rendered live from the project record like a channel's day: one is
+every inquiry the widget took (who asked, what, the topic, whether the bot
+resolved it, the satisfaction mark), the other what customers left for a human
+when it could not — the question, what the bot tried, and the follow-up they
+asked for. A form's second tab states its fields read-only: the structure is a
+fact about the system, not a setting.
+
+**Widget design is a dialog with the widget in it.** The button sits in the
+Results section, beside the forms the widget feeds. The popup is a live
+preview above the controls that change it — the logo (two letters), the tone,
+the title, the greeting, the input placeholder — redrawn as you type. The
+tones are the workspace accent schemes worn via `data-accent`, so a swatch IS
+its scheme and no colour value exists outside tokens.css. What it pointedly
+does not offer is the data structure: the fields and where entries land belong
+to the forms, and both the dialog and the form's own shape tab say so. Design
+is the customer's surface; the record is the system's.
 
 ## Assistants: filter the list, shortlist the ones you use
 
@@ -831,8 +960,13 @@ running it is that it can be edited first — and unlike a starter on the empty
 thread, this text is a *template* for the reader's own question, not a worked
 case with an answer waiting behind it.
 
-Where it lands: the thread you were in if you were in one, otherwise the first
-empty thread, and only then a new one — clicking three examples in a row should
+Where it lands: **the page you asked from, if that page can answer.** A card
+opened from inside a project puts the question in the project's own box — the
+conversation it starts belongs to the project's chat column and its Chat
+History, never to a new chat outside (only Auto program has no box, so that
+one mode steps back to Work). Anywhere else: the thread you were in if you
+were in one, otherwise the first empty thread, and only then a new one —
+clicking three examples in a row should
 not leave three "New chat" rows in the sidebar. The examples appear twice, in the
 identity column and inside their capability, because the two answer different
 questions: *what can I ask this?* and *what is this capability for?*
