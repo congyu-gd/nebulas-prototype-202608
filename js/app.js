@@ -433,7 +433,7 @@ const SECTIONS = {
       if (k === 'wg' || k === 'tp'){
         const d = find(D.DESIGNS, id);
         return { title:d.name, sub:d.kind === 'widget' ? 'widget · ' + d.shape
-          : (d.shape === 'pdf' ? 'PDF result template' : 'web result template · ' + d.shape) };
+          : (d.shape === 'pdf' ? 'PDF artifact template' : 'web artifact template · ' + d.shape) };
       }
       if (k === 'pj'){
         const p = find(D.PROJECTS, id);
@@ -535,11 +535,11 @@ const BUILD_GROUPS = [
     sub:d => d.shape,
     empty:'No widgets yet — the plus above makes one.' },
 
-  { kind:'tp', label:'Result templates', icon:'template', addTip:'New result template — describe it', add:() => openMaker('tp'),
+  { kind:'tp', label:'Artifact templates', icon:'template', addTip:'New artifact template — describe it', add:() => openMaker('tp'),
     items:() => D.DESIGNS.filter(d => d.kind === 'template'),
     lead:() => '<span class="row__icon">' + ic('template', 13) + '</span>',
     sub:d => d.shape === 'pdf' ? 'PDF' : 'web · ' + d.shape,
-    empty:'No result templates yet — the plus above makes one.' }
+    empty:'No artifact templates yet — the plus above makes one.' }
 ];
 
 /* ------------------------------------------------------- small builders */
@@ -791,16 +791,16 @@ function artFileRow(a){
   const filed = a.pj === fp.id;
   const b = el('button','btn btn--ghost btn--sm',
     '<span style="display:flex">' + ic(filed ? 'check' : 'folder',13) + '</span>' +
-    (filed ? 'In ' + esc(fp.name) + '’s results' : 'Add to ' + esc(fp.name) + '’s results'));
+    (filed ? 'In ' + esc(fp.name) + '’s artifacts' : 'Add to ' + esc(fp.name) + '’s artifacts'));
   b.type = 'button';
   b.style.marginTop = 'var(--s-1)';
-  b.title = filed ? 'Click to take it back out' : 'List this in ' + fp.name + '’s results too';
+  b.title = filed ? 'Click to take it back out' : 'List this in ' + fp.name + '’s artifacts too';
   b.onclick = () => toggleArtFile(a, fp);
   return b;
 }
 function toggleArtFile(a, fp){
-  if (a.pj === fp.id){ delete a.pj; toast('Removed from ' + fp.name + '’s results'); }
-  else { a.pj = fp.id; toast('Added to ' + fp.name + '’s results'); }
+  if (a.pj === fp.id){ delete a.pj; toast('Removed from ' + fp.name + '’s artifacts'); }
+  else { a.pj = fp.id; toast('Added to ' + fp.name + '’s artifacts'); }
   render();
   renderArtifact();
 }
@@ -3582,49 +3582,12 @@ function panelSec(p, title, opts){
   return d;
 }
 
-
-/* ------------------------------------------------------------ one project
-   A project answers two different questions and one long page answered neither.
-   So: a panel on the left carrying what this project *is* — its name, the
-   description written for it, who can see it, then the assistant, the knowledge
-   and the workflow, then what has happened in it — and the rest of the pane for
-   the one thing the page is for, asking it something.
-
-   The panel takes the sidebar's own surface and hairline, because it is the same
-   kind of thing: a fixed column of what you are working inside. Read across, the
-   shell now goes rail → menu → this project → the conversation.
-
-   Every row in the panel is a door: the assistant opens its record, a base opens
-   in Knowledge, a thread opens, a result opens in the results column. A fact you
-   can act on is worth more than a fact you can read. */
-function projectView(body, p){
-  const threads = D.THREADS.filter(t => t.project === p.id);
-  const reads = (p.kbs || []).concat(p.sources || []);
-  /* What the project produced, plus what was filed here by hand: a chat's
-     output lives in the global store, and filing lists it here as well. */
-  const mine = allResults().filter(a => a.from === p.name || a.pj === p.id);
-  /* A mode says what you are here for, and that is a fact about the project you
-     opened rather than a preference — so opening another one starts at Work. */
-  if (projModeFor !== p.id){ projMode = 'Work'; projThread = null; projModeFor = p.id; }
-
-  const wrap = el('div','projwrap');
-  const panel = el('aside','projpanel');
-  /* The panel's two zones: what the project IS (scrolls, takes what is left)
-     and what has HAPPENED (pinned at the foot, fixed height, its own scroll —
-     expanding an option above never moves the record below). */
-  const opts = el('div','projpanel__opts');
-  const plog = el('div','projpanel__log');
-  panel.append(opts, plog);
-  const main = el('div','projmain');
-  wrap.append(panel, main);
-  /* The two columns scroll on their own, so the pane body does not. */
-  body.classList.add('pane__body--split');
-  body.append(wrap);
-
-  /* ------------------------------------------------------------- identity
-     Name, glyph, the description Nebulas wrote, and who can see it — the
-     panel runs to the top of the pane now, so this is the one place the
-     project names itself. */
+/* ---------------------------------------------- the project, introduced
+   One design wherever a project is read: the chat/task panel and the Build
+   page draw the identity block and the three option sections from these
+   builders, so the two readings cannot drift apart. Even the fold memory is
+   shared — a section opened on one page is open on the other. */
+function pjIdentity(p){
   const idb = el('div','projid');
   const top = el('div','projid__top');
   top.innerHTML =
@@ -3650,13 +3613,9 @@ function projectView(body, p){
     '<p class="projid__desc">' + esc(p.desc) +
     (p.descAuto ? ' ' + inlineTip('Written by Nebulas from this project\'s settings, ' +
                                   'and rewritten when they change.') : '') + '</p>');
-  opts.append(idb);
-
-  /* The architecture, the same for every project: the four basic options —
-     Assistant, Knowledge, Connections, Schedule — folded shut with their
-     counts on the head, then what the project makes of them (Pages, Channels,
-     also folded), then a full divider, and below it what has happened:
-     Results and Chat History, open, because activity is what you came for. */
+  return idb;
+}
+function pjAsstSec(p){
   const asstNames = p.assistants || (p.assistant ? [p.assistant] : []);
   const sec = panelSec(p, 'Assistants', { shut:true, count:asstNames.length,
     edit:() => editPjAsst(p), tip:'Add assistants' });
@@ -3672,10 +3631,12 @@ function projectView(body, p){
       onClick:a ? () => openAssistant(a) : () => editPjAsst(p)
     }));
   });
-  opts.append(sec);
-
-  /* Two kinds of thing it may read, and the row says which: a base is documents,
-     a dataset is a table. */
+  return sec;
+}
+/* Two kinds of thing it may read, and the row says which: a base is documents,
+   a dataset is a table. */
+function pjKnowSec(p){
+  const reads = (p.kbs || []).concat(p.sources || []);
   const know = panelSec(p, 'Knowledge', { shut:true, count:reads.length,
     edit:() => editPjKnow(p), tip:'Add knowledge' });
   (p.kbs || []).forEach(nm => {
@@ -3694,27 +3655,13 @@ function projectView(body, p){
       onClick:dsx ? () => peekDs(dsx) : () => editPjKnow(p)
     }));
   });
-  opts.append(know);
-
-  /* The external systems it is granted — a row answers in a modal, like every
-     row in this panel; the connection itself is still managed in Cloud. */
-  const cx = panelSec(p, 'Connections', { shut:true, count:(p.conn || []).length,
-    edit:() => editPjConn(p), tip:'Grant a connection' });
-  (p.conn || []).forEach(id => {
-    const cn = connById(id);
-    if (!cn) return;
-    cx.append(listRow({
-      lead:dotLead(cn.state),
-      title:cn.name, sub:cn.state === 'off' ? 'not connected' : cn.scope, meta:cn.kind,
-      onClick:() => peekCn(cn)
-    }));
-  });
-  opts.append(cx);
-
-  /* What the project does without being asked: when it runs, and the script it
-     runs — which is a sentence, because that is what the model is given. The
-     button is there because a weekly project is hard to believe in on a
-     Tuesday. */
+  return know;
+}
+/* What the project does without being asked: when it runs, and the script it
+   runs — which is a sentence, because that is what the model is given. The
+   button is there because a weekly project is hard to believe in on a
+   Tuesday. */
+function pjSchedSec(p){
   const auto = panelSec(p, 'Schedule', { shut:true, count:p.run ? 1 : 0,
     edit:() => editPjRun(p), tip:'Set the schedule',
     trailing:infoTip('Nebulas runs this without being asked and files each result in the results column.') });
@@ -3735,27 +3682,140 @@ function projectView(body, p){
     now.onclick = () => runProject(p);
     auto.append(rowActs([now]));
   }
-  opts.append(auto);
+  return auto;
+}
+/* -------------------------------------------------------------- artifacts
+   One row shape wherever a project's artifacts list — the chat/task panel
+   and the Build page cannot disagree. Artifacts is the flat record of
+   everything produced; Customized output, its own section below it, holds
+   the outputs the project filed there (p.custom.ids). Filing joins the
+   add-artifact flow. */
+const pjArts = p => allResults().filter(r => r.from === p.name || r.pj === p.id);
+const pjCustom = p => {
+  const ids = (p.custom && p.custom.ids) || [];
+  return pjArts(p).filter(r => ids.indexOf(r.id) > -1);
+};
+
+function pjArtRow(p, r, opts){
+  const base = listRow({
+    lead:'<span class="row__icon">' + ic(artGlyph(r),13) + '</span>',
+    title:r.title, sub:artType(r) + ' · ' + r.size, meta:stampShort(r.at),
+    onClick:() => openArtifact(r.id)
+  });
+  /* On Build a page artifact keeps its edit door — its bindings are Build's
+     to change. Sibling button, not nested: the row is a button already. */
+  const pg = opts && opts.gear && r.kind === 'page' &&
+             (p.pages || []).filter(x => x.id === r.pg)[0];
+  if (!pg) return base;
+  const line = el('div','rowline');
+  const gear = el('button','row__act', ic('gear',13));
+  gear.type = 'button';
+  gear.title = 'Page settings — layout, logic, reads';
+  gear.setAttribute('aria-label','Settings for ' + pg.name);
+  gear.onclick = () => editPjPage(p, pg);
+  line.append(base, gear);
+  return line;
+}
+function pjArtRows(p, into, opts){
+  const mine = pjArts(p);
+  if (!mine.length) into.append(helpNote('None yet. Artifacts the project produces land here.'));
+  mine.forEach(r => into.append(pjArtRow(p, r, opts)));
+  return mine;
+}
+function pjCustomRows(p, into, opts){
+  const rows = pjCustom(p);
+  if (!rows.length) into.append(helpNote('Nothing here yet — filing an output joins the add-artifact flow.'));
+  rows.forEach(r => into.append(pjArtRow(p, r, opts)));
+  return rows;
+}
+
+/* The external systems it is granted — a row answers in a modal; the
+   connection itself is still managed in Cloud. */
+function pjConnSec(p){
+  const cx = panelSec(p, 'Connections', { shut:true, count:(p.conn || []).length,
+    edit:() => editPjConn(p), tip:'Grant a connection' });
+  (p.conn || []).forEach(id => {
+    const cn = connById(id);
+    if (!cn) return;
+    cx.append(listRow({
+      lead:dotLead(cn.state),
+      title:cn.name, sub:cn.state === 'off' ? 'not connected' : cn.scope, meta:cn.kind,
+      onClick:() => peekCn(cn)
+    }));
+  });
+  return cx;
+}
+
+
+/* ------------------------------------------------------------ one project
+   A project answers two different questions and one long page answered neither.
+   So: a panel on the left carrying what this project *is* — its name, the
+   description written for it, who can see it, then the assistant, the knowledge
+   and the workflow, then what has happened in it — and the rest of the pane for
+   the one thing the page is for, asking it something.
+
+   The panel takes the sidebar's own surface and hairline, because it is the same
+   kind of thing: a fixed column of what you are working inside. Read across, the
+   shell now goes rail → menu → this project → the conversation.
+
+   Every row in the panel is a door: the assistant opens its record, a base opens
+   in Knowledge, a thread opens, a result opens in the results column. A fact you
+   can act on is worth more than a fact you can read. */
+function projectView(body, p){
+  const threads = D.THREADS.filter(t => t.project === p.id);
+  /* What the project produced, plus what was filed here by hand: a chat's
+     output lives in the global store, and filing lists it here as well. */
+  const mine = pjArts(p);
+  /* A mode says what you are here for, and that is a fact about the project you
+     opened rather than a preference — so opening another one starts at Work. */
+  if (projModeFor !== p.id){ projMode = 'Work'; projThread = null; projModeFor = p.id; }
+
+  const wrap = el('div','projwrap');
+  const panel = el('aside','projpanel');
+  /* The panel's two zones: what the project IS (scrolls, takes what is left)
+     and what has HAPPENED (pinned at the foot, fixed height, its own scroll —
+     expanding an option above never moves the record below). */
+  const opts = el('div','projpanel__opts');
+  const plog = el('div','projpanel__log');
+  panel.append(opts, plog);
+  const main = el('div','projmain');
+  wrap.append(panel, main);
+  /* The two columns scroll on their own, so the pane body does not. */
+  body.classList.add('pane__body--split');
+  body.append(wrap);
+
+  /* ------------------------------------------------------------- identity
+     Name, glyph, the description Nebulas wrote, and who can see it — the
+     panel runs to the top of the pane now, so this is the one place the
+     project names itself.
+
+     The architecture, the same for every project: the four basic options —
+     Assistant, Knowledge, Connections, Schedule — folded shut with their
+     counts on the head, then what the project makes of them (Pages, Channels,
+     also folded), then a full divider, and below it what has happened:
+     Artifacts and Chat History, open, because activity is what you came for.
+     Identity and the four option sections are shared builders — the Build
+     page draws the same ones, so the two readings of a project cannot
+     drift apart. */
+  opts.append(pjIdentity(p));
+  opts.append(pjAsstSec(p));
+  opts.append(pjKnowSec(p));
+  opts.append(pjConnSec(p));
+  opts.append(pjSchedSec(p));
 
   /* Pages are not a panel section: a page IS a result of the project, so it
-     lives in Results below — a `page` artifact rendered live from the record,
+     lives in Artifacts below — a `page` artifact rendered live from the record,
      authored in Build. */
 
   /* Where it publishes. Only a project that posts has it; the writing that is
      not out yet lives inside each channel's own tab, not in a panel list. */
   if (p.channels && p.channels.length) projectChannels(opts, p);
 
-  /* The line between IS and HAPPENED is the log zone's own top border. */
-  const res = panelSec(p, 'Results', { count:mine.length });
-  if (!mine.length){
-    res.append(helpNote('None yet. Results the project produces land here.'));
-  } else {
-    mine.forEach(a => res.append(listRow({
-      lead:'<span class="row__icon">' + ic(artGlyph(a),13) + '</span>',
-      title:a.title, meta:stampShort(a.at), sub:artType(a) + ' · ' + a.size,
-      onClick:() => openArtifact(a.id)
-    })));
-  }
+  /* The line between IS and HAPPENED is the log zone's own top border.
+     The same rows Build draws (pjArtRows), then the project's Customized
+     output as its own section below — never a grouping inside the record. */
+  const res = panelSec(p, 'Artifacts', { count:mine.length });
+  pjArtRows(p, res);
   /* A project with a customer-facing widget designs it from here — beside the
      forms it feeds. Design only: the popup restyles, never restructures. */
   if (p.widget){
@@ -3766,6 +3826,12 @@ function projectView(body, p){
     res.append(rowActs([wb]));
   }
   plog.append(res);
+
+  /* Customized output — the project's own section, below Artifacts on every
+     surface. What is filed here is chosen, not everything produced. */
+  const cust = panelSec(p, 'Customized output', { count:pjCustom(p).length });
+  pjCustomRows(p, cust);
+  plog.append(cust);
 
   /* A chat opened here opens HERE: the row swaps the right-hand column to the
      conversation instead of leaving the project for the main chat. The current
@@ -4637,9 +4703,9 @@ function newAssistant(){
 function draftDesign(kind, shape){
   const tpl = kind === 'template';
   const d = tpl ? {
-    id:'de-n' + (++madeN), name:'Untitled result template', kind:'template', shape:shape || 'landing',
+    id:'de-n' + (++madeN), name:'Untitled artifact template', kind:'template', shape:shape || 'landing',
     state:'draft', team:D.ASSISTANT_TEAMS[0],
-    desc:'A new result template. Everything about it is set in the inspector.',
+    desc:'A new artifact template. Everything about it is set in the inspector.',
     cfg:{ title:'Untitled', sub:'', cta:'Get started', nav:'Home, Docs, Pricing',
           sections:'Summary, Detail, Actions', footer:'',
           accent:'Nebulas', radius:'Soft', theme:'Follow', width:'Wide',
@@ -4694,9 +4760,14 @@ const pageTemplate = pg => D.DESIGNS.filter(d => d.id === pg.template && d.kind 
    own project — one store, no twin. */
 function editPjAbout(p){
   openEdit({ title:'About', sub:p.name, ico:'folder',
-    staged:{ name:p.name, icon:p.icon },
+    /* An auto description stages as empty so the box invites writing one; the
+       current auto text sits in the placeholder, readable but not owned. */
+    staged:{ name:p.name, icon:p.icon, desc:p.descAuto ? '' : (p.desc || '') },
     build(body, st){
       body.append(field('Name', inputCtl(st.name, v => { st.name = v; })));
+      body.append(field('What it is for',
+        textareaCtl(st.desc, v => { st.desc = v; }, p.descAuto ? p.desc : ''),
+        'Left empty, Nebulas writes it from the settings and keeps it current.'));
       body.append(field('Icon', selectCtl(PROJ_ICONS, st.icon, v => { st.icon = v; }),
         'Named after the kind of work, in the sidebar.'));
     },
@@ -4706,6 +4777,9 @@ function editPjAbout(p){
       const row = p.run && p.run.sched && find(D.SCHEDULE, p.run.sched);
       if (row) row.target = nm;
       p.name = nm; p.icon = st.icon;
+      const d = st.desc.trim();
+      if (d){ p.desc = d; p.descAuto = false; }
+      else { p.desc = ''; p.descAuto = true; }
       refreshDesc(p);
     } });
 }
@@ -4751,7 +4825,7 @@ function editPjShare(p){
       inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); commit(); } };
       row.append(inp, add);
       body.append(field('Invite by email', row,
-        'They can open the project, its threads and its results.'));
+        'They can open the project, its threads and its artifacts.'));
       body.append(list);
       draw();
       const sw = switchCtl('Share with everyone at ' + D.ACCOUNT.org, st.shared);
@@ -5050,7 +5124,7 @@ function editPjCode(p, c){
 }
 
 /* -------------------------------------------------------------- the pages
-   A page is three bindings: a result template for the layout, one of the
+   A page is three bindings: a artifact template for the layout, one of the
    project's presets for the logic, and the tables the logic reads. The logic
    list offers only what this project has granted — requirements change by
    changing which preset the page picks, not by editing the page. */
@@ -5068,13 +5142,13 @@ function editPjPage(p, pg){
       const tplCur = (tpls.filter(t => t.id === st.template)[0] || {}).name || '— none —';
       body.append(field('Layout', selectCtl(tplNames, tplCur, v => {
         st.template = (tpls.filter(t => t.name === v)[0] || {}).id || null;
-      }), 'A result template — how the page looks. Made in Build → Result templates.'));
+      }), 'A artifact template — how the page looks. Made in Build → Artifact templates.'));
       const lgNames = ['— none —'].concat(p.code.map(c => c.name));
       const lgCur = (p.code.filter(c => c.id === st.logic)[0] || {}).name || '— none —';
       body.append(field('Logic', selectCtl(lgNames, lgCur, v => {
         st.logic = (p.code.filter(c => c.name === v)[0] || {}).id || null;
       }), p.code.length ? 'One of this project\'s presets — how the page computes.'
-                        : 'Nothing to pick: grant a preset first, under Preset code.'));
+                        : 'Nothing to pick: no preset is granted to this project yet.'));
       body.append(field('Reads', pickList(
         D.DATASETS.map(t => ({ nm:t.name,
           sub:(p.sources || []).indexOf(t.name) > -1 ? t.desc : 'not on the project shelf — bind it under Knowledge',
@@ -5109,45 +5183,301 @@ function editPjPage(p, pg){
     } });
 }
 
-/* The deploy line a page already has, the way a result template has one: the
+/* The deploy line a page already has, the way a artifact template has one: the
    command is read, not run, and it names all three bindings so the reader can
    check them against the rows above it. */
 function pageSnippet(p, pg){
   const t = pageTemplate(pg), lg = pageLogic(p, pg);
   return [
     'nebulas deploy ' + p.id + '/' + pg.id +
-      ' --template ' + (t ? t.id : '—') + ' --logic ' + (lg ? lg.name : '—'),
+      (pg.folder ? ' --folder ' + pg.folder.name + '/'
+                 : ' --template ' + (t ? t.id : '—') + ' --logic ' + (lg ? lg.name : '—')),
     pg.state === 'live' && pg.url
       ? '  live at ' + pg.url + ' · rebuilt on every run'
       : '  draft — nothing is hosted until it is published'
   ].join('\n');
 }
 
-/* A page rebuild files a result the way a scheduled run does: same column,
-   same attribution, so the project page's Results list carries both. */
-function runPage(p, pg){
-  const t = pageTemplate(pg), lg = pageLogic(p, pg);
-  const n = allResults().filter(a => a.from === p.name).length + 1;
-  const report = [
-    '**' + pg.name + '** was rebuilt' + (pg.state === 'live' && pg.url
-      ? ' and published to `' + pg.url + '`.' : ' as a draft — nothing is hosted yet.'),
-    '',
-    'Ran ' + stampFull(Date.now()) + ' · on request.',
-    '',
-    '- **Layout** — ' + (t ? t.name : 'none picked'),
-    '- **Logic** — ' + (lg ? lg.name + (lg.edited ? ', edited in this project' : ', as the library ships it')
-                           : 'none picked'),
-    '- **Read** — ' + (pg.sources.length ? pg.sources.join(', ') : 'nothing'),
-    '',
-    'The rebuild is simulated here, as every answer in this prototype is: a real one ' +
-    'would leave the rendered page behind this entry.'
-  ].join('\n');
-  fileResult({ id:'r-' + p.id + '-' + pg.id + '-' + n, title:pg.name + ' — page rebuilt',
-    from:p.name, shape:'doc', size:plural(5, 'line'), md:report });
-  state.projLoan = false;
-  state.artBefore = null;
-  p.when = 'now';
+/* One door for adding an artifact: the button opens this chooser, and the
+   choice routes to its kind's own flow. Only the page flow exists today; the
+   other kinds name themselves and say so when picked — a list that pretends
+   five flows exist teaches people not to trust the one that does. Read-only
+   dialog shape: choosing IS the act, so there is nothing to stage or save. */
+function addArtifactChooser(p){
+  const kinds = [
+    { nm:'Page', ico:'template', go:true,
+      sub:'Described in chat, one question at a time — built as a folder, hosted at a URL, rebuilt by its workflow' },
+    { nm:'Table', ico:'table',
+      sub:'Rows the project computes and keeps current' },
+    { nm:'Document', ico:'doc',
+      sub:'A written report, filed on every run' },
+    { nm:'Chart', ico:'chart',
+      sub:'A measure drawn, with the data behind it' },
+    { nm:'Form', ico:'clist',
+      sub:'What people submit, one row per entry' }
+  ];
+  openEdit({ title:'Add an artifact', sub:p.name, ico:'plus', read:true, staged:{},
+    build(body){
+      const list = el('div','picklist');
+      kinds.forEach(k => {
+        const row = el('button','picklist__row');
+        row.type = 'button';
+        row.innerHTML =
+          '<span class="picklist__ico">' + ic(k.ico, 14) + '</span>' +
+          '<span class="picklist__main">' +
+            '<span class="picklist__nm">' + esc(k.nm) + '</span>' +
+            '<span class="picklist__sub">' + esc(k.sub) + '</span></span>' +
+          (k.go ? '<span class="setrow__go">' + ic('chevR',13) + '</span>'
+                : '<span class="badge">soon</span>');
+        row.onclick = k.go
+          ? () => { closeEdit(); openPageWizard(p); }
+          : () => toast('Adding a ' + k.nm.toLowerCase() + ' — this flow is not designed yet');
+        list.append(row);
+      });
+      body.append(list);
+      body.append(noteP('An artifact is something the project produces and keeps producing. ' +
+        'Each kind gets its own flow; only the page flow exists so far.'));
+    } });
+}
+
+/* ============================================================= page wizard
+   Add → Page opens this: a guided chat on the left, the page taking shape on
+   the right. The questions are a fixed script (D.PAGE_WIZARD) asked one at a
+   time — a chip answers with a click, the box answers with anything typed —
+   because a wall of every setting at once is the form this flow replaces.
+   Nothing branches on an answer: the order is the logic, and the answers are
+   kept to be written into the page that comes out. When the build finishes,
+   the right pane holds Preview and Script, and Done files the page — as a
+   folder of working files — under the project's Customized output. */
+let pwOn = null;
+
+function openPageWizard(p){
+  pwOn = { p:p, step:-1, answers:[], built:false, busy:false, done:false, tab:0 };
+  $('#pwTitle').textContent = 'New page';
+  $('#pwSub').textContent = p.name + ' · one question at a time — the page appears on the right';
+  $('#pwLog').innerHTML = '';
+  $('#pwInput').value = '';
+  $('#pwInput').disabled = false;
+  pwSyncSide();
+  $('#pwScrim').dataset.open = 'true';
+  pwAsk();
+  $('#pwInput').focus();
+}
+function closePageWizard(){
+  const w = pwOn;
+  $('#pwScrim').dataset.open = 'false';
+  pwOn = null;
+  /* The panes empty with the overlay — stale chips must not linger armed. */
+  $('#pwLog').innerHTML = '';
+  pwSyncSide();
+  /* Closing mid-conversation discards: nothing is filed until Done says so. */
+  if (w && !w.done && w.answers.length) toast('Left the page wizard — nothing was filed');
+}
+
+const pwScroll = () => { const s = $('#pwLog'); s.scrollTop = s.scrollHeight; };
+function pwMsg(role, html){
+  const wrap = el('div','msg');
+  wrap.dataset.role = role;
+  wrap.innerHTML = '<div class="msg__head"><span class="msg__who">' +
+    (role === 'user' ? 'You' : esc(state.model)) + '</span></div>';
+  wrap.append(el('div','prose', html));
+  $('#pwLog').append(wrap);
+  pwScroll();
+  return wrap;
+}
+
+/* The next question arrives after a beat, with its answers as chips under it.
+   The chips leave when the step is answered — an old question must not stay
+   clickable, or the "one at a time" promise breaks. */
+function pwAsk(){
+  const w = pwOn;
+  w.step++;
+  const s = D.PAGE_WIZARD.steps[w.step];
+  if (!s){ pwBuild(); return; }
+  w.busy = true;
+  $('#pwSend').disabled = true;
+  setTimeout(() => {
+    if (pwOn !== w) return;                              /* closed while thinking */
+    const wrap = pwMsg('ai',
+      (s.pre ? '<p>' + esc(s.pre) + '</p>' : '') + '<p>' + esc(s.ask) + '</p>');
+    const opts = el('div','pwopts');
+    s.opts.forEach(t => {
+      const c = el('button','chip','<span>' + esc(t) + '</span>');
+      c.type = 'button';
+      c.onclick = () => pwAnswer(t);
+      opts.append(c);
+    });
+    wrap.append(opts);
+    $('#pwInput').placeholder = s.ph || 'Or answer in your own words…';
+    w.busy = false;
+    $('#pwSend').disabled = false;
+    pwScroll();
+  }, w.step === 0 ? 350 : 650);
+}
+
+function pwAnswer(text){
+  const w = pwOn;
+  if (!w || w.busy || w.built) return;
+  const t = String(text).trim();
+  if (!t) return;
+  $$('.pwopts', $('#pwLog')).forEach(x => x.remove());
+  w.answers[w.step] = t;
+  pwMsg('user', '<p>' + esc(t) + '</p>');
+  $('#pwInput').value = '';
+  pwAsk();
+}
+
+/* The name is the last answer; everything the page is filed under follows it. */
+const pwName = w => (w.answers[D.PAGE_WIZARD.steps.length - 1] ||
+  'Monthly data analysis report').replace(/\s+/g, ' ').slice(0, 60);
+const pwSlug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'page';
+const pwUrl  = w => w.p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') +
+  '.acme.app/' + pwSlug(pwName(w));
+const pwFolder = w => ({ name:pwSlug(pwName(w)), files:D.PAGE_WIZARD.files });
+
+/* All answered: the build runs as a visible trace (the turn engine's shape),
+   then the page exists — a WEB_PAGES entry the preview renders from. */
+async function pwBuild(){
+  const w = pwOn;
+  w.busy = true;
+  $('#pwSend').disabled = true;
+  $('#pwInput').disabled = true;
+  const wrap = pwMsg('ai', '<p>That is everything I need. Building it now.</p>');
+  const trace = traceNode([], '', true);
+  trace.classList.add('msg__trace');
+  const tbody = $('.trace__body', trace);
+  tbody.innerHTML = '';
+  $('[data-label]', trace).textContent = 'Building…';
+  wrap.append(trace);
+  pwScroll();
+  let elapsed = 0;
+  for (const s of D.PAGE_WIZARD.build){
+    if (pwOn !== w) return;
+    const step = el('div','step',
+      '<span class="dot dot--run is-live"></span>' +
+      '<span class="step__name">' + esc(s.n) + '</span>' +
+      '<span class="step__detail">' + esc(s.d) + '</span>' +
+      '<span class="step__t"></span>');
+    tbody.append(step);
+    pwScroll();
+    await sleep(parseFloat(s.t) * 620);
+    if (pwOn !== w) return;
+    $('.dot', step).className = 'dot dot--ok';
+    $('.step__t', step).textContent = s.t;
+    elapsed += parseFloat(s.t);
+  }
+  $('[data-label]', trace).textContent = 'Worked through ' + D.PAGE_WIZARD.build.length + ' steps';
+  $('.trace__dur', trace).textContent = elapsed.toFixed(1) + 's';
+  trace.dataset.open = 'false';
+  wrap.append(el('div','prose', md(D.PAGE_WIZARD.done)));
+  D.WEB_PAGES[pwUrl(w)] = Object.assign({}, D.PAGE_WIZARD.page, {
+    title:pwName(w),
+    foot:'Generated by ' + w.p.name + ' · rebuilt monthly by the workflow'
+  });
+  w.built = true;
+  w.busy = false;
+  $('#pwInput').placeholder = 'The page is built — Done files it.';
+  pwSyncSide();
+  pwScroll();
+}
+
+/* The right pane: a placeholder until the build, then Preview | Script tabs.
+   Preview is the page itself under its address; Script is the folder. */
+function pwSyncSide(){
+  const w = pwOn, side = $('#pwSide');
+  side.innerHTML = '';
+  $('#pwDone').disabled = !w || !w.built;
+  if (!w) return;
+  if (!w.built){
+    side.append(emptyState('template','The page appears here',
+      'Answer on the left, one step at a time. When the build finishes, the preview and the script fill this pane.'));
+    return;
+  }
+  const tabs = el('div','tabs arttabs');
+  ['Preview','Script'].forEach((l, i) => {
+    const b = el('button','tab', l);
+    b.type = 'button';
+    b.setAttribute('aria-selected', String(i === w.tab));
+    b.onclick = () => { w.tab = i; pwSyncSide(); };
+    tabs.append(b);
+  });
+  side.append(tabs);
+  if (w.tab === 0){
+    const url = pwUrl(w);
+    side.append(el('div','pwaddr', ic('globe',12) + '<span>https://' + esc(url) + '</span>'));
+    const frame = el('div','pwframe');
+    frame.append(webPageNode(url));
+    side.append(frame);
+  } else {
+    side.append(folderNode(pwFolder(w)));
+  }
+}
+
+/* A folder of working files: the header names it, a row per file, the chosen
+   file's contents underneath. Selection is local to the node, so the wizard's
+   Script tab and the artifact's Files tab show the same folder without
+   sharing a cursor. */
+function folderNode(folder){
+  const wrap = el('div','pwfolder');
+  let cur = 1 < folder.files.length ? 1 : 0;   /* the logic file first — it is the story */
+  const draw = () => {
+    wrap.innerHTML = '';
+    wrap.append(el('div','pwfolder__head',
+      ic('folder',13) + '<span class="t-mono">' + esc(folder.name) + '/</span>' +
+      '<span class="pwfolder__n">' + plural(folder.files.length, 'file') + '</span>'));
+    const list = el('div','pwfiles');
+    folder.files.forEach((f, i) => {
+      const b = el('button','pwfile');
+      b.type = 'button';
+      b.setAttribute('aria-selected', String(i === cur));
+      b.innerHTML = ic('file',13) +
+        '<span class="pwfile__nm t-mono">' + esc(f.nm) + '</span>' +
+        '<span class="pwfile__sub">' + esc(f.sub) + '</span>';
+      b.onclick = () => { cur = i; draw(); };
+      list.append(b);
+    });
+    wrap.append(list);
+    wrap.append(codeCard(folder.files[cur].code));
+  };
+  draw();
+  return wrap;
+}
+
+/* Done is the filing act: the page record (carrying its folder) joins the
+   project, the artifact joins the results column, and its id joins
+   Customized output — which is where the Add that started this lives. */
+function pwDone(){
+  const w = pwOn;
+  if (!w || !w.built) return;
+  const p = w.p, name = pwName(w), url = pwUrl(w);
+  const pg = { id:'pg-n' + (++madeN), name:name, template:null,
+    logic:(p.code && p.code[0] ? p.code[0].id : null),
+    sources:(p.sources || []).slice(0, 2), state:'live', url:url,
+    folder:pwFolder(w) };
+  p.pages.push(pg);
+  const a = { id:'a-n' + (++madeN), kind:'page', pid:p.id, pg:pg.id,
+    title:name + ' — page', from:p.name, when:'now', at:Date.now(), size:'live',
+    md:[
+      'The **' + name + '** page, live at <code>' + url + '</code> — built as the folder ' +
+      '<code>' + pg.folder.name + '/</code>, whose workflow rebuilds it monthly.',
+      '',
+      '- **Data** — ' + (w.answers[1] || 'the project shelf'),
+      '- **Schedule** — ' + (w.answers[4] || 'monthly'),
+      '',
+      'The latest month is always what the URL shows: a run recomputes every number on it.'
+    ].join('\n'),
+    code:'— a page result renders live from the project —' };
+  D.ARTIFACTS.push(a);
+  if (!p.custom) p.custom = { ids:[] };
+  p.custom.ids.push(a.id);
+  refreshDesc(p);
+  w.done = true;
+  pwOn = null;
+  $('#pwScrim').dataset.open = 'false';
+  $('#pwLog').innerHTML = '';
+  pwSyncSide();
   render();
+  toast('Filed under Customized output — ' + name);
 }
 
 /* The bench's reply for a project runs the question through what is bound —
@@ -5170,9 +5500,9 @@ function pjTestScript(text, p){
     const lines = ['Rebuilding **' + pg.name + '** — simulated, like everything here.', ''];
     lines.push(lg
       ? '- **Logic** — ' + lg.name + (lg.edited ? ', edited in this project.' : ', as the library ships it.')
-      : '- **No logic** — the page points at no preset, so there is nothing to run. Pick one under Preset code.');
+      : '- **No logic** — the page points at no preset, so there is nothing to run. Pick one in the page\'s settings.');
     lines.push(t ? '- **Layout** — ' + t.name + ', a ' + t.shape + ' template.'
-                 : '- **No layout** — pick a result template and the page has a shape.');
+                 : '- **No layout** — pick a artifact template and the page has a shape.');
     lines.push(pg.state === 'live' && pg.url
       ? '- **Published** — the rebuild would land at ' + pg.url + '.'
       : '- **Draft** — nothing is hosted until the page is published.');
@@ -5209,130 +5539,32 @@ function projectBuildView(body, p){
   const s = buildSplit();
   s.wrap.classList.add('build--test');
 
-  const connName = id => find(D.CONNECTORS, id).name;
-  const threads = D.THREADS.filter(t => t.project === p.id);
-
-  const about = el('section','section');
-  about.append(sectionHead('About', '<span class="t-mono">' + plural(threads.length, 'thread') + '</span>'));
-  const l1 = el('div','setlist');
-  l1.append(setRow('Name', esc(p.name), () => editPjAbout(p)));
-  l1.append(setRow('Who can see it',
-    p.shared ? 'Shared — the workspace works here'
-      : (p.people || []).length ? esc('Shared with ' + plural(p.people.length, 'coworker'))
-      : 'Personal', () => editPjShare(p)));
-  l1.append(setRow('Icon', esc(p.icon), () => editPjAbout(p)));
-  about.append(l1);
-  s.main.append(about);
-
-  const work = el('section','section');
-  work.append(sectionHead('The work'));
-  const l2 = el('div','setlist');
-  l2.append(setRow('Assistants',
-    (p.assistants || []).length ? esc(p.assistants.join(' · '))
-                                : 'none — threads here use the workspace model',
-    () => editPjAsst(p)));
-  const reads = (p.kbs || []).concat(p.sources || []);
-  l2.append(setRow('Knowledge',
-    reads.length ? esc(reads.join(' · ')) : 'nothing on the shelf yet',
-    () => editPjKnow(p)));
-  l2.append(setRow('Connections',
-    (p.conn || []).length ? esc(p.conn.map(connName).join(' · ')) : 'none granted',
-    () => editPjConn(p)));
-  work.append(l2);
-  /* A granted connector that is not connected is stated, not hidden. */
+  /* The project introduces itself here exactly as its chat/task panel does —
+     the same identity block, the same four folded sections (Assistants,
+     Knowledge, Connections, Schedule), drawn from the same builders
+     (pjIdentity and friends), so the two readings of one project cannot
+     drift apart. Build adds only what the chat page keeps quiet about: the
+     gap banner, because this is the page where gaps are fixed. */
+  s.main.append(pjIdentity(p));
+  s.main.append(pjAsstSec(p));
+  s.main.append(pjKnowSec(p));
+  s.main.append(pjConnSec(p));
+  /* A granted connector that is not connected is stated, not hidden — and
+     outside the fold, or the statement folds away with it. */
   const cold = (p.conn || []).map(id => find(D.CONNECTORS, id)).filter(c => c.state === 'off');
   if (cold.length){
     const b = banner('warn', '<strong>' + esc(cold.map(c => c.name).join(', ')) +
       '</strong> ' + (cold.length === 1 ? 'is granted but not connected' : 'are granted but not connected') +
       '. The grant states the need; the connection is made in Cloud → Connections.');
-    b.style.margin = 'var(--s-3) 0 0';
-    work.append(b);
+    b.style.margin = 'calc(-1 * var(--s-4)) 0 var(--s-6)';
+    s.main.append(b);
   }
-  s.main.append(work);
 
-  const prog = el('section','section');
-  prog.append(sectionHead('Auto program'));
-  const l3 = el('div','setlist');
-  l3.append(setRow('Program',
-    p.run ? esc(p.run.every.toLowerCase() + ' — files a result in the results column')
-          : 'off — nothing runs by itself',
-    () => editPjRun(p)));
-  if (p.run) l3.append(setRow('What it produces', esc(p.run.ask), () => editPjRun(p)));
-  prog.append(l3);
-  s.main.append(prog);
+  s.main.append(pjSchedSec(p));
 
-  /* ------------------------------------------------------------ preset code
-     The project's own copies of library presets: what its pages may run. The
-     rows edit; the folds below them read — the code belongs on the page it
-     governs, not behind a dialog only. Build is the only surface that edits
-     any of this; the chat page reports it and points here. */
-  const codeSec = el('section','section');
-  codeSec.append(sectionHead('Preset code',
-    p.code.length ? '<span class="t-mono">' + plural(p.code.length, 'preset') + '</span>' : ''));
-  const l4 = el('div','setlist');
-  p.code.forEach(c => l4.append(setRow(c.name,
-    esc(c.lang + (c.edited ? ' · edited here' : ' · as the library ships it')),
-    () => editPjCode(p, c))));
-  if (!p.code.length) l4.append(setRow('Presets', 'none granted — a page runs on one, so this comes first',
-    () => editPjCodeGrant(p)));
-  codeSec.append(l4);
-  p.code.forEach(c => codeSec.append(fold(c.name,
-    () => c.edited ? 'edited here' : 'as shipped',
-    b => b.append(codeCard(c.code)))));
-  const grant = el('button','btn btn--ghost btn--sm', ic('plus',13) + 'Grant a preset');
-  grant.type = 'button';
-  grant.onclick = () => editPjCodeGrant(p);
-  codeSec.append(rowActs([grant]));
-  s.main.append(codeSec);
-
-  /* ------------------------------------------------------------ output pages
-     What the project publishes: each page a template, a preset and its reads,
-     with the deploy line underneath so the three bindings can be checked
-     against the command that ships them. Gaps are stated the way a cold
-     connector is — a page pointing at a deleted preset stays on the page. */
-  const out = el('section','section');
-  out.append(sectionHead('Output pages',
-    p.pages.length ? '<span class="t-mono">' + plural(p.pages.length, 'page') + '</span>' : ''));
-  if (!p.pages.length){
-    const l5 = el('div','setlist');
-    l5.append(setRow('Pages', 'none — a page turns what this project knows into something hosted',
-      () => editPjPage(p, null)));
-    out.append(l5);
-  }
-  p.pages.forEach(pg => {
-    const t = pageTemplate(pg), lg = pageLogic(p, pg);
-    const l5 = el('div','setlist');
-    l5.append(setRow(pg.name,
-      esc((t ? t.name : 'no layout') + ' · ' + (lg ? lg.name : 'no logic') + ' · ' + pg.state),
-      () => editPjPage(p, pg)));
-    out.append(l5);
-    if (!lg){
-      const b = banner('warn', '<strong>' + esc(pg.name) + '</strong> has no logic — its preset was ' +
-        'never picked or has been ungranted. The page keeps its row; pick a preset to make it build again.');
-      b.style.margin = 'var(--s-3) 0 0';
-      out.append(b);
-    }
-    const off = pg.sources.filter(nm => (p.sources || []).indexOf(nm) < 0);
-    if (off.length){
-      const b = banner('warn', '<strong>' + esc(off.join(', ')) + '</strong> ' +
-        (off.length === 1 ? 'is' : 'are') + ' read by ' + esc(pg.name) +
-        ' but not on the project shelf. Bind ' + (off.length === 1 ? 'it' : 'them') +
-        ' under Knowledge, or the rebuild reads nothing.');
-      b.style.margin = 'var(--s-3) 0 0';
-      out.append(b);
-    }
-    out.append(codeCard(pageSnippet(p, pg)));
-    const run = el('button','btn btn--secondary btn--sm',
-      '<span style="display:flex">' + ic('play',13) + '</span>Rebuild now');
-    run.type = 'button';
-    run.onclick = () => runPage(p, pg);
-    out.append(rowActs([run]));
-  });
-  const addPg = el('button','btn btn--ghost btn--sm', ic('plus',13) + 'Add a page');
-  addPg.type = 'button';
-  addPg.onclick = () => editPjPage(p, null);
-  out.append(rowActs([addPg]));
-  s.main.append(out);
+  /* Preset code left the page: granting and editing a preset joins the
+     add-artifact flow (designed later). The dialogs below survive for it —
+     editPjCodeGrant and editPjCode — and the maker still grants by name. */
 
   if (p.channels && p.channels.length){
     const chSec = el('section','section');
@@ -5348,6 +5580,57 @@ function projectBuildView(body, p){
     });
     s.main.append(chSec);
   }
+
+  /* ------------------------------------------------------------- artifacts
+     Below the line is what the project PRODUCES — the divider draws the same
+     seam the chat panel draws between what a project is and what has
+     happened. One list, whatever the kind: pages, tables, documents, forms,
+     each row opening in the results column where it is read. The gaps a page
+     carries are stated here, because this is the page where gaps are fixed.
+     Adding a page already has its dialog; the other adders name what they
+     will be and say so when pressed — those flows are designed later. */
+  s.main.append(el('div','build__divider'));
+  const mine = pjArts(p);
+  const art = el('section','section');
+  art.append(sectionHead('Artifacts',
+    mine.length ? '<span class="t-mono">' + plural(mine.length, 'artifact') + '</span>' : ''));
+  /* Grouped by pjArtRows — the project's own category first, then General —
+     the same way the chat/task panel groups them. Build's rows keep the page
+     gear (opts.gear), because bindings are Build's to change. */
+  pjArtRows(p, art, { gear:true });
+  p.pages.forEach(pg => {
+    /* A folder page carries its own script — the preset banner is not for it. */
+    if (!pg.folder && !pageLogic(p, pg)){
+      const b = banner('warn', '<strong>' + esc(pg.name) + '</strong> has no logic — its preset was ' +
+        'never picked or has been ungranted. The page keeps its row; pick a preset to make it build again.');
+      b.style.margin = 'var(--s-3) 0 0';
+      art.append(b);
+    }
+    const off = pg.sources.filter(nm => (p.sources || []).indexOf(nm) < 0);
+    if (off.length){
+      const b = banner('warn', '<strong>' + esc(off.join(', ')) + '</strong> ' +
+        (off.length === 1 ? 'is' : 'are') + ' read by ' + esc(pg.name) +
+        ' but not on the project shelf. Bind ' + (off.length === 1 ? 'it' : 'them') +
+        ' under Knowledge, or the rebuild reads nothing.');
+      b.style.margin = 'var(--s-3) 0 0';
+      art.append(b);
+    }
+  });
+  s.main.append(art);
+
+  /* Customized output — the project's own section, below Artifacts on every
+     surface. What is filed here is chosen, not everything produced; the Add
+     button below the rows opens the type chooser. */
+  const custN = pjCustom(p).length;
+  const cust = el('section','section');
+  cust.append(sectionHead('Customized output',
+    custN ? '<span class="t-mono">' + custN + '</span>' : ''));
+  pjCustomRows(p, cust, { gear:true });
+  const add = el('button','btn btn--secondary btn--sm', ic('plus',13) + 'Add');
+  add.type = 'button';
+  add.onclick = () => addArtifactChooser(p);
+  cust.append(rowActs([add]));
+  s.main.append(cust);
 
   const open = el('button','btn btn--secondary', ic('open',13) + 'Open the project');
   open.onclick = () => select('chat', key('p', p.id));
@@ -5400,7 +5683,7 @@ const MAKER_KIND = {
     hint:'Describe the tile. Shapes are read from the words — a value, a trend, a question box, a list — and colours, corners and width by name.',
     starters:['A KPI tile for open tickets, 47 against a 100 goal',
               'Make it amber and wide'] },
-  tp:{ noun:'result template', icon:'template',
+  tp:{ noun:'artifact template', icon:'template',
     hint:'Describe the page — a landing page, a portal, docs, or a PDF report layout with its sections.',
     starters:['A PDF report layout with sections for headline numbers, detail and actions',
               'Call it Quarterly board pack'] }
@@ -5810,7 +6093,7 @@ function makerDesignRead(text, low, d, m, say, removing){
         : /\bportal|dashboard site|intranet\b/.test(low) ? 'portal'
         : /\bdocs|help|faq|manual\b/.test(low) ? 'docs' : 'landing';
       const mt = text.match(/^(?:a|an|the)?\s*(.{2,40}?)\s*(?:template|layout|page|site)\b/i);
-      const nm = titleCase(((mt && mt[1]) || shape + ' result template').replace(/^pdf\s*/i, '').trim() || 'New result template');
+      const nm = titleCase(((mt && mt[1]) || shape + ' artifact template').replace(/^pdf\s*/i, '').trim() || 'New artifact template');
       say('drafted a **' + (shape === 'pdf' ? 'PDF layout' : shape + ' page') + '** — named it **' + nm + '**', () => {
         d.shape = shape;
         d.name = nm;
@@ -6143,7 +6426,7 @@ function designView(body, d){
   const pad = el('div','pane__pad');
   pad.append(pageHead(d.name, d.desc,
     '<span class="badge badge--mono">' + (d.kind === 'widget' ? 'Widget'
-      : d.shape === 'pdf' ? 'PDF result template' : 'Web result template') + '</span>' +
+      : d.shape === 'pdf' ? 'PDF artifact template' : 'Web artifact template') + '</span>' +
     stateBadge(d.state)));
 
   const s = buildSplit();
@@ -6165,7 +6448,7 @@ function designView(body, d){
     ? 'The widget ships its own tokens, so it looks like this inside a page whose CSS we have never seen.'
     : pdf
     ? 'A PDF layout styles what leaves as a document — when a result downloads as pdf, this is the page it is set on.'
-    : 'A web result template is a hosted page. The routes come from the nav; the palette comes from the accent chosen here.'));
+    : 'A web artifact template is a hosted page. The routes come from the nav; the palette comes from the accent chosen here.'));
   s.main.append(emb);
 
   /* --------------------------------------------------- inspector = config */
@@ -7055,48 +7338,63 @@ function artPanes(a){
     { label:'Today',    render:() => artChannelNode(a) },
     { label:'The page', render:() => artProseNode(a.md) }
   ];
-  if (a.kind === 'page') return [
-    { label:'Page',    render:() => artPageNode(a) },
-    { label:'Content', render:() => artProseNode(a.md) }
-  ];
+  if (a.kind === 'page'){
+    const panes = [
+      { label:'The page', render:() => artPageFacts(a) },
+      { label:'Deploy',   render:() => artPageDeploy(a) },
+      { label:'Content',  render:() => artProseNode(a.md) }
+    ];
+    /* A wizard-built page exists as a folder of working files — show them. */
+    const own = artPagePg(a).pg;
+    if (own && own.folder) panes.splice(1, 0, { label:'Files', render:() => folderNode(own.folder) });
+    return panes;
+  }
   if (a.kind === 'form') return [
     { label:'Entries',  render:() => artFormNode(a, 'entries') },
     { label:'The form', render:() => artFormNode(a, 'shape') }
   ];
   return [{ label:'Document', render:() => artProseNode(a.md) }];
 }
-/* A page result renders live from the project record it names — its three
-   bindings, the deploy line, and the rebuild — so repointing the page in
-   Build changes this pane, not a stale copy. The Content tab is the page as
-   it renders. */
-function artPageNode(a){
+/* A page result renders live from the project record it names, so repointing
+   the page in Build changes these panes, not a stale copy. Each section is a
+   tab at the top of the information section — The page (its facts), Deploy
+   (the snippet), Content (the page as prose) — one showing at a time, because
+   under a pinned page the information gets little height and stacked sections
+   would all be below the fold. */
+const artPagePg = a => {
   const p = byId(D.PROJECTS, a.pid);
-  const pg = p && (p.pages || []).filter(x => x.id === a.pg)[0];
+  return { p, pg:p && (p.pages || []).filter(x => x.id === a.pg)[0] };
+};
+function artPageFacts(a){
+  const { p, pg } = artPagePg(a);
   if (!pg) return helpNote('This page is no longer on the project.');
   const t = pageTemplate(pg), lg = pageLogic(p, pg);
-  const wrap = el('div');
-  const sec = el('section','section');
-  sec.append(sectionHead('The page', '<span class="t-mono">' + esc(pg.state) + '</span>'));
-  sec.append(defList([
+  return defList([
     ['State', esc(pg.state) + (pg.url ? ' · ' + esc(pg.url) : '')],
-    ['Layout', esc(t ? t.name : 'none picked')],
-    ['Logic', lg ? esc(lg.name + (lg.edited ? ' — edited in this project' : '')) : 'none picked'],
+    ['Layout', pg.folder ? esc(pg.folder.files[0].nm) + ' — in the page folder'
+             : esc(t ? t.name : 'none picked')],
+    ['Logic', pg.folder
+      ? esc((pg.folder.files.filter(f => /\.(py|js)$/.test(f.nm))[0] || pg.folder.files[0]).nm) +
+        ' — in the page folder'
+      : lg ? esc(lg.name + (lg.edited ? ' — edited in this project' : '')) : 'none picked'],
     ['Reads', esc(pg.sources.join(', ') || 'nothing')]
-  ]));
-  wrap.append(sec);
-  const dep = el('section','section');
-  dep.append(sectionHead('Deploy'));
-  dep.append(codeCard(pageSnippet(p, pg)));
-  wrap.append(dep);
-  const run = el('button','btn btn--secondary btn--sm',
-    '<span style="display:flex">' + ic('play',13) + '</span>Rebuild now');
-  run.type = 'button';
-  run.onclick = () => runPage(p, pg);
+  ]);
+}
+function artPageDeploy(a){
+  const { p, pg } = artPagePg(a);
+  if (!pg) return helpNote('This page is no longer on the project.');
+  return codeCard(pageSnippet(p, pg));
+}
+/* One action, pinned under everything so it is never below the fold: the way
+   to where the page is edited. Rebuild left on purpose — running belongs to
+   the schedule and to the project's Build page; here the page is read. */
+function pageBar(p){
+  const bar = el('div','pagebar');
   const def = el('button','btn btn--ghost btn--sm', ic('build',13) + 'Define in Build');
   def.type = 'button';
   def.onclick = () => select('build', key('pj', p.id));
-  wrap.append(rowActs([run, def]));
-  return wrap;
+  bar.append(def);
+  return bar;
 }
 /* A form result renders live from the project record: the entries as a table,
    the shape as a read-only fact. The widget dialog restyles the widget that
@@ -7134,6 +7432,159 @@ function artChannelNode(a){
   const c = p && (p.channels || []).filter(x => x.id === a.ch)[0];
   if (!c) return helpNote('This channel is no longer on the project.');
   return channelDayNode(p, c);
+}
+
+/* ------------------------------------------------------------ links, opened
+   A URL in a result detail is a door, so it is clickable where it stands — in
+   the prose, in a <code> span, on the page pane's own facts. What opens is a
+   browser embedded in the detail itself: one line of chrome — the address,
+   then copy and open-in-a-window — and the page below, generated rather
+   than fetched, because the prototype has no network and most of these links
+   are local anyway. The address is the one real thing in it, which is why it
+   selects whole and Copy takes it; ↗ lifts the reading into a small window
+   over the workspace when the column is too narrow to read in. Source panes
+   are left alone — a deploy snippet is copied whole, not read link by link.
+   A path is required on purpose: without one the pattern would swallow every
+   email address in a form result. */
+const WEB_RE = /(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}\/[a-z0-9\-._~/?#=&%]*[a-z0-9\-_/]/gi;
+
+function linkifyUrls(root){
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const hits = [];
+  let n;
+  while ((n = walk.nextNode())){
+    if (n.parentNode.closest('button, a, pre, input, textarea')) continue;
+    WEB_RE.lastIndex = 0;
+    if (WEB_RE.test(n.nodeValue)) hits.push(n);
+  }
+  hits.forEach(node => {
+    const text = node.nodeValue, frag = document.createDocumentFragment();
+    let last = 0, m;
+    WEB_RE.lastIndex = 0;
+    while ((m = WEB_RE.exec(text))){
+      const url = m[0];
+      frag.append(document.createTextNode(text.slice(last, m.index)));
+      const b = el('button','weblink');
+      b.type = 'button';
+      b.textContent = url;
+      b.title = 'Open ' + url + ' here, in the result';
+      b.onclick = () => openWebLink(url);
+      frag.append(b);
+      last = m.index + url.length;
+    }
+    frag.append(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+  });
+}
+
+/* Which address each result has open — one per result, the last link clicked,
+   kept per result id so leaving and coming back finds the reading where it
+   was. */
+const WEB_VIEW = {};
+
+function openWebLink(url){
+  const id = state.art.id;
+  if (!id) return;
+  WEB_VIEW[id] = { url:url.replace(/^https?:\/\//i, '') };
+  renderArtifact();
+}
+
+/* The embedded browser: one line of chrome — the address, then what can be
+   done to it (copy · open in a window) — and the page below. No close: the
+   page reads as part of the result, and clicking another link replaces it. */
+function webviewNode(a){
+  const w = WEB_VIEW[a.id];
+  if (!w || !w.url) return null;
+  const full = 'https://' + w.url;
+  const box = el('div','webview');
+
+  const addr = el('div','webview__addr');
+  addr.append(el('span','webview__glyph', ic('globe',12)));
+  const url = el('span','webview__url', esc(full));
+  url.title = full;
+  const copy = el('button','iconbtn iconbtn--sm', ic('copy',13));
+  copy.type = 'button';
+  copy.title = 'Copy link';
+  copy.setAttribute('aria-label','Copy ' + full);
+  copy.onclick = () => copyText(full);
+  const grow = el('button','iconbtn iconbtn--sm', ic('open',13));
+  grow.type = 'button';
+  grow.title = 'Open in a window';
+  grow.setAttribute('aria-label','Open ' + w.url + ' in a window');
+  grow.onclick = () => openWebWin(w.url);
+  addr.append(url, copy, grow);
+  box.append(addr);
+
+  const page = el('div','webview__page');
+  page.append(webPageNode(w.url));
+  box.append(page);
+  return box;
+}
+
+let webOn = null;                    /* the address the window is showing */
+function openWebWin(url){
+  webOn = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+  $('#webAddr').value = webOn;
+  const page = $('#webPage');
+  page.innerHTML = '';
+  page.append(webPageNode(webOn.replace(/^https?:\/\//i, '')));
+  $('#webScrim').dataset.open = 'true';
+}
+function closeWeb(){
+  $('#webScrim').dataset.open = 'false';
+  webOn = null;
+}
+/* The page a URL shows — real content from the WEB_PAGES fixture, because the
+   reader was promised a page and bars would only say "layout". The customer's
+   accent is confined to the page, same rule as the design canvas. A URL with
+   no entry still gets a page, built from its address: modest, and it says what
+   it is instead of faking a site the prototype has never seen. */
+function webPageNode(bare){
+  const parts = bare.split('/'), host = parts[0];
+  const leaf = (parts.slice(1).filter(Boolean).pop() || host).replace(/\?.*$/, '').replace(/[-_]/g, ' ');
+  const spec = D.WEB_PAGES[bare] || {
+    site:host, nav:[],
+    title:leaf.charAt(0).toUpperCase() + leaf.slice(1),
+    sub:'https://' + bare,
+    body:['This address is outside the workspace, so the prototype drafts a stand-in rather than fetching it. The link itself is real — the address line above carries it.']
+  };
+  const page = el('div','webpage');
+  page.style.setProperty('--wp-a', accentVar(spec.accent || 'Nebulas'));
+  page.append(el('div','webpage__bar',
+    '<span class="webpage__logo"></span>' +
+    '<span class="webpage__site">' + esc(spec.site) + '</span>' +
+    ((spec.nav || []).length ? '<span class="webpage__nav">' +
+      spec.nav.map(n => '<span>' + esc(n) + '</span>').join('') + '</span>' : '')));
+
+  const main = el('div','webpage__main');
+  main.append(el('h1','webpage__h1', esc(spec.title)));
+  if (spec.sub) main.append(el('div','webpage__sub', esc(spec.sub)));
+  if (spec.stats){
+    const row = el('div','webpage__stats');
+    spec.stats.forEach(([v, k]) => row.append(el('div','webpage__stat',
+      '<span class="webpage__statv">' + esc(v) + '</span>' +
+      '<span class="webpage__statk">' + esc(k) + '</span>')));
+    main.append(row);
+  }
+  if (spec.table){
+    const t = el('table','table table--rows');
+    t.innerHTML =
+      '<thead><tr>' + spec.table.head.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr></thead>' +
+      '<tbody>' + spec.table.rows.map(r => '<tr>' + r.map((v, i) =>
+        i === spec.table.meter
+          ? '<td><span class="webpage__score"><span class="meter"><i style="width:' +
+            Math.round(v * 100) + '%"></i></span>' + v.toFixed(2) + '</span></td>'
+          : '<td>' + esc(v) + '</td>').join('') + '</tr>').join('') + '</tbody>';
+    const sx = el('div','scroll-x');
+    sx.append(t);
+    main.append(sx);
+  }
+  (spec.body || []).forEach(p => main.append(el('p','webpage__p', esc(p))));
+  /* A span on purpose: this button belongs to the page, not to the app. */
+  if (spec.cta) main.append(el('span','webpage__cta', esc(spec.cta)));
+  if (spec.foot) main.append(el('div','webpage__foot', esc(spec.foot)));
+  page.append(main);
+  return page;
 }
 
 function openArtifact(id, quiet){
@@ -7175,6 +7626,7 @@ function renderArtifact(){
   const a = state.art.id ? D.ARTIFACT_BY_ID(state.art.id) : null;
   const tabs = $('#artTabs'), body = $('#artBody'), foot = $('#artFoot');
   tabs.innerHTML = ''; body.innerHTML = ''; foot.innerHTML = '';
+  body.removeAttribute('data-pin');
   $('#artBack').hidden = !a;
   /* All act on the result being read, so none exists in the list. */
   $('#artDl').hidden = !a;
@@ -7252,10 +7704,29 @@ function renderArtifact(){
     const filed = a.pj === fp.id;
     const fb = $('#artFile');
     fb.setAttribute('aria-pressed', String(filed));
-    fb.title = filed ? 'In ' + fp.name + '’s results — click to remove'
-                     : 'Add to ' + fp.name + '’s results';
+    fb.title = filed ? 'In ' + fp.name + '’s artifacts — click to remove'
+                     : 'Add to ' + fp.name + '’s artifacts';
     fb.setAttribute('aria-label', fb.title);
     fb.onclick = () => toggleArtFile(a, fp);
+  }
+
+  /* The embedded browser pins above everything else: the page reads at its
+     full height and never scrolls away, and the information below it takes
+     the leftover room — and the only scrollbar. A result that IS a live page
+     arrives with its own address already open: the page is what you came to
+     see. Same rule the assistant page follows — panels scroll, the page does
+     not. A page result pins even as a draft with no address yet, because its
+     facts bar (below) pins too. */
+  const pp = a.kind === 'page' ? byId(D.PROJECTS, a.pid) : null;
+  const ppg = pp && (pp.pages || []).filter(x => x.id === a.pg)[0];
+  if (ppg && ppg.url && !WEB_VIEW[a.id]) WEB_VIEW[a.id] = { url:ppg.url };
+  const wv = webviewNode(a);
+  let rest = body;
+  if (wv || ppg){
+    body.dataset.pin = 'true';
+    if (wv) body.append(wv);
+    rest = el('div','artpane__rest');
+    body.append(rest);
   }
 
   /* Who can open this, said where the result is read. */
@@ -7268,21 +7739,32 @@ function renderArtifact(){
     manage.type = 'button';
     manage.onclick = () => openShare(a);
     bar.append(manage);
-    body.append(bar);
+    rest.append(bar);
   }
 
   const panes = artPanes(a);
   if (state.art.pane >= panes.length) state.art.pane = 0;
   if (panes.length > 1){
+    /* A page result's tabs sit at the top of the information section itself —
+       under the pinned page, directly above what they switch. Every other
+       kind keeps them in the pane header. */
+    const inline = !!ppg;
+    const host = inline ? el('div','tabs arttabs') : tabs;
     panes.forEach((p, i) => {
-      const b = el('button', null, esc(p.label));
+      const b = el('button', inline ? 'tab' : null, esc(p.label));
       b.type = 'button';
       b.setAttribute('aria-selected', String(i === state.art.pane));
       b.onclick = () => { state.art.pane = i; renderArtifact(); };
-      tabs.append(b);
+      host.append(b);
     });
+    if (inline) rest.append(host);
   }
-  body.append(panes[state.art.pane].render());
+  rest.append(panes[state.art.pane].render());
+  /* The one action pins under the scroll region — never below the fold,
+     whichever tab is up. */
+  if (ppg) body.append(pageBar(pp));
+  /* Only in the detail: the index is rows of names, and a name is not a URL. */
+  linkifyUrls(body);
 
   /* Type, size, and when it was made — the three things a stored file says
      about itself. The day is spelled out on hover, not in 40px of footer. */
@@ -8813,15 +9295,26 @@ function assistantPicker(){
   pop.append(manage);
 
   pop.dataset.open = 'true';
-  /* One-shot outside click, bound after this click finishes bubbling. */
+  /* One-shot outside click, bound after this click finishes bubbling — and
+     Escape on capture, the popmenu's own rule: the topmost thing on screen
+     takes the key before the window's ladder can act behind it. */
   setTimeout(() => document.addEventListener('mousedown', outsideAssistant), 0);
+  document.addEventListener('keydown', assistantKey, true);
 }
 function closeAssistantPicker(){
   $('#assistPop').dataset.open = 'false';
   document.removeEventListener('mousedown', outsideAssistant);
+  document.removeEventListener('keydown', assistantKey, true);
 }
 function outsideAssistant(e){
   if (!e.target.closest('#assistPop') && !e.target.closest('#assistBtn')) closeAssistantPicker();
+}
+function assistantKey(e){
+  if (e.key === 'Escape'){
+    e.stopPropagation();
+    e.preventDefault();
+    closeAssistantPicker();
+  }
 }
 function autosize(){
   const i = $('#composerInput');
@@ -8866,7 +9359,7 @@ function palRender(q){
     items.push({ g:'Connectors', nm:c.name, sub:c.state === 'off' ? 'not connected' : c.kind,
                  run:() => select('cloud', key('cn', c.id)) }); });
   D.DESIGNS.forEach(d => { if (hitOnly(d.name))
-    items.push({ g:d.kind === 'widget' ? 'Widgets' : 'Result templates', nm:d.name, sub:d.shape,
+    items.push({ g:d.kind === 'widget' ? 'Widgets' : 'Artifact templates', nm:d.name, sub:d.shape,
                  run:() => select('build', key(d.kind === 'widget' ? 'wg' : 'tp', d.id)) }); });
 
   COMMANDS.forEach(c => { if (hit(c.nm)) items.push(c); });
@@ -9137,7 +9630,9 @@ function boot(){
     if (e.key === 'ArrowDown'){ e.preventDefault(); palHi(Math.min(palIx + 1, palItems.length - 1)); }
     else if (e.key === 'ArrowUp'){ e.preventDefault(); palHi(Math.max(palIx - 1, 0)); }
     else if (e.key === 'Enter'){ e.preventDefault(); const it = palItems[palIx]; if (it){ palClose(); it.run(); } }
-    else if (e.key === 'Escape'){ palClose(); }
+    /* Stopped here, or the window's Escape ladder would see the palette
+       already closed and take a second layer with the same keystroke. */
+    else if (e.key === 'Escape'){ e.stopPropagation(); palClose(); }
   });
   $('#scrim').addEventListener('mousedown', e => { if (e.target === $('#scrim')) palClose(); });
 
@@ -9148,6 +9643,12 @@ function boot(){
   /* share dialog */
   $('#shareClose').onclick = closeShare;
   $('#shareScrim').addEventListener('mousedown', e => { if (e.target === $('#shareScrim')) closeShare(); });
+
+  /* the small browser window */
+  $('#webClose').onclick = closeWeb;
+  $('#webCopy').onclick = () => { if (webOn) copyText(webOn); };
+  $('#webAddr').onclick = () => $('#webAddr').select();
+  $('#webScrim').addEventListener('mousedown', e => { if (e.target === $('#webScrim')) closeWeb(); });
 
   /* project dialog */
   $('#projClose').onclick = closeProject;
@@ -9175,6 +9676,16 @@ function boot(){
     if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); makerSubmit(); }
   });
 
+  /* the page wizard */
+  $('#pwIco').innerHTML = ic('template', 15);
+  $('#pwClose').onclick = closePageWizard;
+  $('#pwScrim').addEventListener('mousedown', e => { if (e.target === $('#pwScrim')) closePageWizard(); });
+  $('#pwSend').onclick = () => pwAnswer($('#pwInput').value);
+  $('#pwInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); pwAnswer($('#pwInput').value); }
+  });
+  $('#pwDone').onclick = pwDone;
+
   /* status bar */
   $('#stThemeBtn').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   $('#stDensityBtn').onclick = () => {
@@ -9186,7 +9697,15 @@ function boot(){
   /* global keys */
   addEventListener('keydown', e => {
     const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key.toLowerCase() === 'k'){
+    /* A modal owns the keyboard. While any scrim but the palette's is open,
+       the navigation shortcuts fall silent instead of acting behind it — the
+       worst of them, ⌘K, would open the palette UNDER the dialog (equal
+       z-index, earlier in the DOM) with focus stolen into an invisible
+       input. ⌘J stays: the theme repaints, it does not navigate. */
+    const modalUp = $$('.scrim').some(s => s.id !== 'scrim' && s.dataset.open === 'true');
+    if (mod && modalUp && (e.key.toLowerCase() === 'k' || e.key === '\\' || e.key === '.' || e.key === ']')){
+      e.preventDefault();
+    } else if (mod && e.key.toLowerCase() === 'k'){
       e.preventDefault();
       $('#scrim').dataset.open === 'true' ? palClose() : palOpen();
     } else if (mod && e.key === '\\'){
@@ -9201,6 +9720,9 @@ function boot(){
       /* Opened over whatever page armed it, so it takes Escape first —
          and Escape means Cancel: the staged copy is dropped unsaved. */
       closeEdit();
+    } else if (e.key === 'Escape' && $('#webScrim').dataset.open === 'true'){
+      /* Opened over a result, above whatever pane held its link. */
+      closeWeb();
     } else if (e.key === 'Escape' && $('#asstScrim').dataset.open === 'true'){
       closeAssistant();
     } else if (e.key === 'Escape' && $('#shareScrim').dataset.open === 'true'){
@@ -9209,6 +9731,9 @@ function boot(){
     } else if (e.key === 'Escape' && $('#postScrim').dataset.open === 'true'){
       /* Opened from the project page, so it is above everything on it. */
       closePost();
+    } else if (e.key === 'Escape' && $('#pwScrim').dataset.open === 'true'){
+      /* The page wizard opens over Build (its chooser closed first). */
+      closePageWizard();
     } else if (e.key === 'Escape' && $('#makerScrim').dataset.open === 'true'){
       /* The maker opens over Build, so it yields before Build's own layers. */
       closeMaker();

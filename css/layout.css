@@ -499,6 +499,12 @@
   align-items:start;
 }
 .build__main{ min-width:0 }
+/* The seam between what the project IS (above) and what it PRODUCES (below) —
+   the same line the chat panel draws with its log zone's top border. */
+.build__divider{
+  border-top:var(--border) solid var(--line);
+  margin:var(--s-2) 0 var(--s-6);
+}
 /* Sticky, because the inspector's job is to stay true while you scroll the
    thing it describes. */
 .build__side{

@@ -322,6 +322,88 @@ const SECTIONS = [
   ]
 },
 {
+  id:'floating', title:'Floating layers', blurb:
+    'Everything that floats, as one system, audited against the code: tooltip, popover, menu, toast, the modal plane, and what stands on it — six kinds, and nothing floats outside them. The cloud page participates with one shell and one placement of its own. Same specification as DESIGN.md § Floating layers, in eight parts.',
+  items:[
+    { cls:'1 · Levels', what:'the z ladder', wide:true, block:true, html:
+      '<table class="table"><thead><tr><th class="num">z</th><th>What</th><th>Why this height</th></tr></thead><tbody>' +
+      '<tr><td class="num">90</td><td><span class="t-mono">.popmenu · .toasts</span></td><td>a menu answers a click that may land over a scrim; toasts report acts from anywhere</td></tr>' +
+      '<tr><td class="num">80</td><td><span class="t-mono">.scrim</span></td><td>one plane for every modal — eleven instances across the two pages, equal, stacked by DOM order</td></tr>' +
+      '<tr><td class="num">60</td><td><span class="t-mono">.tip::after</span></td><td>above content, below every deliberate surface — a tooltip never covers a choice</td></tr>' +
+      '<tr><td class="num">40</td><td><span class="t-mono">.pop</span></td><td>anchored to its control, opens upward; only needs to clear the composer</td></tr>' +
+      '<tr><td class="num">2–4</td><td>sticky heads · rail · grip</td><td>in-layout, not floating: they scroll with their pane and stack locally</td></tr>' +
+      '</tbody></table>',
+      note:'A floating surface earns a shadow; an in-layout one does not. --shadow-lg on the modal plane\'s content and menus; --shadow-md on tooltips, toasts — and .pop, which rises 8px off its own composer, not 16vh off a page.' },
+    { cls:'2 · The modal plane', what:'.scrim', wide:true, block:true, html:
+      '<div style="position:relative;height:132px;border:var(--border) solid var(--line);border-radius:var(--r-lg);overflow:hidden">' +
+      '<div style="position:absolute;inset:0;padding:var(--s-3);color:var(--text-4);font-size:var(--t-11)">the page, behind</div>' +
+      '<div style="position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(2px)"></div>' +
+      '<div class="dialog" style="position:absolute;left:50%;top:26px;translate:-50% 0;width:240px">' +
+      '<header class="dialog__head"><span class="dialog__ico">' + ic('share', 15) + '</span>' +
+      '<span class="dialog__id"><span class="dialog__title">Share result</span></span>' +
+      '<button class="iconbtn iconbtn--sm">' + ic13('x') + '</button></header></div></div>',
+      note:'One recipe, eleven instances: --scrim backdrop, 2px blur, content settling from -8px/.985 (the maker alone writes that as -1×--s-2, so its entrance breathes with density). THREE placements — top 14vh (palette, record dialogs), centered (.scrim--center: assistant detail, maker, page wizard, edit, browser window), and .scrim--wizard at 7vh (the cloud page\'s module wizard, install.css). Three ways out, always: ×, Escape, mousedown on the backdrop — all meaning Cancel where a copy is staged.' },
+    { cls:'3 · Escape', what:'resolved top-down', wide:true, block:true, html:
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
+      ['edit','browser window','assistant detail','share','post','page wizard','maker','run history','project','palette','app sheet']
+        .map(function(n){ return '<span class="kbd">' + n + '</span>'; })
+        .join(' <span style="color:var(--text-4)">→</span> ') + '</div>',
+      note:'One window handler, ordered by who conceptually opened last; the app sheet is not a modal but yields to all of them. Two floaters take Escape BEFORE the ladder, on document capture with stopPropagation: an open .popmenu and the assistant picker. The palette\'s own input also stops propagation — one keystroke never closes two layers. And while any modal is open, the navigation shortcuts (⌘K ⌘\\ ⌘. ⌘]) fall silent instead of acting behind it; ⌘J stays, because the theme repaints rather than navigates.' },
+    { cls:'4 · Shells', what:'and their dimensions', wide:true, block:true, html:
+      '<div class="scroll-x"><table class="table"><thead><tr><th>Shell</th><th>Overlays</th><th>Place</th>' +
+      '<th class="num">Width</th><th class="num">Height caps</th></tr></thead><tbody>' +
+      '<tr><td><span class="t-mono">.palette</span></td><td>⌘K palette</td><td>top</td><td class="num">min(560px, 92vw)</td><td class="num">list min(420px, 52vh)</td></tr>' +
+      '<tr><td><span class="t-mono">.dialog</span></td><td>share · edit</td><td>top / center</td><td class="num">min(460px, 92vw)</td><td class="num">body min(560px, 62vh)</td></tr>' +
+      '<tr><td><span class="t-mono">.dialog--wide</span></td><td>project · post · runs</td><td>top</td><td class="num">min(520px, 94vw)</td><td class="num">body min(520px, 64vh)</td></tr>' +
+      '<tr><td><span class="t-mono">.detail</span></td><td>assistant record</td><td>center</td><td class="num">min(1120px, 96vw)</td><td class="num">min(760px, 88vh) · 1 column under 860px</td></tr>' +
+      '<tr><td><span class="t-mono">.maker</span></td><td>Build\'s chat layer · page wizard</td><td>center</td><td class="num">min(1102px, 96vw)</td><td class="num">min(760px, 88vh)</td></tr>' +
+      '<tr><td><span class="t-mono">.webwin</span></td><td>browser window</td><td>center</td><td class="num">min(460px, 92vw)</td><td class="num">page min(420px, 56vh)</td></tr>' +
+      '<tr><td><span class="t-mono">.wizard</span></td><td>module wizard <span style="color:var(--text-4)">(cloud page)</span></td><td>wizard 7vh</td><td class="num">min(680px, 94vw)</td><td class="num">max-height 82vh — sizes to content</td></tr>' +
+      '</tbody></table></div>',
+      note:'All wear --r-xl corners, the --bg surface, a --line border, --shadow-lg, overflow:hidden. Six live in components.css; the maker\'s frame is layout.css\'s, the wizard install.css\'s — both reuse the shared scrim and open selector.' },
+    { cls:'5 · Dialog anatomy', what:'head · body · foot', wide:true, block:true, html:
+      '<table class="table table--facts"><tbody>' +
+      '<tr><td>Head</td><td class="num">s-3 / s-4·s-2</td><td>icon text-4 · title t-13 medium · sub t-11 names the record · × nearest the edge</td></tr>' +
+      '<tr><td>Body</td><td class="num">s-4 · gap s-4</td><td>scrolls inside its cap, so the foot never leaves the screen</td></tr>' +
+      '<tr><td>Foot</td><td class="num">s-3 / s-4</td><td>--surface, top border · destructive act · spacer · Cancel · the verb — never "OK"</td></tr>' +
+      '</tbody></table>',
+      note:'The full specimen is under Containers → .dialog. A read-only peek (openEdit read:true) hides the foot entirely: nothing is staged, so × or Escape is the whole way out.' },
+    { cls:'6 · Buttons', what:'on floating layers', wide:true, block:true, html:
+      '<table class="table table--facts"><tbody>' +
+      '<tr><td><span class="t-mono">.btn--primary</span></td><td class="num">ctl-md 30</td><td>the one verb the overlay exists for</td></tr>' +
+      '<tr><td><span class="t-mono">.btn--secondary</span></td><td class="num">30</td><td>the second act — Run now, Copy</td></tr>' +
+      '<tr><td><span class="t-mono">.btn--ghost</span></td><td class="num">30</td><td>Cancel, quiet acts</td></tr>' +
+      '<tr><td><span class="t-mono">.btn--danger</span></td><td class="num">30</td><td>Stop sharing, Delete — never beside the ×</td></tr>' +
+      '<tr><td><span class="t-mono">.btn--sm</span></td><td class="num">ctl-sm 26</td><td>inside body content, not in the foot</td></tr>' +
+      '<tr><td><span class="t-mono">.iconbtn--sm</span></td><td class="num">26</td><td>the ×, per-row acts in chrome lines</td></tr>' +
+      '<tr><td><span class="t-mono">.iconbtn--xs</span></td><td class="num">22</td><td>acts inside identity rows and section heads</td></tr>' +
+      '</tbody></table>',
+      note:'Specimens live under Controls; this is where each may appear on a floating layer. Disabled is opacity:.4 — a control that exists but is unavailable stays visible.' },
+    { cls:'7 · Anchored floaters', what:'no scrim', wide:true, block:true, html:
+      '<div style="display:flex;flex-wrap:wrap;gap:var(--s-4);align-items:flex-start">' +
+      '<div class="pop" data-open="true" style="position:static;flex:none">' +
+      '<button class="pop__item" aria-current="true"><span class="pop__nm">Revenue analyst</span>' +
+      '<span class="pop__sub">Nebula Pro</span></button>' +
+      '<button class="pop__item"><span class="pop__nm">Code reviewer</span>' +
+      '<span class="pop__sub">Nebula Pro</span></button>' +
+      '<button class="pop__item pop__item--foot">Browse all assistants…</button></div>' +
+      '<div class="webwin" style="width:min(300px,100%);flex:none">' +
+      '<header class="webwin__bar"><span class="webwin__dots"><i></i><i></i><i></i></span>' +
+      '<input class="webwin__addr" value="https://churn.acme.app/watchlist" readonly>' +
+      '<button class="iconbtn iconbtn--sm">' + ic13('copy') + '</button></header>' +
+      '<div class="webwin__page" style="padding:var(--s-3);font-size:var(--t-11);color:var(--text-4)">the page, drawn — never fetched</div></div></div>',
+      note:'.popmenu (Containers) is JS-anchored: fixed at its button\'s rect, right-aligned, clamped 8px from the viewport, flipped above when it would overflow — and it does not follow scroll. .pop is its sibling in role only: its own component, CSS-positioned above the composer, z 40 not 90, shadow-md not lg, a +4px rise not a −4px drop — each animates from its anchor\'s side. Tooltips (.tip, Feedback) open to the RIGHT by default, --below flips them; controls on a clipped edge use native title instead, so two tooltip systems coexist by design. Toasts (Feedback) stack pointer-events:none with each toast opting back in; 2s, 6s with an Undo — the cloud page ships its own 2.2s emitter.' },
+    { cls:'8 · Shared logic', what:'every layer', wide:true, block:true, html:
+      '<ul style="margin:0;padding-left:18px;font-size:var(--t-12);color:var(--text-2);line-height:var(--lh-ui)">' +
+      '<li><strong>Staged copies.</strong> openEdit hands build() a copy; apply() runs on Save alone and toasts "‹title› saved". Escape, ×, scrim and Cancel all discard. Share stages a draft only until a link is minted; the maker mutates live, and closing a never-spoken-to draft deletes it.</li>' +
+      '<li><strong>Choosing is the act</strong> in read-only choosers (read:true): the foot withdraws, rows route immediately.</li>' +
+      '<li><strong>The edit dialog never opens over another overlay</strong> — all of its call sites are page-level views, and the navigation shortcuts fall silent while any modal is up.</li>' +
+      '<li><strong>Focus</strong> moves to the first text control where one exists (palette, edit, maker, wizard; the project dialog only when creating); every shell carries role="dialog", aria-modal, aria-labelledby.</li>' +
+      '<li><strong>No nested buttons:</strong> a row that is a button gets its per-row acts as siblings in a .rowline.</li>' +
+      '<li><strong>Density-aware:</strong> every dimension derives from --u × --density and the --ctl-* tokens. Space, radius, shadow and motion values are the Tokens section\'s — one source.</li></ul>' }
+  ]
+},
+{
   id:'measure', title:'Measurements', blurb:
     'Five ways of showing a number, and the rule they share: a measurement is not an action, so none of them takes the accent. Colour appears only where a value has crossed a limit somebody set.',
   items:[
@@ -502,7 +584,11 @@ const SECTIONS = [
     ['Permission denied', 'Access is modelled in the fixtures — a base can be read by some assistants and not others — but no surface refuses anything.'],
     ['A failed tool call, mid-turn', '.trace shows steps that all succeeded. A step that raised has no styling, and the turn has no way to stop half-finished.'],
     ['An artifact that will not render', 'A result whose payload does not match its kind falls through to nothing rather than to a stated failure.'],
-    ['Zero search results', 'The palette filters as you type and shows a shorter list. It does not have a state for the list being empty.']
+    ['Zero search results', 'The palette filters as you type and shows a shorter list. It does not have a state for the list being empty.'],
+    ['Focus, trapped and returned', 'Overlays move focus in (palette, edit, maker, wizard) but nothing traps it inside the plane, and nothing restores it on close. Tab walks out of an open dialog into the page behind it.'],
+    ['Tooltips for the keyboard', '.tip shows on :hover only — no :focus-visible rule — so a keyboard user never sees one. And two tooltip systems coexist (.tip and native title), a documented tradeoff around scroll clipping, not a finished answer.'],
+    ['A menu that follows its anchor', '.popmenu is fixed at the rect it opened on. Scroll the pane and the menu stays where the button was.'],
+    ['Undo behind a modal', 'A toast\'s 6-second Undo stays clickable over an open overlay; clicking it re-renders the page underneath while the overlay shows stale state.']
   ]
 }
 ];

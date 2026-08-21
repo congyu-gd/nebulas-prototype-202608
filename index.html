@@ -272,6 +272,31 @@
   </div>
 </div>
 
+<!-- ==================================================== a link, in a window
+     A URL a result opened reads embedded in the detail (.webview in app.js);
+     its ↗ lifts the page here — a small browser window over the
+     workspace — when the column is too narrow to read in. Nothing is fetched:
+     the prototype has no network and most of these links are local, so the
+     page is drawn — the live page's own wireframe when the address is one of
+     ours, bars when it is not. The address bar is the one real thing in the
+     window: it selects on click, and Copy takes it. Rendered by openWebWin. -->
+<div class="scrim scrim--center" id="webScrim" data-open="false">
+  <div class="webwin" role="dialog" aria-modal="true" aria-label="Web page, previewed">
+    <header class="webwin__bar">
+      <span class="webwin__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <input class="webwin__addr" id="webAddr" type="text" readonly aria-label="Page address" spellcheck="false">
+      <button class="iconbtn iconbtn--sm" id="webCopy" title="Copy link" aria-label="Copy link">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+      </button>
+      <button class="iconbtn iconbtn--sm" id="webClose" title="Close (esc)" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="webwin__page" id="webPage"></div>
+    <footer class="webwin__foot">Nothing was fetched — the page is drawn here. The address is real, and Copy takes it.</footer>
+  </div>
+</div>
+
 <!-- ======================================================= make a project
      The same dialog creates one and edits one, because the answers are the
      same answers and none of them is final. Only the name is required: leave
@@ -376,6 +401,43 @@
       <aside class="maker__side">
         <div class="maker__preview" id="makerSide"></div>
         <footer class="maker__foot" id="makerFoot"></footer>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================ page wizard (Add → Page)
+     The maker's shell, repurposed: a guided chat on the left asks one
+     question at a time; the right pane holds the page as it takes shape —
+     Preview and Script once the build finishes, and Done files it under
+     Customized output. -->
+<div class="scrim scrim--center" id="pwScrim" data-open="false">
+  <div class="maker" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+    <header class="dialog__head">
+      <span class="dialog__ico" id="pwIco" aria-hidden="true"></span>
+      <span class="dialog__id">
+        <span class="dialog__title" id="pwTitle">New page</span>
+        <span class="dialog__sub" id="pwSub"></span>
+      </span>
+      <button class="iconbtn iconbtn--sm" id="pwClose" title="Close (esc)" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="maker__body">
+      <div class="maker__chat">
+        <div class="maker__log" id="pwLog"></div>
+        <div class="maker__ask">
+          <textarea class="textarea" id="pwInput" rows="2"
+            placeholder="Or answer in your own words&#8230;"></textarea>
+          <button class="btn btn--primary btn--sm" id="pwSend" type="button">Send</button>
+        </div>
+      </div>
+      <aside class="maker__side">
+        <div class="maker__preview" id="pwSide"></div>
+        <footer class="maker__foot">
+          <button class="btn btn--primary btn--sm" id="pwDone" type="button" disabled>Done</button>
+          <span class="pwfoot__hint">Done files the page under Customized output.</span>
+        </footer>
       </aside>
     </div>
   </div>

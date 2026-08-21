@@ -25,7 +25,7 @@ tools/audit.py       the rules, as a check. python3 tools/audit.py
 
 nebulas-cloud.html   deployment setup — an independent page on the same tokens
 css/install.css      its shell only: menu · configuration · usage views
-js/install-data.js   the twelve deployment modules, as configuration
+js/install-data.js   the thirteen deployment modules, as configuration
 js/usage-data.js     the two usage perspectives, as seeded measurements
 js/install.js        the initialisation dialog, menu, configuration and views
 ```
@@ -396,6 +396,68 @@ The list marks a shared result with a link glyph and counts them in the footer
 means. The URL is derived from the result id, not drawn at random: reopening the
 dialog has to show the same link, or the one already sent is a lie.
 
+### A link in a result opens without leaving
+
+A URL in a result detail — in the prose, in a `<code>` span, on the page pane's
+own facts — is a door, so it is clickable where it stands. What opens is a
+**browser embedded in the detail itself**, not a new tab and not an overlay:
+the link belongs to the result, so the reading happens where the result reads.
+The embedded browser sits above the panes and keeps its chrome to **one
+line** — the full address, then everything done to it: copy, open in a
+window. One page per result, the last link clicked, remembered while the app
+runs; a tab strip was tried and taken out, because in a column this narrow a
+second row of chrome costs more than switching pages is worth, and a close
+button went the same way — the page reads as part of the result, and clicking
+another link replaces it. It bleeds to the pane's edges: a browser is a
+surface, not a card, and the results column is too narrow to give margins
+away.
+
+And it **pins**. The pane's own scrolling turns off while a page is open: the
+page shows whole, at its full height, and never scrolls away; the information
+below it — the result's own panes — takes the leftover room and the only
+scrollbar. Same rule the assistant page follows: panels scroll, the page does
+not. A floor is reserved for that lower region, so a page that alone outgrows
+the pane scrolls itself as a last resort rather than pushing the result's own
+facts out of reach; width that does not fit scrolls horizontally, with the bar
+at the page's bottom edge.
+
+A result that **is** a live page arrives with its own address already open —
+the page is what you came to see, and a facts list alone would make the reader
+go find it. Under a pinned page the information section gets little height,
+so its sections do not stack: each subheading is a **tab at the top of the
+section itself** — The page (its facts) · Deploy (the snippet) · Content (the
+page as prose) — one showing at a time, the tabs sitting directly above what
+they switch rather than up in the pane header. Below everything, pinned so it
+is never under the fold, sits the one action: `Define in Build`, the way to
+where the page is edited. It pins even for a draft page with no address yet.
+`Rebuild` left on purpose: running belongs to the schedule and to the
+project's Build page — here the page is read, and duplicating a trigger where
+things are read is how things get run twice.
+
+Nothing is fetched — the prototype has no network — but what shows is **the
+page, with its content**, not a wireframe: bars would say "layout" when the
+reader was promised a page. Known addresses are fixtures (`WEB_PAGES` in
+data.js) rendered by one declarative page shape — a site bar, a headline, stat
+tiles, a table whose named column draws as a bar, prose, a CTA that belongs to
+the page rather than to the app. The watchlist shows its five ranked accounts
+with owners; the case study reads like the case study. Each page's accent is
+confined to it, the same rule the design canvas follows. An address with no
+fixture still gets a page, built from the URL, and it says it is a stand-in
+instead of faking a site the prototype has never seen.
+
+The address is the one real thing in the browser, and it behaves like one:
+one click selects it whole (`user-select:all`), and **Copy** beside it takes
+the full URL — the point of the thing when the link is local. The ↗ after it
+lifts the page into a **small browser window** over the workspace, for when
+the results column is too narrow to read in; the window repeats the address,
+the Copy, and the generated page, and its footer says the rule in one line:
+nothing was fetched, the page is drawn, the address is real.
+
+Two exclusions are deliberate. Source panes are not linkified — a deploy
+snippet is copied whole, not read link by link. And the pattern requires a
+path after the domain, or it would swallow every email address a form result
+carries.
+
 ### Panel priority
 
 Six columns want more width than a laptop has, so each collapsible one has a
@@ -526,7 +588,7 @@ is, because the switch is the only difference.
 **Advanced is two more switches, not another kind.** The same rule scales past
 the schedule. Grant a project **preset code** — library snippets copied onto
 the project, where its Build page may edit the copy — and add an **output
-page** that binds a result template (the layout), one granted preset (the
+page** that binds an artifact template (the layout), one granted preset (the
 logic) and the tables it reads, and the project now publishes something hosted.
 There is still no `kind` field and no picker at creation: `basic` and
 `advanced` are words for prose, derived from whether pages exist, and the only
@@ -629,10 +691,11 @@ same acts.
 **Every panel section folds, and the panel has one architecture.** Every project
 reads the same way: the four basic options — **Assistants, Knowledge,
 Connections, Schedule** — then Channels on a publishing project, then a full
-divider, and below it what has happened: **Results** and **Chat History**.
+divider, and below it what has happened: **Artifacts** (the project’s own results) and **Chat History**.
 Pages are not a section at all: a page is a *result* of the project, so each
-one is a `page` artifact in the results column — rendered live from the record
-(bindings, deploy line, rebuild) with the page's content as its second tab —
+one is a `page` artifact in the results column — rendered live from the record:
+the page itself in the embedded browser, its facts, deploy line and content as
+tabs at the top of the information section under it —
 and Build stays the only place a page is authored. Each section is a native `<details>` whose
 summary is the head it already had — the chevron leading at the left, the way
 the fold and the trace draw theirs, then the eyebrow, then the count of what is
@@ -644,7 +707,7 @@ Chat History open, because activity is what you came back for. The head stays
 one text line tall: its controls overhang the line instead of inflating it. A
 toggle is remembered per project for the session — a reading preference, not a
 fact about the project. The panel itself is two zones, each its own scroller:
-the options take what is left, and the log — Results and Chat History — is
+the options take what is left, and the log — Artifacts and Chat History — is
 pinned to the foot at a fixed height, so however far the options are expanded,
 the record of what happened keeps its place and its size. The full divider
 between what a project *is* and what has *happened* in it is the log zone's own
@@ -988,7 +1051,7 @@ it did not need a page:
 | Agents | scheduled runs are already visible in Chat → Schedule. Two lists of "things that run on a clock" was one too many. |
 | Connectors | Cloud → Connections. Connecting a system is an administrative act, usually by a different person than the one composing an assistant. Build *grants* a connector; Cloud makes the grant mean something. |
 | Solutions | retired. A solution duplicated what a project already is — an assistant, knowledge, connections and a place results land — behind a second linking convention and a publish ceremony. Projects took the role; the checklist went with it. |
-| "Design settings" | split into **Widgets** and **Result templates**. One label had been holding two genuinely different artifacts (an embeddable widget, a hosted page or a PDF layout) with one creation path that could only ever make a KPI tile. The lane is named for what the layouts are *for* — presenting results — not for the artifact class. |
+| "Design settings" | split into **Widgets** and **Artifact templates** (first named Result templates). One label had been holding two genuinely different artifacts (an embeddable widget, a hosted page or a PDF layout) with one creation path that could only ever make a KPI tile. The lane is named for what the layouts are *for* — presenting results — not for the artifact class. |
 
 ### The sidebar is Miller columns
 
@@ -1072,6 +1135,63 @@ shelf + grants + program):
 - **The left column states the configuration as facts** — `.setrow` rows:
   label, current value, chevron. Nothing on the page is a live control, so
   reading the record cannot accidentally edit it.
+- **A project introduces itself in Build exactly as on its chat/task page.**
+  The identity block (icon, name, the description written there or by
+  Nebulas — the About dialog edits it, and emptying it hands it back to
+  Nebulas) and the four option sections — Assistants, Knowledge, Connections,
+  Schedule (its run row, the script sentence, Run now), folded with counts,
+  rows as doors — are shared builders (`pjIdentity` and friends), drawn by
+  both surfaces so the two readings of one project cannot drift apart. Even
+  the fold memory is shared: a section opened on one page is open on the
+  other. Build adds only what the chat page keeps quiet about — the
+  granted-but-not-connected banner — because Build is the page where gaps are
+  fixed. Below the configuration a **divider** draws the same seam the chat
+  panel draws with its log zone's border: above it what the project IS, below
+  it **Artifacts** — what it produces, one flat list whatever the kind (pages,
+  tables, documents, forms), each row opening in the results column, a page
+  row keeping a quiet gear to its bindings dialog. Below Artifacts, every
+  project carries **Customized output** — its own section, on both surfaces,
+  holding the outputs the project filed there (`p.custom.ids`): chosen, not
+  everything produced. Filing joins the add-artifact flow; until then the
+  fixtures file each project's obvious set (the watchlist pair, the retrofit
+  posts, the service-desk forms). One row builder (`pjArtRow`) draws both
+  lists on both surfaces — the chat/task panel and Build cannot disagree
+  about what either section holds. The old Output pages
+  section folded into this list — a page's deploy line reads in its page
+  artifact now — and a page's gap banners (no logic, a source off the shelf)
+  moved with it. Preset code left the page the same way: granting and editing
+  a preset joins the add-artifact flow (its dialogs survive for that; the
+  maker still grants by name). Under the Customized output rows stands **one
+  door**: a lone `Add` button (the Artifacts list itself has none) opens the
+  chooser overlay — Page, Table, Document, Chart, Form,
+  each with a one-line account of what it would be. Picking Page opens the
+  **page wizard**; the others are marked *soon* and say their flow is not
+  designed yet, because a list that pretends five flows exist teaches people
+  not to trust the one that does.
+- **The page wizard** (`#pwScrim`, the maker's shell) replaces the New-page
+  form with a conversation: chat on the left, the page taking shape on the
+  right. The questions are a fixed script (`D.PAGE_WIZARD`) asked **one at a
+  time** — what the page is, where the data comes from, credentials if an
+  external source is involved, what the report carries, whether a workflow
+  rebuilds it, and its name. Each offers answer chips *and* the box for a
+  custom answer; answering removes the chips (an old question must not stay
+  clickable) and brings the next question after a beat. Nothing branches on
+  an answer — the order is the logic; a step that only applies sometimes says
+  "…or say none" — but every answer is kept and written into what comes out.
+  After the last answer the build runs as a visible trace, and the right pane
+  fills: **Preview** (the real page under its address, a `WEB_PAGES` entry
+  created at build time) and **Script** — because the page exists as a
+  **folder of working files** (`index.html`, `build_report.py`,
+  `workflow.yml`, `sources.json`), rows to click with the chosen file's
+  contents underneath. **Done** is the filing act: the page record (carrying
+  its folder) joins the project, the artifact joins the results column, its
+  id joins Customized output, and the overlay returns to the Build page.
+  Closing early discards with a toast — nothing is filed until Done says so.
+  A folder page skips the no-preset banner (its logic is its own script), its
+  facts name the folder's files, its deploy line reads `--folder`, and its
+  artifact detail gains a **Files** tab showing the same folder node. The
+  worked example is a monthly data analysis report: run the project's
+  workflow each month and the URL shows the latest month.
 - **The right column is the test bench**: a conversation with the record as
   configured, streamed by the same turn engine as chat and the maker
   (`opts.who` names the speaker). Its thread is a scratch object per
@@ -1572,6 +1692,168 @@ across the empty half of the column.
 3. **Artifact reference** — a single line pointing at the pane.
 4. **Citations** — a hairline-separated chip row.
 
+## Floating layers
+
+Everything that floats, in one specification — audited against the code, not
+remembered. Six kinds of floating thing exist: tooltip, popover, menu, toast,
+the modal plane, and what stands on it. Nothing floats outside these six, and
+the cloud page (nebulas-cloud.html) participates: it brings one shell and one
+placement of its own.
+
+### Levels
+
+One ladder, few rungs, and every rung earns its place:
+
+| z | What | Class | Why this height |
+|---|---|---|---|
+| 2–4 | sticky heads, the rail, the results grip | — | in-layout, not floating: they scroll with their pane and stack locally. (`.rail` carries z:3 with no `position`; `.build__side` is sticky with no z — both work by grid paint order.) |
+| 40 | composer popover (assistant picker) | `.pop` | anchored to its control, opens upward; only needs to clear the composer |
+| 60 | styled tooltips | `.tip::after` | above content, below every deliberate surface — a tooltip never covers a choice |
+| 80 | the modal plane | `.scrim` | one plane for every modal — eleven instances across the two pages, all equal, stacked by DOM order |
+| 90 | anchored menus · toasts | `.popmenu` `.toasts` | a menu answers a click that may land over a scrim; toasts report acts from anywhere |
+
+A floating surface earns a shadow; an in-layout one does not. `shadow-lg` for
+the modal plane's content and menus, `shadow-md` for tooltips, toasts — and
+`.pop`, which takes the lighter shadow on purpose: it rises 8px off its own
+composer, not 16vh off a page.
+
+### The modal plane
+
+One `.scrim` recipe carries every modal: `position:fixed; inset:0; z:80`,
+background `--scrim` (light `rgba(24,24,27,.34)`, dark `rgba(0,0,0,.6)`),
+`backdrop-filter:blur(2px)`, opacity fade over `--base`. Its content enters
+from `translate:0 -8px; scale:.985` and settles on open — the maker alone
+writes that distance as `-1×--s-2`, so its entrance breathes with density
+while the others hold at 8px.
+
+Three placements:
+
+- **Top-anchored** (default): `place-items:start center; padding-top:14vh` —
+  the palette and the record dialogs (share · project · post · run history).
+  A working dialog hangs near the top the way a sheet of paper does.
+- **Centered** (`.scrim--center`, padding `s-6`): the tall overlays —
+  assistant detail, maker, page wizard, edit dialog, the small browser window.
+- **Wizard** (`.scrim--wizard`, `padding-top:7vh`, install.css): the cloud
+  page's module wizard — taller than a dialog, shorter than centered.
+
+Three ways out, always: the **×** in the head (`iconbtn--sm`, 13px glyph,
+titled *Close (esc)*), **Escape**, and a **mousedown on the backdrop** itself
+(`e.target === scrim`, so a drag that ends outside does not close). Where a
+staged copy exists, all three mean *Cancel* — nothing applies but Save.
+
+**Escape resolves top-down** through one window handler, ordered by who
+conceptually opened last: edit dialog → browser window → assistant detail →
+share → post → page wizard → maker → run history → project → palette →
+**the app sheet**,
+which is not a modal but yields to all of them. Two floaters take Escape
+before the ladder, on document capture with `stopPropagation`: an open
+anchored menu, and the assistant picker — the topmost thing on screen takes
+the key. The palette's own input also stops propagation, so one keystroke
+never closes two layers.
+
+**What can and cannot stack.** The edit dialog can never open over another
+overlay — every one of its call sites is a page-level view. The navigation
+shortcuts (⌘K · ⌘\ · ⌘. · ⌘]) fall silent while a modal is open, so the
+palette cannot open beneath a dialog; ⌘J (theme) stays live, because it
+repaints rather than navigates. Toasts still float over everything at z:90 —
+their stack is `pointer-events:none` with the toasts themselves opting back
+in, so only a toast, never the empty column, takes a click.
+
+### The shells and their dimensions
+
+| Shell | Overlays | Placement | Width | Height caps |
+|---|---|---|---|---|
+| `.palette` | ⌘K palette | top | `min(560px, 92vw)` | list `min(420px, 52vh)`, input row 46px |
+| `.dialog` | share · edit | top / center | `min(460px, 92vw)` | body `min(560px, 62vh)` |
+| `.dialog--wide` | project · post · run history | top | `min(520px, 94vw)` | body `min(520px, 64vh)` |
+| `.detail` | assistant record | center | `min(1120px, 96vw)` | `min(760px, 88vh)`; columns 340px + rest; single column under 860px |
+| `.maker` | Build's chat layer · the page wizard | center | `min(1102px, 96vw)` (measure×1.45) | `min(760px, 88vh)`; side column `--list-w`×1.45 |
+| `.webwin` | the small browser window | center | `min(460px, 92vw)` | page `min(420px, 56vh)` |
+| `.wizard` | module wizard (cloud page, install.css) | wizard 7vh | `min(680px, 94vw)` | `max-height:82vh` — the one shell that sizes to content |
+
+All wear `r-xl` corners (10px), `--bg` surface, `--line` border, `shadow-lg`,
+`overflow:hidden` so their own headers and footers clip cleanly. Six live in
+components.css; the maker's frame is layout.css's, the wizard install.css's —
+both reuse the shared scrim and the shared open selector.
+
+### The dialog anatomy
+
+- **Head** — `s-3` vertical, `s-4` left, `s-2` right (the × sits closer to
+  the edge than the text): icon (`text-4`), title (`t-13` medium), sub
+  (`t-11`, `text-4`, ellipsised). The sub names the record the dialog edits,
+  so two open contexts cannot be confused.
+- **Body** — padding `s-4`, fields stacked on an `s-4` grid gap, scrolls
+  inside its cap so the foot never leaves the screen.
+- **Foot** — `s-3`/`s-4` padding, `--surface` background, top border. The
+  recipe reads left to right: *destructive act* (ghost/danger) · spacer ·
+  *Cancel* (ghost) · *the verb* (primary). The primary names the act — Save,
+  Create link, Post — never "OK". A read-only peek hides the foot entirely:
+  nothing is staged, so × or Escape is the whole way out.
+
+### Buttons on floating layers
+
+| Kind | Size | Use |
+|---|---|---|
+| `.btn--primary` | `ctl-md` 30px · `t-12` | the one verb the overlay exists for |
+| `.btn--secondary` | 30px | the second act (Run now, Copy) |
+| `.btn--ghost` | 30px | Cancel, quiet acts |
+| `.btn--danger` | 30px | Stop sharing, Delete — never beside the × |
+| `.btn--sm` variants | `ctl-sm` 26px · `t-11` | inside body content, not in the foot |
+| `.iconbtn--sm` | 26px square | the ×, per-row acts in chrome lines |
+| `.iconbtn--xs` | 22px square | acts inside identity rows and section heads |
+
+Disabled is `opacity:.4; cursor:not-allowed` — a control that exists but is
+not available stays visible.
+
+### Anchored floaters (no scrim)
+
+- **`.popmenu`** — a menu summoned by a control (Download…): built by
+  `openMenu`, appended to `body` at `position:fixed`, right-aligned to the
+  anchor, clamped 8px from the viewport edges, flipped above the anchor when
+  it would overflow the bottom. It does **not** follow scroll — it is fixed
+  at the rect it opened on. 240–`min(320px, 92vw)` wide, `s-1` padding,
+  `r-lg`, `shadow-lg`, −4px drop over `--fast`. Closes on outside mousedown
+  (capture), Escape (capture), or choosing.
+- **`.pop`** — the composer's assistant picker: the same card recipe but its
+  own component, positioned by CSS alone (`absolute`, above the composer),
+  z:40, `shadow-md`, +4px **rise** — each of the pair animates from its
+  anchor's side. Closes on outside mousedown (deferred one tick), Escape
+  (capture), or picking.
+- **`.tip[data-tip]`** — the styled tooltip: inverted surface, `t-11`,
+  `6px × s-2` padding, `r-sm`, `shadow-md`, `pointer-events:none`. The
+  default opens to the **right** of its control; `.tip--below` flips it
+  underneath. Hover-only, and `white-space:nowrap` with no max-width — keep
+  tips to a phrase. Controls on a clipped edge use native `title` instead —
+  a CSS tooltip cannot escape a scroll container — so two tooltip systems
+  coexist by design (layout.css says where and why).
+- **`.toasts`** — fixed bottom-center, above the status bar
+  (`--status-h` + `s-3`), stacking upward on an `s-2` gap,
+  `pointer-events:none` with each toast opting back in. A toast is the
+  inverted surface, `t-12`, `8px × s-3`, `r-md`; it lives 2 seconds, or 6
+  when it carries an action (`.toast__act`, an underlined `ctl-xs` text
+  button — Undo). `aria-live="polite"`. The cloud page ships its own smaller
+  emitter in install.js: 2.2 seconds, no action.
+
+### Component logic, shared
+
+- **Staged copies.** `openEdit` hands `build()` a copy; controls write the
+  copy; `apply()` runs on Save alone and toasts *"‹title› saved"*. Escape,
+  ×, scrim and Cancel all discard. Share stages a draft only until a link is
+  minted, then edits live; the maker mutates its record live, and closing a
+  draft nobody spoke to deletes it.
+- **Choosing is the act** in read-only choosers (`read:true`): the foot
+  withdraws, rows are buttons that route immediately.
+- **Focus** moves to the first text control where one exists (palette, edit
+  dialog, maker, wizard; the project dialog only when creating); every shell
+  carries `role="dialog"`, `aria-modal`, `aria-labelledby`. Focus is not yet
+  trapped inside the plane, and not restored on close — stated in the
+  styleguide's gaps, not hidden.
+- **No nested buttons**, in overlays as everywhere: a row that is a button
+  gets its per-row acts as siblings in a `.rowline`.
+- **Density-aware.** Every dimension above is token-derived (`--u` 4px ×
+  `--density`, `--ctl-*`), so compact/comfortable/roomy re-scale the floating
+  layers with the rest of the interface.
+
 ## Interaction notes
 
 **Streaming.** The full markup is built first, every text node emptied, then
@@ -1600,9 +1882,9 @@ widgets, templates and commands into one ranked list.
 
 ## The cloud page has two kinds of page
 
-Eleven of its pages answer *what should exist*. Two answer *what happened*, and
+Twelve of its pages answer *what should exist*. Two answer *what happened*, and
 the difference is load-bearing: a configuration page has a state (`Configured`),
-a footer that moves you to the next one, and a place in `0 / 12 modules`. A
+a footer that moves you to the next one, and a place in `0 / 13 modules`. A
 usage page has none of those. It has a window and a scope instead, and its
 footer says `Read-only — usage is measured, not configured`. Making them look
 alike would promise a Save button that cannot exist.
@@ -1610,17 +1892,30 @@ alike would promise a Save button that cannot exist.
 The menu carries four groups now, and **Platform Usage Monitoring** is the
 first of them — ahead of Foundation, Platform and Operations. A deployment is
 configured once and read every day afterwards, so the pages you come back to
-are at the top and the twelve steps are underneath, still in dependency order
+are at the top and the thirteen steps are underneath, still in dependency order
 among themselves. The page a fresh visit lands on is Cloud Usage for the same
 reason. Grouping reads a `phase` field off each page rather than slicing the
 array by index, which is what it used to do and what broke every time a module
 was added.
 
+Module 07 is **Design Assets** — the design system as configuration, sitting
+in the Platform phase because it shapes what tenants see, not how the install
+runs. Its six groups are the token categories a generated surface inherits:
+color palette (brand, accent, surfaces, semantic status kept apart from the
+brand hue), typography (faces, base size, scale ratio, self-hosted fonts),
+spacing & density (a base unit everything is a multiple of), radii & elevation,
+breakpoints & layout, and motion · icons · themes. The defaults are this
+prototype's own tokens where one exists — 4px base unit, 8px radius, subtle
+motion — so the form ships answered the way the page in front of you answers
+it. Inserting it renumbered modules 08–13; ids never changed, which is why
+nothing that reads configuration (`cval` is by id, group title and field
+label) had to move.
+
 Both views show **example data from the first visit**, before any tenant
 exists — this is a prototype, and a reader who opens a dashboard should see what
 it reports rather than an empty state describing what it would report. The
 header badge carries the caveat instead: `Example data` until the tenant is
-created, then `Shared with tenants` or `Internal only` from module 08's switch.
+created, then `Shared with tenants` or `Internal only` from module 09's switch.
 
 ### A dashboard that invents its own limits says nothing
 
@@ -1635,11 +1930,11 @@ can move without silently reporting the wrong number.
 Two consequences worth keeping:
 
 - **Cards report their own misconfiguration.** Untagged spend is `$0` when
-  module 12 blocks untagged resources and a real number when it does not.
+  module 13 blocks untagged resources and a real number when it does not.
   Failover counts are the only evidence that module 05's fallback choice works.
   A dimension that is consumed but not metered is named as unbillable.
 - **Windows have to agree.** Spend follows the range picker, but the budget in
-  module 12 is monthly, so the budget card stays on the month and says so.
+  module 13 is monthly, so the budget card stays on the month and says so.
   Comparing a quarter's spend to a monthly budget would have read 300%.
 
 Figures come from a seeded PRNG keyed on view, range and scope — not
@@ -1654,7 +1949,7 @@ defaults do the arguing: departments and totals are the view, individual rows
 are hidden behind a button, and revealing them is not remembered — it is an act
 for a purpose, not a preference. The page reports counts and categories and
 never contents, which is also all it *could* report, since module 05 leaves
-prompt logging off. What is collected, how long module 08 keeps it, and who can
+prompt logging off. What is collected, how long module 09 keeps it, and who can
 see it are a card on the page rather than a policy elsewhere. The fixture people
 are fictional for the same reason.
 
