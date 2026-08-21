@@ -1517,6 +1517,65 @@ button.chip--plain:hover{ background:var(--raised) }
 .pwfile__sub{ margin-left:auto; color:var(--text-3); font-size:var(--t-11) }
 .pwfoot__hint{ font-size:var(--t-11); color:var(--text-3) }
 
+/* The wizard's left column carries two tabs: AI Chat and Manual Script. The
+   manual pane is the page as a hand-written definition — inputs, sources,
+   the report step as editable code — with a test row at the end. */
+.pwmode{ padding:var(--s-3) var(--s-5) 0; margin-bottom:0 }
+.pwmanual{
+  flex:1 1 0; min-height:0; overflow-y:auto;
+  display:flex; flex-direction:column; gap:var(--s-5);
+  padding:var(--s-4) var(--s-5);
+}
+.pwmanual[hidden]{ display:none }
+.pwman__sec{ display:flex; flex-direction:column; gap:var(--s-2) }
+.pwman__head{
+  display:flex; align-items:center; gap:var(--s-2);
+  color:var(--text-3); margin-bottom:var(--s-1);
+}
+.pwman__row{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-2) var(--s-3);
+  border:var(--border) solid var(--line); border-radius:var(--r-md);
+  font-size:var(--t-12); color:var(--text-2);
+}
+.pwman__row .input{ flex:1; min-width:0 }
+.pwman__k{ font-size:var(--t-12); color:var(--text) }
+.pwman__hint{ color:var(--text-4); font-size:var(--t-11) }
+.pwman__eq{ color:var(--text-4) }
+.pwman__step{
+  border:var(--border) solid var(--line); border-radius:var(--r-md);
+  overflow:hidden;
+}
+.pwman__stephead{
+  display:flex; align-items:center; gap:var(--s-2);
+  padding:var(--s-2) var(--s-3);
+  border-bottom:var(--border) solid var(--line);
+  font-size:var(--t-12); color:var(--text-2);
+}
+.pwman__n{
+  display:grid; place-items:center; width:18px; height:18px;
+  border-radius:var(--r-sm); background:var(--raised-2);
+  font:600 var(--t-11)/1 var(--mono); color:var(--text-2);
+}
+.pwman__lang{ font-weight:600; color:var(--text) }
+.pwman__arrow{ color:var(--text-4) }
+.pwman__out{ color:var(--text-3); font-size:var(--t-12) }
+.pwman__code{
+  border:none; border-radius:0; width:100%;
+  min-height:240px; font-size:var(--t-12);
+}
+.pwman__test{
+  display:flex; align-items:center; gap:var(--s-3); flex-wrap:wrap;
+  padding-top:var(--s-3); border-top:var(--border) solid var(--line);
+}
+.pwman__testt{ font-size:var(--t-13) }
+.pwman__vals{
+  display:flex; align-items:center; gap:var(--s-2);
+  flex:1; min-width:180px;
+}
+.pwman__vals .input{ flex:1; min-width:0 }
+.pwman__test .btn{ margin-left:auto }
+
 .webview__glyph{ display:flex; flex:none; color:var(--text-4) }
 .webview__addr{
   display:flex; align-items:center; gap:var(--s-1);

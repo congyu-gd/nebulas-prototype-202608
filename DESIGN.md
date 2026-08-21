@@ -1179,14 +1179,24 @@ shelf + grants + program):
   an answer — the order is the logic; a step that only applies sometimes says
   "…or say none" — but every answer is kept and written into what comes out.
   After the last answer the build runs as a visible trace, and the right pane
-  fills: **Preview** (the real page under its address, a `WEB_PAGES` entry
-  created at build time) and **Script** — because the page exists as a
-  **folder of working files** (`index.html`, `build_report.py`,
-  `workflow.yml`, `sources.json`), rows to click with the chosen file's
-  contents underneath. **Done** is the filing act: the page record (carrying
+  fills with the **preview** — the real page under its address, a `WEB_PAGES`
+  entry created at build time. The pane shows one thing and shows it whole:
+  the page exists as a **folder of working files** (`index.html`,
+  `build_report.py`, `workflow.yml`, `sources.json`), but the code's homes
+  are the **Manual Script** tab on the left and, once filed, the artifact's
+  **Files** tab. **Done** is the filing act: the page record (carrying
   its folder) joins the project, the artifact joins the results column, its
   id joins Customized output, and the overlay returns to the Build page.
   Closing early discards with a toast — nothing is filed until Done says so.
+  Above the chat sit two tabs — **AI Chat** and **Manual Script** — because
+  being asked and writing it down are two doors to the same page. The manual
+  pane is the page as a hand-written definition: declared inputs
+  (`month = {{now()}}`), the tables it reads, and the report step as
+  editable SQL (`1 · SQL → monthly_kpis`), ending in a *Test report
+  generation* row whose **Preview** is the same act as the chat build — the
+  page exists and the right pane shows it. Edits live on a working copy;
+  the chat keeps its place while the manual tab is up, and either path arms
+  Done.
   A folder page skips the no-preset banner (its logic is its own script), its
   facts name the folder's files, its deploy line reads `--folder`, and its
   artifact detail gains a **Files** tab showing the same folder node. The

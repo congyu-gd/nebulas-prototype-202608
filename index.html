@@ -425,8 +425,11 @@
     </header>
     <div class="maker__body">
       <div class="maker__chat">
+        <!-- Two ways to define the page: asked for, or written by hand. -->
+        <div class="tabs arttabs pwmode" id="pwMode" role="tablist"></div>
         <div class="maker__log" id="pwLog"></div>
-        <div class="maker__ask">
+        <div class="pwmanual" id="pwManual" hidden></div>
+        <div class="maker__ask" id="pwAskRow">
           <textarea class="textarea" id="pwInput" rows="2"
             placeholder="Or answer in your own words&#8230;"></textarea>
           <button class="btn btn--primary btn--sm" id="pwSend" type="button">Send</button>

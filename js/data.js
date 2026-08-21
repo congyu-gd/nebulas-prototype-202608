@@ -428,7 +428,7 @@ const PAGE_WIZARD = {
     '- <code>workflow.yml</code> — the monthly schedule that reruns it',
     '- <code>sources.json</code> — where the data comes from; credentials by reference',
     '',
-    'Preview it or read the script on the right. **Done** files it under ' +
+    'The preview is on the right; the script is under the Manual Script tab. **Done** files it under ' +
     'Customized output — from then on, running the workflow is all it takes to get the latest month.'
   ].join('\n'),
   /* The folder's working files — what the Script tab and the artifact's Files
@@ -489,6 +489,29 @@ const PAGE_WIZARD = {
         '}'
       ].join('\n') }
   ],
+  /* The Manual Script tab — the same page, written by hand instead of asked
+     for: declared inputs, the tables it reads, and the report step as
+     editable SQL. Preview runs it against the fixture and fills the right
+     pane, the same act as the chat build. */
+  manual:{
+    inputs:[{ k:'month', v:'{{now()}}', hint:'date' }],
+    sources:['q3_ledger','fy25_targets'],
+    steps:[{ n:1, lang:'SQL', out:'monthly_kpis', code:[
+      'WITH monthly AS (',
+      '  SELECT',
+      "    DATE_TRUNC('month', CAST(l.booked_at AS TIMESTAMP)) AS month,",
+      '    l.segment,',
+      '    SUM(l.arr)                                          AS revenue,',
+      '    SUM(l.arr) - LAG(SUM(l.arr)) OVER (',
+      '      PARTITION BY l.segment ORDER BY 1)                AS delta',
+      '  FROM q3_ledger l',
+      '  GROUP BY 1, 2',
+      ')',
+      'SELECT * FROM monthly',
+      "WHERE month = DATE_TRUNC('month', {{month}})",
+      'ORDER BY revenue DESC'
+    ].join('\n') }]
+  },
   /* The WEB_PAGES spec the finished page renders from — title and foot are
      set when the wizard files it, from the answers and the project. */
   page:{
