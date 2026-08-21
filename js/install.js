@@ -2,7 +2,7 @@
    install.js — renders the initialisation dialog, the menu and the
    configuration surface from MODULES.
 
-   Module 01 is the gate: it arrives as a layer over the page, and the eleven
+   Module 01 is the gate: it arrives as a layer over the page, and the twelve
    configuration modules only become reachable once it is done. Every field is
    addressed as "moduleId.groupIndex.fieldIndex", so one state object holds the
    whole install and the dialog and the page can share every renderer.
@@ -12,7 +12,7 @@
 /* Icons live in js/icons.js — one set for every page, loaded before this. */
 
 /* ==================================================================== state
-   MODULES[0] is initialisation — the dialog. PAGES are the eleven that get a
+   MODULES[0] is initialisation — the dialog. PAGES are the twelve that get a
    configuration page of their own. */
 const KEY   = 'nebulas.install.v1';
 const INIT  = MODULES[0];
@@ -20,7 +20,7 @@ const PAGES = MODULES.slice(1);
 
 /* The two monitoring perspectives, from usage-data.js. They are views, not
    modules: nothing on them is saved, none of them can be "configured", and
-   they never count toward the twelve. A page is a view when it has cards. */
+   they never count toward the thirteen. A page is a view when it has cards. */
 const ALL    = PAGES.concat(VIEWS);
 const isView = m => !!(m && m.cards);
 const pageOf = id => ALL.find(m => m.id === id);
@@ -30,7 +30,7 @@ const pageOf = id => ALL.find(m => m.id === id);
    Monitoring comes first, ahead of the install it measures. The three
    configuration phases are still in dependency order among themselves, but a
    deployment is configured once and read every day after — so the pages you
-   return to sit at the top, and the twelve steps sit under them. */
+   return to sit at the top, and the thirteen steps sit under them. */
 const PHASES = [
   { k:'usage',      l:'Platform Usage Monitoring' },
   { k:'foundation', l:'Foundation' },
@@ -119,7 +119,7 @@ const cnum = (s, dflt) => {
 function readCfg(){
   const gpuPool = cval('compute','Node pools','GPU inference pool','None');
   return {
-    /* module 12 — money and limits */
+    /* module 13 — money and limits */
     budget:cnum(cval('cost','Budgets & anomalies','Monthly budget','25000'), 25000),
     thresholds:String(cval('cost','Budgets & anomalies','Alert thresholds','50% / 80% / 100%'))
       .split('/').map(x => cnum(x, 0)).filter(Boolean),
@@ -136,14 +136,14 @@ function readCfg(){
     recs:cval('cost','Optimisation','Recommendations to surface',[]),
     review:cval('cost','Optimisation','Review cadence','Monthly'),
     autoStopIdle:!!cval('cost','Optimisation','Auto-stop idle GPU nodes',true),
-    /* module 08 — objectives and what is kept */
+    /* module 09 — objectives and what is kept */
     slo:cval('observe','Alerts','Availability SLO','99.9%'),
     p95:cval('observe','Alerts','p95 latency objective','2.5s'),
     mRetention:cval('observe','Metrics','Retention','90 days'),
     lRetention:cval('observe','Log aggregation','Retention','30 days'),
     piiMask:!!cval('observe','Log aggregation','PII masking at ingest',true),
     tenantDash:!!cval('observe','Tenant-facing observability','Expose per-tenant usage dashboard',true),
-    /* module 07 — who, and what is metered */
+    /* module 08 — who, and what is metered */
     metered:cval('identity','Billing dimensions','Metered on',[]),
     period:cval('identity','Billing dimensions','Billing period','Monthly'),
     hardStop:!!cval('identity','Billing dimensions','Hard stop at quota',false),
@@ -166,7 +166,7 @@ function readCfg(){
     chunk:cval('ai','RAG pipeline','Chunk size / overlap','800 / 120'),
     rerank:!!cval('ai','RAG pipeline','Rerank before generation',true),
     cite:!!cval('ai','RAG pipeline','Require citations in answers',true),
-    /* modules 03 · 04 · 06 · 09 — what it runs on */
+    /* modules 03 · 04 · 06 · 10 — what it runs on */
     gpuPool:gpuPool,
     gpuCount:cnum(gpuPool, 0) || (gpuPool === 'None' ? 0 : 1),
     nodeBand:cval('compute','Node pools','General pool — size','3 – 12'),
@@ -177,10 +177,10 @@ function readCfg(){
   };
 }
 
-/* A bare "%" hugs its number; a worded unit takes a space. */
+/* A symbol unit ("%", "px") hugs its number; a worded unit takes a space. */
 function fmt(v, unit){
   if(!unit) return String(v);
-  return unit === '%' ? v + '%' : v + ' ' + unit;
+  return unit === '%' || unit === 'px' ? v + unit : v + ' ' + unit;
 }
 
 /* ==================================================================== field */
@@ -272,7 +272,7 @@ function renderWizard(){
 
 /* The dialog is a gate before the tenant exists and an editor after it, so
    the same footer says two different things. It is always dismissable — this
-   is a prototype, and being able to look at the eleven pages without filling
+   is a prototype, and being able to look at the twelve pages without filling
    the gate in first matters more here than the flow being airtight. */
 function syncWizard(){
   const started = !!state.done.init;
@@ -285,7 +285,7 @@ function syncWizard(){
   el('wizHint').textContent   = !named
     ? 'Enter the legal entity name to continue, or close to browse the modules.'
     : (started ? 'Changes apply to every module that inherits them.'
-               : 'The eleven configuration modules unlock once the tenant exists.');
+               : 'The twelve configuration modules unlock once the tenant exists.');
 }
 
 function openWizard(){
@@ -579,7 +579,7 @@ function renderView(v){
   el('cfgTitle').textContent = v.label;
 
   /* A view has no configured state, so the badge says who may see it instead —
-     which is module 08's switch, and the only status it has. Until the tenant
+     which is module 09's switch, and the only status it has. Until the tenant
      exists there is nothing behind these numbers, and the badge says that
      rather than the page withholding them. */
   const st = el('cfgState');
@@ -608,7 +608,7 @@ function renderView(v){
 }
 
 /* ================================================================= progress
-   All twelve modules count — initialisation is a dialog, not an exemption.
+   All thirteen modules count — initialisation is a dialog, not an exemption.
    The two views are not modules, so they are not in this arithmetic. */
 function renderProgress(){
   const n   = MODULES.filter(m => state.done[m.id]).length;
@@ -647,7 +647,7 @@ function go(id){
   renderMenu();
   renderConfig();
 }
-/* The footer walks the eleven configuration modules — that is the install.
+/* The footer walks the twelve configuration modules — that is the install.
    The arrow keys walk everything in the menu, including the two views, because
    there they are a way of moving down a list you can see. */
 function step(delta, list){
@@ -762,7 +762,7 @@ el('nextBtn').addEventListener('click', () => {
 
   const i = PAGES.indexOf(m);
   if(i < PAGES.length - 1){ go(PAGES[i + 1].id); }
-  else{ renderConfig(); toast('All 12 modules configured — ready to deploy'); }
+  else{ renderConfig(); toast('All ' + MODULES.length + ' modules configured — ready to deploy'); }
   renderMenu();
   renderProgress();
 });

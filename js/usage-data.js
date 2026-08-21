@@ -1,10 +1,10 @@
 /* ============================================================================
    usage-data.js — the two monitoring perspectives.
 
-   The other eleven pages answer "what should exist". These two answer "what
+   The other twelve pages answer "what should exist". These two answer "what
    happened", so they are views rather than modules: nothing here is saved,
-   nothing counts toward the twelve, and every threshold a number is judged
-   against is READ FROM THE CONFIGURATION — the budget from module 12, the SLO
+   nothing counts toward the thirteen, and every threshold a number is judged
+   against is READ FROM THE CONFIGURATION — the budget from module 13, the SLO
    from 08, the quotas from 12, the models from 05, the metered dimensions from
    07. A dashboard that invents its own limits cannot tell you anything about
    this deployment.
@@ -165,7 +165,7 @@ function cloudCards(ctx){
   const gpuCap = c.gpuCount * 24 * 30 * r.f;          /* GPU-hours available */
   const gpuUse = uwalk(sd + 'gpu', r.pts, 52, .28, .1, 94);
   const gpuHrs = gpuCap * (uavg(gpuUse) / 100);
-  /* Spend follows the window like everything else, but the budget in module 12
+  /* Spend follows the window like everything else, but the budget in module 13
      is monthly — so the tile pro-rates it and the card below stays on the
      month. Comparing a quarter's spend to a monthly budget would report 300%
      and mean nothing. */
@@ -205,7 +205,7 @@ function cloudCards(ctx){
     left:umoney(mSpend) + ' spent',
     right:umoney(Math.max(0, mBud - mSpend)) + ' left of ' + umoney(mBud),
     marks:c.thresholds.map(t => ({ at:t / 100, l:t + '%' })),
-    note:'The window above does not change this card — the budget in module 12 is monthly. ' +
+    note:'The window above does not change this card — the budget in module 13 is monthly. ' +
          'Projected month-end <b>' + umoney(proj) + '</b> — ' + upct(proj / mBud * 100) +
          ' of budget, on ' + c.granularity.toLowerCase() + ' granularity. ' +
          (c.anomaly
@@ -363,7 +363,7 @@ function cloudCards(ctx){
     cols:[{ l:'Recommendation' }, { l:'What it names' }, { l:'Saving / month', num:true }],
     rows:c.recs.length
       ? c.recs.filter(x => RECS[x]).map(x => [x, RECS[x][0], umoney(RECS[x][1])])
-      : [['No recommendation types selected in module 12.', '', '']],
+      : [['No recommendation types selected in module 13.', '', '']],
     note:'Reviewed <b>' + c.review.toLowerCase() + '</b>. Total identified: <b>' +
          umoney(usum(c.recs.filter(x => RECS[x]).map(x => RECS[x][1]))) + '</b> per month.'
   });
@@ -438,7 +438,7 @@ function peopleCards(ctx){
       { nm:'Scheduled programs',    v:.07, val:String(Math.round(96 * r.f * share)), meta:'runs, unattended' }
     ],
     note:c.logPrompts
-      ? 'Prompt logging is <b>on</b> in module 05, so contents are available — this page still reports categories only, and module 09 owns what the logs may be used for.'
+      ? 'Prompt logging is <b>on</b> in module 05, so contents are available — this page still reports categories only, and module 10 owns what the logs may be used for.'
       : 'Prompt logging is <b>off</b> in module 05, so only counts and categories exist. Nothing here can show what anyone typed.'
   });
 
@@ -476,7 +476,7 @@ function peopleCards(ctx){
       ['Failed sign-ins', String(Math.round(212 * r.f * share)), 'via ' + c.idp + ' · ' + (c.mfa ? 'MFA required at first login' : 'MFA not required')],
       ['Accounts without MFA', String(Math.round(seats * .06)), c.mfa ? 'invited before the policy' : 'policy is off in module 01'],
       ['External shares', String(Math.round(48 * r.f * share)), 'results shared outside the workspace'],
-      ['Data-loss hits', String(Math.round(31 * r.f * share)), c.dlp ? 'blocked by module 09' : 'module 09 scanning is off — these are counted, not blocked'],
+      ['Data-loss hits', String(Math.round(31 * r.f * share)), c.dlp ? 'blocked by module 10' : 'module 10 scanning is off — these are counted, not blocked'],
       ['Directory sync', c.scim ? 'SCIM, hourly' : 'manual', c.scim ? 'joiners and leavers arrive on their own' : 'leavers rely on someone remembering']
     ]
   });
@@ -504,11 +504,11 @@ function peopleCards(ctx){
     lines:[
       'Counts, categories and timings — never the contents of a prompt or an answer. ' +
         (c.logPrompts ? 'Module 05 does log prompts, but this page does not read them.' : 'Module 05 does not log prompts at all.'),
-      'Kept for <b>' + c.mRetention + '</b> (metrics) and <b>' + c.lRetention + '</b> (logs), per module 08. Nothing here outlives that.',
-      (c.piiMask ? 'Personal data is masked at ingest, per module 08 — a guarantee rather than a cleanup job.'
-                 : 'PII masking at ingest is <b>off</b> in module 08, so logs may carry personal data that this page deliberately does not show.'),
+      'Kept for <b>' + c.mRetention + '</b> (metrics) and <b>' + c.lRetention + '</b> (logs), per module 09. Nothing here outlives that.',
+      (c.piiMask ? 'Personal data is masked at ingest, per module 09 — a guarantee rather than a cleanup job.'
+                 : 'PII masking at ingest is <b>off</b> in module 09, so logs may carry personal data that this page deliberately does not show.'),
       'Visible to <b>' + c.model + '</b> roles holding platform administration. Individual rows are gated above; ' +
-        (c.tenantDash ? 'tenants see their own usage, per module 08.' : 'tenants cannot see this at all — module 08 keeps it internal.')
+        (c.tenantDash ? 'tenants see their own usage, per module 09.' : 'tenants cannot see this at all — module 09 keeps it internal.')
     ]
   });
 

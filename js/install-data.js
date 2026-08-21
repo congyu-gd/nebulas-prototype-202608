@@ -1,7 +1,7 @@
 /* ============================================================================
    install-data.js — the deployment mind map, as configuration.
 
-   Twelve modules, each one an admin UI page group. A module's `groups` map
+   Thirteen modules, each one an admin UI page group. A module's `groups` map
    1:1 to the PRD bullets, so the checklist and the form are the same object —
    nothing has to be kept in sync by hand.
 
@@ -43,14 +43,14 @@ const MODULES = [
         o:['us-east-1','us-west-2','eu-west-1','eu-central-1','ap-southeast-1','ap-northeast-1','cn-north-1'] },
       { t:'select', l:'Disaster-recovery region', v:'ap-northeast-1', half:true,
         o:['us-east-1','us-west-2','eu-west-1','eu-central-1','ap-southeast-1','ap-northeast-1','cn-north-1'],
-        h:'Must differ from primary for the DR drills in module 11 to mean anything.' }
+        h:'Must differ from primary for the DR drills in module 12 to mean anything.' }
     ]},
     { t:'Resource projects & tagging', f:[
       { t:'input', l:'Project prefix', v:'acme-ai', half:true },
       { t:'select', l:'Environments', v:'dev · staging · prod', half:true,
         o:['prod only','dev · prod','dev · staging · prod'] },
       { t:'switch', l:'Enforce tag policy at creation', v:true,
-        h:'Untagged resources cannot be charged back in module 12.' }
+        h:'Untagged resources cannot be charged back in module 13.' }
     ]},
     { t:'Initial administrators', f:[
       { t:'input', l:'Invite by email', v:'', ph:'name@acme.com, name2@acme.com' },
@@ -204,7 +204,7 @@ const MODULES = [
       { t:'input', l:'Default rate limit', v:'120000 tokens/min', half:true, mono:true },
       { t:'switch', l:'Per-tenant cost tracking', v:true, half:true },
       { t:'switch', l:'Log prompts and completions', v:false, half:true,
-        h:'Off by default — turning it on makes module 09 responsible for the contents.' }
+        h:'Off by default — turning it on makes module 10 responsible for the contents.' }
     ]},
     { t:'Inference service', f:[
       { t:'select', l:'Server', v:'vLLM', half:true, o:['vLLM','TGI','Triton','SGLang'] },
@@ -270,7 +270,70 @@ const MODULES = [
   ]
 },
 {
-  id:'identity', n:'07', phase:'platform', label:'Identity & Multi-tenancy', icon:'user',
+  id:'design', n:'07', phase:'platform', label:'Design Assets', icon:'feather',
+  page:'Design System',
+  desc:'The tokens every tenant-facing surface inherits — colour, type, spacing, radii, and the breakpoints layouts answer to.',
+  groups:[
+    { t:'Color palette', f:[
+      { t:'input', l:'Primary / brand', v:'#4F46E5', half:true, mono:true,
+        h:'Buttons, links, focus rings — the one saturated voice on the page.' },
+      { t:'input', l:'Accent', v:'#0EA5E9', half:true, mono:true },
+      { t:'input', l:'Surface — light', v:'#FFFFFF', half:true, mono:true },
+      { t:'input', l:'Surface — dark', v:'#101014', half:true, mono:true },
+      { t:'input', l:'Success · warning · danger', v:'#16A34A · #D97706 · #DC2626', mono:true,
+        h:'Status colours are semantic — kept apart from the brand hue so state never competes with identity.' },
+      { t:'seg', l:'Neutral cast', v:'Cool grey', o:['Cool grey','Warm grey','Pure grey'] },
+      { t:'switch', l:'Derive the dark palette automatically', v:true,
+        h:'Off means every dark-mode token is set by hand.' }
+    ]},
+    { t:'Typography', f:[
+      { t:'select', l:'Heading face', v:'Inter', half:true,
+        o:['Inter','Söhne','IBM Plex Sans','Source Han Sans','Roboto','System stack'] },
+      { t:'select', l:'Body face', v:'Inter', half:true,
+        o:['Inter','IBM Plex Sans','Source Han Sans','Roboto','Georgia','System stack'] },
+      { t:'select', l:'Monospace face', v:'JetBrains Mono', half:true,
+        o:['JetBrains Mono','IBM Plex Mono','SF Mono','Consolas'] },
+      { t:'input', l:'Base size', v:'16px', half:true, mono:true },
+      { t:'select', l:'Type scale ratio', v:'1.25 — major third', half:true,
+        o:['1.125 — major second','1.2 — minor third','1.25 — major third','1.333 — perfect fourth'] },
+      { t:'select', l:'Body line height', v:'1.5', half:true, o:['1.4','1.5','1.6'] },
+      { t:'switch', l:'Self-host font files', v:true,
+        h:'Fonts are served from the tenant CDN — no calls to third-party font hosts.' }
+    ]},
+    { t:'Spacing & density', f:[
+      { t:'range', l:'Base unit', v:4, min:2, max:8, step:1, unit:'px',
+        h:'Every gap, inset and control height is a multiple of this.' },
+      { t:'seg', l:'Spacing scale', v:'Geometric ×2', o:['Linear','Geometric ×1.5','Geometric ×2'] },
+      { t:'multi', l:'Density modes offered', v:['Compact','Comfortable'], o:['Compact','Comfortable','Roomy'] },
+      { t:'input', l:'Content max width', v:'1280px', half:true, mono:true }
+    ]},
+    { t:'Radii & elevation', f:[
+      { t:'range', l:'Base corner radius', v:8, min:0, max:24, step:2, unit:'px' },
+      { t:'seg', l:'Radius steps', v:'sm · md · lg · full', o:['One radius everywhere','sm · md · lg','sm · md · lg · full'] },
+      { t:'select', l:'Elevation style', v:'Soft shadows', half:true,
+        o:['Soft shadows','Hard shadows','Borders only','Borders + shadows'] },
+      { t:'select', l:'Shadow steps', v:'3', half:true, o:['2','3','4'] }
+    ]},
+    { t:'Breakpoints & layout', f:[
+      { t:'input', l:'sm · md · lg · xl', v:'640 · 960 · 1280 · 1600', mono:true,
+        h:'In px, mobile-first — each is a min-width the layout answers to.' },
+      { t:'seg', l:'Grid', v:'12 columns', o:['8 columns','12 columns','16 columns'] },
+      { t:'switch', l:'Fluid type between breakpoints', v:false,
+        h:'Sizes interpolate with the viewport instead of stepping at each breakpoint.' }
+    ]},
+    { t:'Motion, icons & themes', f:[
+      { t:'seg', l:'Motion', v:'Subtle', o:['None','Subtle','Expressive'] },
+      { t:'input', l:'Standard duration / easing', v:'160ms · cubic-bezier(.2,.8,.2,1)', half:true, mono:true },
+      { t:'select', l:'Icon set', v:'Outline, 1.5px', half:true,
+        o:['Outline, 1.5px','Outline, 2px','Filled','Duotone'] },
+      { t:'multi', l:'Theme modes', v:['Light','Dark','System'], o:['Light','Dark','System','High contrast'] },
+      { t:'switch', l:'Respect prefers-reduced-motion', v:true,
+        h:'A device that asks for less motion gets none, whatever Motion says above.' }
+    ]}
+  ]
+},
+{
+  id:'identity', n:'08', phase:'platform', label:'Identity & Multi-tenancy', icon:'user',
   page:'Organization & Permissions',
   desc:'Who gets in, what they may touch, how tenants stay apart and how usage becomes an invoice.',
   groups:[
@@ -312,7 +375,7 @@ const MODULES = [
   ]
 },
 {
-  id:'observe', n:'08', phase:'operations', label:'Observability', icon:'chart',
+  id:'observe', n:'09', phase:'operations', label:'Observability', icon:'chart',
   page:'Monitoring & Alerts',
   desc:'Metrics, logs and traces that cover model calls too — plus what tenants get to see of it.',
   groups:[
@@ -351,7 +414,7 @@ const MODULES = [
   ]
 },
 {
-  id:'compliance', n:'09', phase:'operations', label:'Compliance & Audit', icon:'shield',
+  id:'compliance', n:'10', phase:'operations', label:'Compliance & Audit', icon:'shield',
   page:'Security & Compliance',
   desc:'Evidence that the platform behaved: audit trails, encryption, frameworks and content controls.',
   groups:[
@@ -391,7 +454,7 @@ const MODULES = [
   ]
 },
 {
-  id:'cicd', n:'10', phase:'operations', label:'CI/CD Pipeline', icon:'branch',
+  id:'cicd', n:'11', phase:'operations', label:'CI/CD Pipeline', icon:'branch',
   page:'Deployment Management',
   desc:'How code reaches the cluster, and how it comes back out again when it misbehaves.',
   groups:[
@@ -426,7 +489,7 @@ const MODULES = [
   ]
 },
 {
-  id:'dr', n:'11', phase:'operations', label:'Backup & Disaster Recovery', icon:'clock',
+  id:'dr', n:'12', phase:'operations', label:'Backup & Disaster Recovery', icon:'clock',
   page:'Backup & Recovery',
   desc:'The targets, the mechanics that meet them, and the rehearsal that proves they are real.',
   groups:[
@@ -468,7 +531,7 @@ const MODULES = [
   ]
 },
 {
-  id:'cost', n:'12', phase:'operations', label:'Cost Management', icon:'coin',
+  id:'cost', n:'13', phase:'operations', label:'Cost Management', icon:'coin',
   page:'Cost Center',
   desc:'Visibility, budgets and the limits that keep one tenant from spending everyone’s money.',
   groups:[

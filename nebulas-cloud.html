@@ -12,7 +12,7 @@
 <body>
 
 <!-- ==================================================== cloud setting shell
-     Two columns: the twelve-module menu, and the configuration surface for
+     Two columns: the thirteen-module menu, and the configuration surface for
      whichever module is selected. The status strip spans both, because
      deployment progress belongs to neither column.
 
@@ -63,7 +63,7 @@
     <span class="statusbar__item statusbar__hide-sm" id="stRegion">ap-southeast-1</span>
     <div class="statusbar__spacer"></div>
     <span class="statusbar__item statusbar__hide-sm">
-      <span id="stProg">0 / 12 modules</span>
+      <span id="stProg">0 / 13 modules</span>
       <span class="meter statusbar__meter"><i id="stBar" style="width:0%"></i></span>
     </span>
     <button class="statusbar__item" id="stThemeBtn" title="Toggle theme (⌘J)"><span id="stTheme">Light</span></button>
@@ -74,7 +74,7 @@
 <!-- ================================================ initialisation dialog
      Module 01 is the gate, not a page: the tenant, its billing identity and
      the regions every other module inherits. Until it is done there is
-     nothing for the eleven configuration pages to attach to, so it arrives
+     nothing for the twelve configuration pages to attach to, so it arrives
      as a layer over them rather than as the first item in the menu.
 ====================================================================== -->
 <div class="scrim scrim--wizard" id="wizScrim" data-open="false">
