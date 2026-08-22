@@ -2823,6 +2823,7 @@ let projTab = 'std';
 function openProject(p){
   projOn = p || null;
   projTab = 'std';
+  pkSetup = null;
   projDraft = p
     ? { name:p.name, icon:p.icon || 'folder', shared:!!p.shared,
         assistant:p.assistant || '', kbs:(p.kbs || []).slice(), sources:(p.sources || []).slice(),
@@ -2839,6 +2840,7 @@ function closeProject(){
   $('#projScrim').dataset.open = 'false';
   projOn = null;
   projDraft = null;
+  pkSetup = null;
   /* Used once, so the instructions retire. The `?` in the header is how they
      come back, which is why they are hidden rather than deleted. */
   if (projHints) setHints(false);
@@ -2855,6 +2857,8 @@ function renderProject(){
     : projOn.name + ' · ' + (d.run ? CADENCE_ADJ[d.run.every].toLowerCase() : 'no schedule');
 
   $('#projHelp').setAttribute('aria-pressed', String(projHints));
+
+  if (fresh && pkSetup){ renderPackSetup(body, foot); return; }
 
   if (fresh){
     const tabs = el('div','tabs arttabs');
@@ -2878,7 +2882,7 @@ function renderProject(){
             '<span class="pack__sub">' + esc(pk.sub) + '</span></span>');
         const inst = el('button','btn btn--primary btn--sm', ic('pkg', 13) + 'Install');
         inst.type = 'button';
-        inst.onclick = () => installPack(pk);
+        inst.onclick = () => pk.setup ? startPackSetup(pk) : installPack(pk);
         head.append(inst);
         card.append(head);
         card.append(el('ul','pack__brings', pk.brings.map(b => '<li>' + esc(b) + '</li>').join('')));
@@ -2988,17 +2992,185 @@ function syncProjectRun(p, prevSched){
   D.SCHEDULE.push(row);
 }
 
+/* ------------------------------------------------------- the pack installer
+   A pack with `setup` asks before it installs — one screen at a time, in the
+   order the answers depend on each other: credentials first (nothing else
+   means anything without them), then the sources they unlock, the dashboard
+   over those sources, the voice of what goes out, and a review that says
+   exactly what Install will write. Every answer stays editable afterwards on
+   the project page — the installer is a front door, not a lock. */
+let pkSetup = null;
+const PK_STEPS = ['Channels','Data sources','Dashboard','Post style','Review'];
+
+function startPackSetup(pk){
+  const su = pk.setup;
+  const on = {};
+  /* A connector the workspace already has is already connected — the
+     installer only asks for what is genuinely missing. */
+  su.channels.forEach(c => { const cn = connById(c.cn); if (cn && cn.state !== 'off') on[c.id] = true; });
+  pkSetup = { pk:pk, step:0, vals:{
+    on:on, tok:{},
+    tables:su.tables.map(t => t.nm),
+    cards:su.cards.slice(0, 3).map(c => c.nm),
+    cadence:'Weekly',
+    tone:'Warm', emoji:true, hashtags:false, signature:'— Acme Industrial',
+    templates:su.templates.slice(0, 2).map(t => t.nm)
+  } };
+  renderProject();
+}
+
+function renderPackSetup(body, foot){
+  const s = pkSetup, pk = s.pk, su = pk.setup, v = s.vals;
+  const connected = su.channels.filter(c => v.on[c.id]);
+
+  $('#projTitle').textContent = 'Install · ' + pk.nm;
+  $('#projSub').textContent = 'Step ' + (s.step + 1) + ' of ' + PK_STEPS.length +
+    ' — every choice stays editable on the project page';
+
+  /* the stepper: where you are, in one glance */
+  const steps = el('div','pksteps');
+  PK_STEPS.forEach((l, i) => {
+    const it = el('span','pkstep',
+      '<i>' + (i < s.step ? ic('check', 10) : (i + 1)) + '</i><span>' + l + '</span>');
+    it.setAttribute('aria-current', String(i === s.step));
+    if (i < s.step) it.dataset.done = 'true';
+    steps.append(it);
+  });
+  body.append(steps);
+
+  const toggled = (list, nm, onOff) =>
+    onOff ? list.concat([nm]) : list.filter(x => x !== nm);
+
+  if (s.step === 0){
+    body.append(noteP('Each channel posts with its own credential. What the workspace already ' +
+      'has is already connected; paste a key to add the rest, or leave a channel for later.'));
+    su.channels.forEach(c => {
+      const row = el('div','pkch');
+      row.innerHTML = chIcon(c) +
+        '<span class="pkch__main"><b>' + esc(c.nm) + '</b>' +
+        '<span class="pkch__sub">' + (v.on[c.id]
+          ? esc(c.handle) + ' · connected'
+          : esc(c.handle) + ' · needs a credential — nothing leaves without one') + '</span></span>';
+      if (v.on[c.id]){
+        row.append(el('span','badge badge--ok','connected'));
+      } else {
+        const inp = el('input','input input--mono pkch__tok');
+        inp.type = 'password';
+        inp.placeholder = c.ph;
+        inp.value = v.tok[c.id] || '';
+        const btn = el('button','btn btn--secondary btn--sm','Connect');
+        btn.type = 'button';
+        btn.disabled = !(v.tok[c.id] || '').trim();
+        inp.oninput = () => { v.tok[c.id] = inp.value; btn.disabled = !inp.value.trim(); };
+        inp.onkeydown = e => { if (e.key === 'Enter' && inp.value.trim()) btn.click(); };
+        btn.onclick = () => { v.on[c.id] = true; renderProject(); toast(c.nm + ' connected — ' + c.handle); };
+        row.append(inp, btn);
+      }
+      body.append(row);
+    });
+    body.append(helpNote('A pasted key is used once to make the connection and never shown again. ' +
+      'Connections live under Cloud → Connections, same as every other connector.'));
+
+  } else if (s.step === 1){
+    body.append(noteP('What the connected channels can report. Chosen tables land on the project ' +
+      'shelf — the dashboard and the weekly read draw from them.'));
+    body.append(pickList(
+      su.tables.map(t => ({ nm:t.nm, sub:t.sub, meta:'table', id:t.nm })),
+      it => v.tables.indexOf(it.id) > -1,
+      (it, on) => { v.tables = toggled(v.tables, it.id, on); }));
+
+  } else if (s.step === 2){
+    body.append(noteP('The dashboard is the project’s standing answer to “how is it going”. ' +
+      'Pick its cards and how often the numbers refresh.'));
+    body.append(pickList(
+      su.cards.map(c => ({ nm:c.nm, sub:c.sub, meta:'card', id:c.nm })),
+      it => v.cards.indexOf(it.id) > -1,
+      (it, on) => { v.cards = toggled(v.cards, it.id, on); }));
+    body.append(field('Refresh', segCtl(['Daily','Weekly'], v.cadence, x => { v.cadence = x; }),
+      'Daily reads cost more tokens; weekly matches the posting rhythm.'));
+
+  } else if (s.step === 3){
+    body.append(noteP('How posts read before anyone edits them. The templates are starting ' +
+      'shapes — every draft is still yours to change.'));
+    body.append(field('Tone', segCtl(su.tones, v.tone, x => { v.tone = x; })));
+    const em = switchCtl('Emoji where they help', v.emoji);
+    $('input', em).onchange = e => { v.emoji = e.target.checked; };
+    const hs = switchCtl('Hashtags on every post', v.hashtags);
+    $('input', hs).onchange = e => { v.hashtags = e.target.checked; };
+    body.append(em, hs);
+    body.append(field('Signature', inputCtl(v.signature, x => { v.signature = x; }, '— Acme Industrial'),
+      'Closes every post. Leave it empty for none.'));
+    body.append(field('Post templates', pickList(
+      su.templates.map(t => ({ nm:t.nm, sub:t.sub, meta:'template', id:t.nm })),
+      it => v.templates.indexOf(it.id) > -1,
+      (it, on) => { v.templates = toggled(v.templates, it.id, on); })));
+
+  } else {
+    body.append(noteP('What Install writes. Nothing here is final — each line is a setting ' +
+      'on the project page afterwards.'));
+    body.append(defList([
+      ['Channels', connected.length
+        ? esc(connected.map(c => c.nm + ' (' + c.handle + ')').join(' · '))
+        : '<span style="color:var(--warn)">none connected — posts will be written and kept, nothing leaves</span>'],
+      ['Shelf', esc(v.tables.join(', ') || 'nothing — the dashboard will be empty')],
+      ['Dashboard', esc(v.cards.join(' · ') || 'no cards') + ' · refreshed ' + esc(v.cadence.toLowerCase())],
+      ['Voice', esc(v.tone.toLowerCase()) +
+        (v.emoji ? ' · emoji' : '') + (v.hashtags ? ' · hashtags' : '') +
+        (v.signature.trim() ? ' · signed “' + esc(v.signature.trim()) + '”' : '')],
+      ['Templates', esc(v.templates.join(', ') || 'none')],
+      ['Answers', esc(pk.cfg.assistant) + ' · ' + esc(pk.cfg.kbs.join(', '))],
+      ['Schedule', esc(pk.cfg.run.every.toLowerCase()) + ' — “' + esc(pk.cfg.run.ask) + '”']
+    ]));
+  }
+
+  /* the footer walks the steps; Cancel backs out to the package list */
+  const cancel = el('button','btn btn--ghost','Cancel');
+  cancel.type = 'button';
+  cancel.onclick = () => { pkSetup = null; projTab = 'pack'; renderProject(); };
+  const back = el('button','btn btn--secondary','Back');
+  back.type = 'button';
+  back.disabled = s.step === 0;
+  back.onclick = () => { s.step--; renderProject(); };
+  const last = s.step === PK_STEPS.length - 1;
+  const next = el('button','btn btn--primary', last ? 'Install the kit' : 'Continue');
+  next.type = 'button';
+  /* One gate, where it means something: past the first step with no channel
+     connected, the kit would be a diary. Everything else may be empty. */
+  next.disabled = s.step === 0 && !connected.length;
+  if (next.disabled) next.title = 'Connect at least one channel to continue';
+  next.onclick = () => {
+    if (last){ installPack(pk, v); return; }
+    s.step++;
+    renderProject();
+  };
+  foot.append(cancel, el('div','dialog__spacer'), back, next);
+}
+
 /* Installing a package is creation with the bindings already made: the same
-   record shape saveProject builds, filled from the pack, its schedule row
-   written the same way — then straight to the project page it made. */
-function installPack(pk){
+   record shape saveProject builds, filled from the pack — and, when the pack
+   asked, from the answers — its schedule row written the same way, then
+   straight to the project page it made. */
+function installPack(pk, v){
   const cfg = pk.cfg;
+  const chosen = v ? pk.setup.channels.filter(c => v.on[c.id]) : [];
   const p = { id:'p' + (++projN), descAuto:false, desc:cfg.desc,
     name:cfg.name, icon:cfg.icon, shared:false,
     assistant:cfg.assistant, assistants:[cfg.assistant],
-    kbs:cfg.kbs.slice(), sources:cfg.sources.slice(), conn:cfg.conn.slice(),
+    kbs:cfg.kbs.slice(),
+    sources:v ? v.tables.slice() : cfg.sources.slice(),
+    conn:v ? chosen.map(c => c.cn) : cfg.conn.slice(),
     code:[], pages:[], custom:{ ids:[] },
     run:{ every:cfg.run.every, ask:cfg.run.ask }, when:'now' };
+  if (v){
+    p.channels = chosen.map(c => ({ id:c.id, nm:c.nm, cn:c.cn, handle:c.handle,
+      posts:'0 / 30d', sent:[], drafts:[] }));
+    p.dash = { cards:v.cards.slice(), refresh:v.cadence };
+    p.style = { tone:v.tone, emoji:v.emoji, hashtags:v.hashtags,
+      signature:v.signature.trim(), templates:v.templates.slice() };
+    /* Connecting in the installer is the connector's own state change —
+       written once, read everywhere, including Cloud → Connections. */
+    chosen.forEach(c => { const cn = connById(c.cn); if (cn && cn.state === 'off') cn.state = 'ok'; });
+  }
   syncProjectRun(p);
   D.PROJECTS.unshift(p);
   closeProject();
@@ -3232,7 +3404,10 @@ function projectChannels(panel, p){
       sub:(live ? c.handle + ' · ' + c.posts : 'not connected — nothing leaves') +
           (waiting ? ' · ' + waiting + ' prepared' : ''),
       meta:live ? '' : 'off',
-      onClick:() => openArtifact(c.art)
+      /* A channel installed by a pack has no day yet — its artifact arrives
+         with the first run. */
+      onClick:() => c.art ? openArtifact(c.art)
+        : toast('Nothing has gone out yet — ' + c.nm + '’s day appears after the first run')
     }));
   });
   panel.append(sec);

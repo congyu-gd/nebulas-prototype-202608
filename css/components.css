@@ -1536,6 +1536,44 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .pack + .pack{ margin-top:var(--s-3) }
 
+/* The pack installer: a stepper you can read at a glance, and channel rows
+   whose state is the row — connected wears the badge, unconnected wears the
+   credential field. */
+.pksteps{
+  display:flex; align-items:center; gap:var(--s-2); flex-wrap:wrap;
+  margin-bottom:var(--s-4);
+}
+.pkstep{
+  display:inline-flex; align-items:center; gap:var(--s-2);
+  padding:3px var(--s-3) 3px var(--s-1);
+  border-radius:999px; border:var(--border) solid var(--line);
+  font-size:var(--t-11); color:var(--text-3);
+}
+.pkstep i{
+  display:grid; place-items:center; width:16px; height:16px;
+  border-radius:50%; background:var(--raised-2);
+  font:600 10px/1 var(--mono); font-style:normal;
+}
+.pkstep[aria-current="true"]{
+  border-color:var(--accent-line, var(--accent)); color:var(--text);
+}
+.pkstep[aria-current="true"] i{ background:var(--accent); color:var(--accent-fg) }
+.pkstep[data-done="true"] i{ background:var(--ok-soft); color:var(--ok) }
+.pkch{
+  display:flex; align-items:center; gap:var(--s-3);
+  padding:var(--s-3);
+  border:var(--border) solid var(--line); border-radius:var(--r-lg);
+}
+.pkch + .pkch{ margin-top:var(--s-2) }
+.pkch__main{ display:flex; flex-direction:column; gap:1px; min-width:0; flex:1 }
+.pkch__main b{ font-size:var(--t-13); font-weight:var(--w-medium) }
+.pkch__sub{
+  font-size:var(--t-11); color:var(--text-3);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.pkch__tok{ flex:1; min-width:120px; max-width:220px; height:var(--ctl-sm); font-size:var(--t-12) }
+.pkch .btn{ flex:none }
+
 /* The wizard's left column carries two tabs: AI Chat and Manual Script. The
    manual pane is the page as a hand-written definition — inputs, sources,
    the report step as editable code — with a test row at the end. */

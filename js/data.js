@@ -565,12 +565,39 @@ const PROJECT_PACKS = [
   { id:'pk4', nm:'Social publishing kit', ico:'share',
     sub:'Drafts the week across channels and reads back what any of it did.',
     brings:['Social editor answers inside it','Brand & social kit + channel insights on the shelf',
-            'Facebook Pages granted','Runs every week and files the channel read'],
+            'Channels connected with your own credentials','Runs every week and files the channel read'],
     cfg:{ name:'Social publishing kit', icon:'share',
       desc:'Posting across Facebook, Instagram and LinkedIn, with a weekly read on what any of it did.',
       assistant:'Social editor', kbs:['Brand & social kit'],
       sources:['fb_page_insights','ig_media_insights'], conn:['cn10'],
-      run:{ every:'Every week', ask:'Draft the week across channels and file the performance read.' } } }
+      run:{ every:'Every week', ask:'Draft the week across channels and file the performance read.' } },
+    /* This pack asks before it installs: credentials, sources, the dashboard,
+       the voice. The installer walks these in order, one screen at a time. */
+    setup:{
+      channels:[
+        { id:'fb', nm:'Facebook',  cn:'cn10', handle:'@acmeindustrial',  ph:'Page access token' },
+        { id:'ig', nm:'Instagram', cn:'cn11', handle:'@acme.industrial', ph:'Graph API token' },
+        { id:'li', nm:'LinkedIn',  cn:'cn12', handle:'acme-industrial',  ph:'Community management key' }
+      ],
+      tables:[
+        { nm:'fb_page_insights',  sub:'reach, engagement and follows — daily, per post' },
+        { nm:'ig_media_insights', sub:'media reach and saves — daily' },
+        { nm:'li_page_analytics', sub:'impressions and clicks — weekly' }
+      ],
+      cards:[
+        { nm:'Reach trend',             sub:'the four-week line, all channels' },
+        { nm:'Engagement by channel',   sub:'who actually reads what, side by side' },
+        { nm:'Best time to post',       sub:'when your audience is there' },
+        { nm:'Post performance table',  sub:'every post, its numbers, sortable' }
+      ],
+      tones:['Plain','Warm','Bold'],
+      templates:[
+        { nm:'Product update',    sub:'what changed, why it matters, one image' },
+        { nm:'Customer story',    sub:'a result, told by the customer' },
+        { nm:'Event invite',      sub:'date, place, one reason to come' },
+        { nm:'Behind the scenes', sub:'the floor, the people, the work' }
+      ]
+    } }
 ];
 
 /* ---------------------------------------------------------------- threads */

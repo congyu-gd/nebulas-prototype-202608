@@ -1325,6 +1325,23 @@ same verbs serve both, which is why there is no Create button to forget.
   project page it made. Install proposes; the project page and Build adjust.
   The tabs exist only in fresh mode: an existing project's settings dialog
   is tabless, and the maker stays the optimize-in-chat surface.
+- **A pack with `setup` asks before it installs.** The Social publishing kit
+  is the worked example: Install opens a five-step installer in the same
+  dialog — a pill stepper (done steps wear the check), Back · Continue in
+  the foot, Cancel backing out to the package list. The steps are in
+  dependency order: **Channels** (each with its own credential field —
+  connectors the workspace already has arrive pre-connected, LinkedIn is
+  genuinely off in the fixtures and connecting it flips `cn12` on, the one
+  state change written once and read everywhere), **Data sources** (the
+  insight tables, onto the shelf), **Dashboard** (cards + refresh cadence),
+  **Post style** (tone, emoji, hashtags, signature, templates), and a
+  **Review** that says exactly what Install will write. One gate only, where
+  it means something: at least one channel connected — everything else may
+  be empty and the review says what that costs. Install writes the answers
+  onto the record (`channels` render in the project's Channels section, with
+  a no-day-yet toast until the first run; `dash` and `style` ride along),
+  and every choice stays editable afterwards — the installer is a front
+  door, not a lock.
 
 ## An app is a column, not a layer
 
