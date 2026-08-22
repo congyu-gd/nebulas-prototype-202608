@@ -192,6 +192,23 @@ function listRow(opts){
   b.onclick = opts.onClick;
   return b;
 }
+/* A chat is a thing you can pick up: History rows drag, project rows catch.
+   The dragged thread rides in a variable rather than only in dataTransfer,
+   because dragover may not read the payload — and the guard against dropping
+   a chat on the project it is already in needs to know who is flying. */
+let dragTh = null;
+
+/* Filing a chat is one assignment. Undo puts it back where it was —
+   including nowhere, for a chat that lived only in History. */
+function fileThread(t, p){
+  if (t.project === p.id) return;
+  const prev = t.project;
+  t.project = p.id;
+  render();
+  toast('Filed “' + t.title + '” in ' + p.name, { label:'Undo',
+    run:() => { t.project = prev; render(); } });
+}
+
 /* A group header, optionally with a count and the "+" that creates one of its
    members. The count exists because Build's groups are four rows or sixteen,
    and knowing which before scrolling is the whole point of a label. */
@@ -263,16 +280,46 @@ const SECTIONS = {
           '<span class="row__flag tip tip--below" data-tip="Shared with ' +
           esc(p.shared ? D.ACCOUNT.org : plural(p.people.length, 'coworker')) + '">' +
           ic('users',12) + '</span>');
+        /* The row is also a drop target: a chat dragged up from History files
+           here. Its own project refuses the drop — the cursor says so. */
+        row.addEventListener('dragover', e => {
+          if (!dragTh || dragTh.project === p.id) return;
+          e.preventDefault();
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+          row.classList.add('row--drop');
+        });
+        row.addEventListener('dragleave', () => row.classList.remove('row--drop'));
+        row.addEventListener('drop', e => {
+          e.preventDefault();
+          row.classList.remove('row--drop');
+          if (dragTh) fileThread(dragTh, p);
+          dragTh = null;
+        });
         body.append(row);
       });
 
       /* One history, ordered by recency. Splitting it into Today / Earlier
          made two headers out of information the timestamps already carry. */
       body.append(groupLabel('History'));
-      D.THREADS.forEach(t => body.append(listRow({
-        title:t.title, meta:t.when, current:state.item.chat === t.id,
-        onClick:() => select('chat', t.id)
-      })));
+      D.THREADS.forEach(t => {
+        const row = listRow({
+          title:t.title, meta:t.when, current:state.item.chat === t.id,
+          onClick:() => select('chat', t.id)
+        });
+        /* Drag it onto a project above to file it there. The lifted row dims
+           in place so the list keeps saying where it came from. */
+        row.draggable = true;
+        row.addEventListener('dragstart', e => {
+          dragTh = t;
+          row.classList.add('row--lift');
+          if (e.dataTransfer){
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', t.id);
+          }
+        });
+        row.addEventListener('dragend', () => { dragTh = null; row.classList.remove('row--lift'); });
+        body.append(row);
+      });
     },
     head(){
       const v = state.item.chat;
@@ -2995,12 +3042,13 @@ function syncProjectRun(p, prevSched){
 /* ------------------------------------------------------- the pack installer
    A pack with `setup` asks before it installs — one screen at a time, in the
    order the answers depend on each other: credentials first (nothing else
-   means anything without them), then the sources they unlock, the dashboard
-   over those sources, the voice of what goes out, and a review that says
-   exactly what Install will write. Every answer stays editable afterwards on
-   the project page — the installer is a front door, not a lock. */
+   means anything without them), then the sources they unlock, where the
+   pages' data lives, the dashboard over those sources, the voice of what
+   goes out, and a review that says exactly what Install will write. Every
+   answer stays editable afterwards on the project page — the installer is a
+   front door, not a lock. */
 let pkSetup = null;
-const PK_STEPS = ['Channels','Data sources','Dashboard','Post style','Review'];
+const PK_STEPS = ['Channels','Data sources','Storage','Dashboard','Post style','Review'];
 
 function startPackSetup(pk){
   const su = pk.setup;
@@ -3011,6 +3059,7 @@ function startPackSetup(pk){
   pkSetup = { pk:pk, step:0, vals:{
     on:on, tok:{},
     tables:su.tables.map(t => t.nm),
+    store:{ dest:(su.stores && su.stores[0].id) || 'ws', path:'', keep:'6 months' },
     cards:su.cards.slice(0, 3).map(c => c.nm),
     cadence:'Weekly',
     tone:'Warm', emoji:true, hashtags:false, signature:'— Acme Industrial',
@@ -3080,6 +3129,37 @@ function renderPackSetup(body, foot){
       (it, on) => { v.tables = toggled(v.tables, it.id, on); }));
 
   } else if (s.step === 2){
+    body.append(noteP('Every run writes data for the project’s pages — the dashboard’s numbers, ' +
+      'the weekly read, the drafts. Pick where that data lives.'));
+    (su.stores || []).forEach(st => {
+      const row = el('label','pkch pkstore');
+      const dot = el('input','check check--radio');
+      dot.type = 'radio';
+      dot.name = 'pkstore';
+      dot.checked = v.store.dest === st.id;
+      dot.onchange = () => { v.store.dest = st.id; renderProject(); };
+      row.append(dot, el('span','pkch__main',
+        '<b>' + esc(st.nm) + '</b><span class="pkch__sub">' + esc(st.sub) + '</span>'));
+      const cn = st.cn ? connById(st.cn) : null;
+      if (cn) row.append(el('span','badge' + (cn.state !== 'off' ? ' badge--ok' : ''),
+        cn.state !== 'off' ? 'granted' : 'not granted'));
+      /* the bucket is the only destination that needs an address — asked
+         for in place, only once the row is the chosen one */
+      if (st.ph && v.store.dest === st.id){
+        const inp = el('input','input input--mono pkch__tok');
+        inp.placeholder = st.ph;
+        inp.value = v.store.path;
+        inp.oninput = () => { v.store.path = inp.value; };
+        row.append(inp);
+      }
+      body.append(row);
+    });
+    body.append(field('Keep runs for', segCtl(su.keeps, v.store.keep, x => { v.store.keep = x; }),
+      'Older runs age out on their own; the newest one is always what the page shows.'));
+    body.append(helpNote('Pages read through the project, not the store — moving the data ' +
+      'somewhere else later never breaks a page.'));
+
+  } else if (s.step === 3){
     body.append(noteP('The dashboard is the project’s standing answer to “how is it going”. ' +
       'Pick its cards and how often the numbers refresh.'));
     body.append(pickList(
@@ -3089,7 +3169,7 @@ function renderPackSetup(body, foot){
     body.append(field('Refresh', segCtl(['Daily','Weekly'], v.cadence, x => { v.cadence = x; }),
       'Daily reads cost more tokens; weekly matches the posting rhythm.'));
 
-  } else if (s.step === 3){
+  } else if (s.step === 4){
     body.append(noteP('How posts read before anyone edits them. The templates are starting ' +
       'shapes — every draft is still yours to change.'));
     body.append(field('Tone', segCtl(su.tones, v.tone, x => { v.tone = x; })));
@@ -3113,6 +3193,16 @@ function renderPackSetup(body, foot){
         ? esc(connected.map(c => c.nm + ' (' + c.handle + ')').join(' · '))
         : '<span style="color:var(--warn)">none connected — posts will be written and kept, nothing leaves</span>'],
       ['Shelf', esc(v.tables.join(', ') || 'nothing — the dashboard will be empty')],
+      ['Page data', (function(){
+        const st = (su.stores || []).find(x => x.id === v.store.dest);
+        if (!st) return 'project workspace · kept ' + esc(v.store.keep.toLowerCase());
+        if (st.ph && !v.store.path.trim())
+          return '<span style="color:var(--warn)">bucket path missing — falls back to the ' +
+            'project workspace</span> · kept ' + esc(v.store.keep.toLowerCase());
+        return esc(st.nm) + (st.ph ? ' (' + esc(v.store.path.trim()) + ')' : '') +
+          (st.kb ? ' — “' + esc(st.kb) + '” joins the knowledge' : '') +
+          ' · kept ' + esc(v.store.keep.toLowerCase());
+      })()],
       ['Dashboard', esc(v.cards.join(' · ') || 'no cards') + ' · refreshed ' + esc(v.cadence.toLowerCase())],
       ['Voice', esc(v.tone.toLowerCase()) +
         (v.emoji ? ' · emoji' : '') + (v.hashtags ? ' · hashtags' : '') +
@@ -3167,6 +3257,15 @@ function installPack(pk, v){
     p.dash = { cards:v.cards.slice(), refresh:v.cadence };
     p.style = { tone:v.tone, emoji:v.emoji, hashtags:v.hashtags,
       signature:v.signature.trim(), templates:v.templates.slice() };
+    /* Where the pages' data lives. A bucket without a path is no store at
+       all, so the record falls back to the workspace — as the review said. */
+    const st = (pk.setup.stores || []).find(x => x.id === v.store.dest);
+    const fell = !st || (st.ph && !v.store.path.trim());
+    p.store = { dest: fell ? 'ws' : st.id, keep: v.store.keep };
+    if (!fell && st.ph) p.store.path = v.store.path.trim();
+    /* The knowledge destination is also a binding: the archive becomes a
+       knowledge base on the record, so the assistant answers from the runs. */
+    if (!fell && st.kb && p.kbs.indexOf(st.kb) < 0) p.kbs.push(st.kb);
     /* Connecting in the installer is the connector's own state change —
        written once, read everywhere, including Cloud → Connections. */
     chosen.forEach(c => { const cn = connById(c.cn); if (cn && cn.state === 'off') cn.state = 'ok'; });

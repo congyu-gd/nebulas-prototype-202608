@@ -571,8 +571,9 @@ const PROJECT_PACKS = [
       assistant:'Social editor', kbs:['Brand & social kit'],
       sources:['fb_page_insights','ig_media_insights'], conn:['cn10'],
       run:{ every:'Every week', ask:'Draft the week across channels and file the performance read.' } },
-    /* This pack asks before it installs: credentials, sources, the dashboard,
-       the voice. The installer walks these in order, one screen at a time. */
+    /* This pack asks before it installs: credentials, sources, where the
+       pages' data lives, the dashboard, the voice. The installer walks
+       these in order, one screen at a time. */
     setup:{
       channels:[
         { id:'fb', nm:'Facebook',  cn:'cn10', handle:'@acmeindustrial',  ph:'Page access token' },
@@ -584,6 +585,18 @@ const PROJECT_PACKS = [
         { nm:'ig_media_insights', sub:'media reach and saves — daily' },
         { nm:'li_page_analytics', sub:'impressions and clicks — weekly' }
       ],
+      /* where the pages' data lands each run — one destination, one policy */
+      stores:[
+        { id:'ws', nm:'Project workspace',
+          sub:'kept with the project — zero setup, every run versioned' },
+        { id:'wh', nm:'Snowflake · ANALYTICS_SOCIAL', cn:'cn1',
+          sub:'result tables written next to the source data' },
+        { id:'bk', nm:'Object storage bucket', ph:'s3://bucket/prefix',
+          sub:'S3-compatible — you keep the bytes, the project keeps a pointer' },
+        { id:'kb', nm:'Project knowledge base', kb:'Social runs archive',
+          sub:'every run filed as knowledge — the assistant answers from it' }
+      ],
+      keeps:['30 days','6 months','Forever'],
       cards:[
         { nm:'Reach trend',             sub:'the four-week line, all channels' },
         { nm:'Engagement by channel',   sub:'who actually reads what, side by side' },

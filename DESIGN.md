@@ -693,6 +693,17 @@ is another door to the same records, not another store. The two panel
 toggles the shell bar carried (results, apps) move into this bar, wired to the
 same acts.
 
+**Filing a chat is a drag.** A History row is draggable; a project row in the
+sidebar is its drop target. The lifted chat dims in place (`.row--lift`) so
+the list keeps saying where it came from, the project row under the cursor
+takes an accent inset (`.row--drop`), and its own project refuses the drop —
+the cursor says so, nothing else has to. Dropping sets `t.project`, one
+assignment, then re-renders and toasts with **Undo** — which puts the chat
+back where it was, including nowhere, for a chat that lived only in History.
+The dragged thread rides in a variable (`dragTh`) rather than only in
+dataTransfer, because dragover may not read the payload and the
+own-project guard needs to know who is flying.
+
 **Every panel section folds, and the panel has one architecture.** Every project
 reads the same way: the four basic options — **Assistants, Knowledge,
 Connections, Schedule** — then Channels on a publishing project, then a full
@@ -1326,22 +1337,29 @@ same verbs serve both, which is why there is no Create button to forget.
   The tabs exist only in fresh mode: an existing project's settings dialog
   is tabless, and the maker stays the optimize-in-chat surface.
 - **A pack with `setup` asks before it installs.** The Social publishing kit
-  is the worked example: Install opens a five-step installer in the same
+  is the worked example: Install opens a six-step installer in the same
   dialog — a pill stepper (done steps wear the check), Back · Continue in
   the foot, Cancel backing out to the package list. The steps are in
   dependency order: **Channels** (each with its own credential field —
   connectors the workspace already has arrive pre-connected, LinkedIn is
   genuinely off in the fixtures and connecting it flips `cn12` on, the one
   state change written once and read everywhere), **Data sources** (the
-  insight tables, onto the shelf), **Dashboard** (cards + refresh cadence),
-  **Post style** (tone, emoji, hashtags, signature, templates), and a
-  **Review** that says exactly what Install will write. One gate only, where
-  it means something: at least one channel connected — everything else may
-  be empty and the review says what that costs. Install writes the answers
-  onto the record (`channels` render in the project's Channels section, with
-  a no-day-yet toast until the first run; `dash` and `style` ride along),
-  and every choice stays editable afterwards — the installer is a front
-  door, not a lock.
+  insight tables, onto the shelf), **Storage** (where the pages' data lands
+  each run — one destination among the pack's `stores` as radio rows: the
+  workspace, the warehouse, a bucket asking for its path in place only while
+  chosen, or a knowledge base — that last one is also a binding, landing the
+  archive on the record's `kbs` so the assistant answers from the runs —
+  plus a keep-runs-for policy; a bucket left without a path falls back to
+  the project workspace, and the review says so in warning color before
+  Install does it),
+  **Dashboard** (cards + refresh cadence), **Post style** (tone, emoji,
+  hashtags, signature, templates), and a **Review** that says exactly what
+  Install will write. One gate only, where it means something: at least one
+  channel connected — everything else may be empty and the review says what
+  that costs. Install writes the answers onto the record (`channels` render
+  in the project's Channels section, with a no-day-yet toast until the first
+  run; `dash`, `style` and `store` ride along), and every choice stays
+  editable afterwards — the installer is a front door, not a lock.
 
 ## An app is a column, not a layer
 

@@ -442,6 +442,14 @@ button.chip--plain:hover{ background:var(--raised) }
 .row--wrap .row__title{ white-space:normal; overflow:visible; text-overflow:clip }
 .row--wrap .row__icon,.row--wrap .row__meta,.row--wrap .dot{ margin-top:3px }
 .row__icon{ color:var(--text-4); flex:none }
+/* Drag-to-file: the lifted chat dims in place — the list keeps saying where
+   it came from — and the project row under the cursor says it will catch. */
+.row--lift{ opacity:.45 }
+.row--drop{
+  background:var(--raised-2);
+  box-shadow:inset 0 0 0 1px var(--accent-line, var(--accent));
+}
+.row--drop .row__title{ color:var(--text) }
 /* A mark that says something is true of this row — currently only "shared",
    in the results list. It sits before the meta, not inside the title, so a
    long name still ellipsises against the same edge as every other row. */
@@ -1573,6 +1581,12 @@ button.chip--plain:hover{ background:var(--raised) }
 }
 .pkch__tok{ flex:1; min-width:120px; max-width:220px; height:var(--ctl-sm); font-size:var(--t-12) }
 .pkch .btn{ flex:none }
+/* The storage step: one destination among a few, so the whole row is a
+   radio's label. The chosen row carries the accent edge the way the current
+   stepper pill does. */
+.pkstore{ cursor:pointer; transition:border-color var(--fast) var(--ease) }
+.pkstore:hover{ border-color:var(--line-strong) }
+.pkstore:has(.check:checked){ border-color:var(--accent-line, var(--accent)) }
 
 /* The wizard's left column carries two tabs: AI Chat and Manual Script. The
    manual pane is the page as a hand-written definition — inputs, sources,
