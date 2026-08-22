@@ -363,7 +363,216 @@ function renderConfig(){
   const m = pageOf(state.id);
   if(!m) return;
   if(isView(m)) renderView(m);
+  else if(m.custom === 'design') renderDesign(m);
   else renderModule(m);
+}
+
+/* ====================================================== design extraction
+   Module 07 is not a form: the design system is read from a site, not typed
+   in. The page is the DISPLAY — the extracted record at the page's own
+   width, a card per token kind (palette, type, spacing, radii, marks), each
+   token carrying its provenance: share of the site's declarations, and the
+   variable or selector it was read from, because a token you can trace is a
+   token you can trust. Extracting again is an act, so it lives in a dialog
+   behind the one button — the page never squeezes to make room for a form.
+   Only the roles, the URL and the crawl size persist; the tokens are the
+   extraction's to write. */
+const dsxVal = (k, dflt) => k in state.values ? state.values[k] : dflt;
+let dsxRunning = false;
+
+function renderDesign(m){
+  const i = PAGES.indexOf(m);
+  const done = !!state.done[m.id];
+  const X = DESIGN_EXTRACT;
+
+  el('cfgTitle').textContent = m.label;
+  el('cfgHint').textContent = 'Choices are kept in this browser only.';
+  el('prevBtn').hidden = el('nextBtn').hidden = false;
+  const st = el('cfgState');
+  st.className   = 'badge' + (done ? ' badge--ok' : '');
+  st.textContent = done ? 'Configured' : 'Not configured';
+
+  const card = (title, sub, inner) =>
+    '<div class="card step-card"><div class="card__head">' +
+      '<span class="card__title">' + title + '</span>' +
+      (sub ? '<span class="dsx__cardsub">' + sub + '</span>' : '') +
+    '</div><div class="card__body">' + inner + '</div></div>';
+
+  /* The chip is pure colour — the hex sits in the label row, name left,
+     value right, so twelve cards align instead of twelve inks negotiating
+     with twelve backgrounds. */
+  const swatch = s => {
+    const role = dsxVal('design.role.' + s.hex, s.role);
+    return '<div class="dsxsw">' +
+      '<div class="dsxsw__chip" style="background:' + s.hex + '"></div>' +
+      '<div class="dsxsw__body">' +
+        '<span class="dsxsw__top"><span class="dsxsw__nm">' + esc(s.nm) + '</span>' +
+          '<span class="dsxsw__hex">' + s.hex + '</span></span>' +
+        '<select class="select dsxsw__role" data-role="' + s.hex + '" aria-label="Role of ' + esc(s.nm) + '">' +
+          DESIGN_ROLES.map(r => '<option' + (r === role ? ' selected' : '') + '>' + r + '</option>').join('') +
+        '</select>' +
+        '<span class="dsxsw__read">' + esc(s.share) + ' · ' + esc(s.read) + '</span>' +
+      '</div></div>';
+  };
+
+  const fontRow = f =>
+    '<div class="dsxfont">' +
+      '<span class="dsxfont__spec" style="font-family:' + f.fam + '">The quick brown fox — 0123456789</span>' +
+      '<span class="dsxfont__meta">' +
+        '<span class="dsxfont__nm">' + esc(f.face) + '</span>' +
+        '<span class="badge">' + esc(f.role) + '</span>' +
+        '<span class="dsxsw__read">' + esc(f.share) + ' · ' + esc(f.read) + '</span>' +
+      '</span>' +
+    '</div>';
+
+  const spacing =
+    '<div class="dsxspace">' + X.spacing.vals.map(v =>
+      '<span class="dsxspace__item"><i style="width:' + v + 'px"></i>' +
+      '<b>' + v + '</b></span>').join('') + '</div>' +
+    '<span class="dsxsw__read">base ' + X.spacing.base + 'px · ' + esc(X.spacing.read) + '</span>';
+
+  const radii =
+    '<div class="dsxrad">' + X.radii.map(r =>
+      '<span class="dsxrad__item"><i style="border-radius:' + Math.min(r.v, 28) + 'px"></i>' +
+      '<b>' + esc(r.l) + '</b>' +
+      '<span class="dsxsw__read">' + esc(r.read) + '</span></span>').join('') + '</div>';
+
+  const brand = X.swatches[0].hex, ylw = X.swatches[2].hex;
+  const logos = '<div class="dsxlogo">' + X.logos.map(g =>
+    '<span class="dsxlogo__item">' +
+      '<span class="dsxlogo__tile' + (g.on === 'dark' ? ' dsxlogo__tile--dark' : '') + '">' +
+        (g.kind === 'wordmark'
+          ? '<i class="dsxlogo__dot" style="background:' + brand + '"></i><b>nebulas</b>'
+          : '<i class="dsxlogo__mark" style="background:' + brand + ';box-shadow:14px -8px 0 -4px ' + ylw + '"></i>') +
+      '</span>' +
+      '<span class="dsxlogo__nm t-mono">' + esc(g.nm) + '</span>' +
+      '<span class="dsxsw__read">' + esc(g.kind) + ' · ' + esc(g.size) + ' · for ' + esc(g.on) + ' surfaces</span>' +
+    '</span>').join('') + '</div>';
+
+  /* The wide measure (the usage views' width): swatches are the content
+     here, and colour read at thumbnail size is colour misread. */
+  el('cfgBody').innerHTML =
+    '<div class="cfg__inner cfg__inner--wide">' +
+      '<div class="pagehead">' +
+        '<div class="pagehead__row"><h2 class="t-display pagehead__title">' + esc(m.label) + '</h2></div>' +
+        '<p class="pagehead__desc">' + esc(m.desc) + '</p>' +
+        '<p class="t-mono" style="margin:var(--s-3) 0 0">Admin page · ' + esc(m.page) + '</p>' +
+      '</div>' +
+      '<div class="card step-card"><div class="card__body dsx__head">' +
+        '<div class="dsx__id"><strong>' + esc(X.name) + '</strong>' +
+          '<span class="t-mono dsx__uid">' + esc(X.uid) + '</span>' +
+          '<p class="dsx__stamp">Extracted ' + esc(dsxVal('design.stamp', X.stamp)) +
+            ' · ' + esc(dsxVal('design.site', X.site)) + '</p></div>' +
+        '<button class="btn btn--primary" id="dsxOpen" type="button">' +
+          ic('play', 13) + 'Extract design system</button>' +
+      '</div></div>' +
+      card('Palette', 'share of color declarations · where it was read',
+        '<div class="dsx__grid">' + X.swatches.map(swatch).join('') + '</div>') +
+      card('Typography', X.fonts.length + ' face(s) · specimens set in the nearest local face',
+        X.fonts.map(fontRow).join('')) +
+      card('Spacing', 'every declaration lands on one scale', spacing) +
+      card('Radii', 'corners, by where they were read', radii) +
+      card('Logos & marks', 'imported to the knowledge base', logos) +
+    '</div>';
+
+  el('cfgBody').scrollTop = 0;
+
+  /* roles persist; the tokens are the extraction's to write */
+  el('cfgBody').querySelectorAll('.dsxsw__role').forEach(sel => {
+    sel.addEventListener('change', () => {
+      state.values['design.role.' + sel.dataset.role] = sel.value;
+      save();
+    });
+  });
+  el('dsxOpen').addEventListener('click', openDsx);
+
+  el('prevBtn').disabled = i === 0;
+  el('nextBtn').textContent = i === PAGES.length - 1
+    ? (done ? 'Finish' : 'Save & finish')
+    : (done ? 'Continue' : 'Save & continue');
+  el('skipBtn').hidden = done || i === PAGES.length - 1;
+}
+
+/* --------------------------------------------------- the extraction dialog
+   The one act the page offers, as a layer over it: the URL, the crawl size,
+   and the last run step by step. The Extract button replays the pipeline at
+   a watchable pace, restamps the record, and the page behind redraws. */
+const dsxOpen_ = () => el('dsxScrim').dataset.open === 'true';
+
+function renderDsxBody(){
+  const X = DESIGN_EXTRACT;
+  const runRow = r =>
+    '<div class="dsx__step">' +
+      '<div class="dsx__steptop"><span class="dsx__stepn">' + esc(r.n) + '</span>' +
+        '<span class="dsx__stept"><span class="dsx__ok">succeeded</span> · ' + r.t + 'ms</span></div>' +
+      '<span class="dsx__stepd">' + esc(r.d) + '</span>' +
+    '</div>';
+  el('dsxBody').innerHTML =
+    '<div class="field"><label class="field__label" for="dsxSite">Website</label>' +
+      '<input class="input" id="dsxSite" value="' + esc(dsxVal('design.site', X.site)) + '" spellcheck="false"></div>' +
+    '<div class="field"><label class="field__label" for="dsxPages">Pages to crawl</label>' +
+      '<input class="input input--mono" id="dsxPages" value="' + esc(dsxVal('design.pages', X.pages)) + '"></div>' +
+    '<p class="dsx__note">Only extract from sites you own or are allowed to use. Pages are fetched publicly and their images are stored in your knowledge base.</p>' +
+    '<div class="dsx__runhead"><strong>Last run</strong>' +
+      '<span class="dsx__state" id="dsxState"><span class="dsx__ok">' + ic('check', 12) + ' succeeded</span></span></div>' +
+    '<div class="dsx__run" id="dsxRun">' + X.run.map(runRow).join('') + '</div>' +
+    '<p class="dsx__pages">Pages: ' + esc(dsxVal('design.site', X.site)) + '</p>' +
+    '<details class="dsx__prev"><summary>Previous runs</summary>' +
+      X.prev.map(p => '<div class="dsx__prevrow"><span class="t-mono">' + esc(p.when) + '</span>' +
+        '<span>' + esc(p.note) + '</span></div>').join('') +
+    '</details>';
+  const keep = (id, k) => el(id).addEventListener('change', () => {
+    state.values[k] = el(id).value.trim();
+    save();
+  });
+  keep('dsxSite', 'design.site');
+  keep('dsxPages', 'design.pages');
+}
+
+function openDsx(){
+  renderDsxBody();
+  el('dsxScrim').dataset.open = 'true';
+  setTimeout(() => el('dsxSite').focus(), 40);
+}
+function closeDsx(){
+  if(dsxRunning) return;                     /* a run in flight finishes first */
+  el('dsxScrim').dataset.open = 'false';
+}
+
+function dsxPlay(){
+  if(dsxRunning || !dsxOpen_()) return;
+  dsxRunning = true;
+  const X = DESIGN_EXTRACT;
+  const run = el('dsxRun');
+  el('dsxGo').disabled = true;
+  el('dsxState').innerHTML = '<span class="dsx__running">running…</span>';
+  run.innerHTML = '';
+  let i = 0;
+  const step = () => {
+    if(i >= X.run.length){
+      el('dsxState').innerHTML = '<span class="dsx__ok">' + ic('check', 12) + ' succeeded</span>';
+      el('dsxGo').disabled = false;
+      const now = new Date();
+      const p2 = n => String(n).padStart(2, '0');
+      state.values['design.stamp'] = p2(now.getDate()) + '/' + p2(now.getMonth() + 1) + '/' +
+        now.getFullYear() + ', ' + p2(now.getHours()) + ':' + p2(now.getMinutes()) + ':' + p2(now.getSeconds());
+      save();
+      dsxRunning = false;
+      /* the record behind the dialog is what was just rewritten */
+      if(state.id === 'design') renderDesign(mod('design'));
+      toast('Design system extracted from ' + dsxVal('design.site', X.site));
+      return;
+    }
+    const r = X.run[i++];
+    run.insertAdjacentHTML('beforeend',
+      '<div class="dsx__step">' +
+        '<div class="dsx__steptop"><span class="dsx__stepn">' + esc(r.n) + '</span>' +
+          '<span class="dsx__stept"><span class="dsx__ok">succeeded</span> · ' + r.t + 'ms</span></div>' +
+        '<span class="dsx__stepd">' + esc(r.d) + '</span>' +
+      '</div>');
+    setTimeout(step, Math.min(700, Math.max(150, r.t / 8)));
+  };
+  step();
 }
 
 function renderModule(m){
@@ -736,6 +945,13 @@ el('wizCancel').addEventListener('click', () => closeWizard());
 /* Clicking the dim area behind the dialog dismisses it too. */
 el('wizScrim').addEventListener('mousedown', e => { if(e.target === el('wizScrim')) closeWizard(); });
 
+/* the extraction dialog (module 07) */
+el('dsxClose').innerHTML = ic('x', 13);
+el('dsxClose').addEventListener('click', () => closeDsx());
+el('dsxCancel').addEventListener('click', () => closeDsx());
+el('dsxGo').addEventListener('click', () => dsxPlay());
+el('dsxScrim').addEventListener('mousedown', e => { if(e.target === el('dsxScrim')) closeDsx(); });
+
 el('wizStart').addEventListener('click', () => {
   if(!tenantName()) return;
   const first = !state.done.init;
@@ -807,9 +1023,13 @@ document.addEventListener('keydown', e => {
   if(meta && e.key.toLowerCase() === 'j'){ e.preventDefault(); el('stThemeBtn').click(); return; }
   if(meta && e.key === 'Enter'){
     e.preventDefault();
-    (wizOpen() ? el('wizStart') : el('nextBtn')).click();
+    (dsxOpen_() ? el('dsxGo') : wizOpen() ? el('wizStart') : el('nextBtn')).click();
     return;
   }
+  /* The extraction dialog opened over the design page, so it takes Escape
+     first; a run in flight holds the layer until it settles. */
+  if(e.key === 'Escape' && dsxOpen_()){ closeDsx(); return; }
+  if(dsxOpen_()) return;
   if(e.key === 'Escape' && wizOpen()){ closeWizard(); return; }
   if(wizOpen()) return;
   /* Bare arrows only when focus isn't in a control that wants them. */

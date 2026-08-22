@@ -82,7 +82,7 @@
 }
 /* Hover and active sit above the rail's own surface, which is now a step
    darker than the sidebar — so both go up, not down. */
-.rail__btn:hover{ background:var(--rail-active); color:var(--text) }
+.rail__btn:hover{ background:var(--rail-active); color:var(--text); text-decoration:none }
 .rail__btn[aria-current="page"]{ background:var(--rail-active); color:var(--text) }
 /* Active marker bleeds to the rail's own left edge. */
 .rail__btn[aria-current="page"]::before{

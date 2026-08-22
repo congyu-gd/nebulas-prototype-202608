@@ -1517,6 +1517,25 @@ button.chip--plain:hover{ background:var(--raised) }
 .pwfile__sub{ margin-left:auto; color:var(--text-3); font-size:var(--t-11) }
 .pwfoot__hint{ font-size:var(--t-11); color:var(--text-3) }
 
+/* ------------------------- new project dialog: standard vs packages tabs
+   Only while a fresh project is being made. A package card carries what it
+   installs; Install is the act. */
+.pack{
+  border:var(--border) solid var(--line); border-radius:var(--r-lg);
+  padding:var(--s-4);
+}
+.pack__head{ display:flex; align-items:flex-start; gap:var(--s-3) }
+.pack__ico{ display:flex; flex:none; color:var(--text-3); margin-top:2px }
+.pack__id{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px }
+.pack__nm{ font-size:var(--t-13); font-weight:var(--w-medium) }
+.pack__sub{ font-size:var(--t-12); color:var(--text-3); line-height:1.5 }
+.pack__head .btn{ flex:none }
+.pack__brings{
+  margin:var(--s-3) 0 0; padding-left:var(--s-5);
+  font-size:var(--t-12); color:var(--text-2); line-height:1.7;
+}
+.pack + .pack{ margin-top:var(--s-3) }
+
 /* The wizard's left column carries two tabs: AI Chat and Manual Script. The
    manual pane is the page as a hand-written definition — inputs, sources,
    the report step as editable code — with a test row at the end. */

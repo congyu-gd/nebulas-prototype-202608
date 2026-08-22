@@ -31,7 +31,11 @@ js/install.js        the initialisation dialog, menu, configuration and views
 ```
 
 `nebulas-cloud.html` shares `tokens.css`, `base.css` and `components.css` with
-the workspace and nothing else — no shared script, no shared layout.
+the workspace and nothing else — no shared script, no shared layout. The two
+pages are linked by one door: the workspace rail's cloud icon is a real `<a>`
+to the cloud page (the in-app Cloud & settings section keeps its content and
+stays reachable from the links that name it — Build's connect banners, the
+palette — but its rail seat belongs to the page).
 
 Which makes the class names in `components.css` a namespace two pages live in,
 and taking a name a page shell already uses breaks that page silently. It has
@@ -68,8 +72,9 @@ pages need the same part it moves up under one name; when one page needs a
 variant it takes a modifier. A page may *extend* a component with a state
 (`.chip[aria-pressed]`) or place it in a context (`.projwrap .section`), but
 re-declaring the bare block claims the name — which is exactly how `.menu`
-deleted the cloud page's left column and `.barlist` silently redefined a shared
-geometry.
+deleted the cloud page's left column, `.barlist` silently redefined a shared
+geometry, and `.swatch` (the workspace's accent chip) crushed the cloud
+palette's colour cards to 22px squares — the cloud's are `.dsxsw` now.
 
 **`block__element--modifier`**, lowercase, no abbreviations for new blocks:
 `.cols__bar`, not `.cols__b`; `.barlist`, not `.bl`.
@@ -1308,6 +1313,18 @@ same verbs serve both, which is why there is no Create button to forget.
   is byte-for-byte the chat pane's behaviour.
 - **Closing an untouched fresh draft removes it silently** — nothing was said,
   so nothing was made. `Discard` on a touched one is undoable.
+- **A fresh project is not made here.** Both project `+` buttons — the chat
+  sidebar's and Build's Projects lane — open the **project dialog**, whose
+  fresh mode carries two tabs: **Standard project** (a name and an icon,
+  nothing else — the default) and **Project packages**: pre-configured,
+  functional packages (`D.PROJECT_PACKS` — Monthly close pack, Churn
+  watchtower, Support triage desk, Social publishing kit), each a card saying
+  what it brings with one **Install** button. Installing builds the same
+  record shape `saveProject` builds — bindings from the pack, the schedule
+  row written through `syncProjectRun` — closes the dialog and lands on the
+  project page it made. Install proposes; the project page and Build adjust.
+  The tabs exist only in fresh mode: an existing project's settings dialog
+  is tabless, and the maker stays the optimize-in-chat surface.
 
 ## An app is a column, not a layer
 
@@ -1719,7 +1736,7 @@ One ladder, few rungs, and every rung earns its place:
 | 2–4 | sticky heads, the rail, the results grip | — | in-layout, not floating: they scroll with their pane and stack locally. (`.rail` carries z:3 with no `position`; `.build__side` is sticky with no z — both work by grid paint order.) |
 | 40 | composer popover (assistant picker) | `.pop` | anchored to its control, opens upward; only needs to clear the composer |
 | 60 | styled tooltips | `.tip::after` | above content, below every deliberate surface — a tooltip never covers a choice |
-| 80 | the modal plane | `.scrim` | one plane for every modal — eleven instances across the two pages, all equal, stacked by DOM order |
+| 80 | the modal plane | `.scrim` | one plane for every modal — twelve instances across the two pages, all equal, stacked by DOM order |
 | 90 | anchored menus · toasts | `.popmenu` `.toasts` | a menu answers a click that may land over a scrim; toasts report acts from anywhere |
 
 A floating surface earns a shadow; an in-layout one does not. `shadow-lg` for
@@ -1744,7 +1761,8 @@ Three placements:
 - **Centered** (`.scrim--center`, padding `s-6`): the tall overlays —
   assistant detail, maker, page wizard, edit dialog, the small browser window.
 - **Wizard** (`.scrim--wizard`, `padding-top:7vh`, install.css): the cloud
-  page's module wizard — taller than a dialog, shorter than centered.
+  page's module wizard and its extraction dialog — taller than a dialog,
+  shorter than centered.
 
 Three ways out, always: the **×** in the head (`iconbtn--sm`, 13px glyph,
 titled *Close (esc)*), **Escape**, and a **mousedown on the backdrop** itself
@@ -1779,7 +1797,7 @@ in, so only a toast, never the empty column, takes a click.
 | `.detail` | assistant record | center | `min(1120px, 96vw)` | `min(760px, 88vh)`; columns 340px + rest; single column under 860px |
 | `.maker` | Build's chat layer · the page wizard | center | `min(1102px, 96vw)` (measure×1.45) | `min(760px, 88vh)`; side column `--list-w`×1.45 |
 | `.webwin` | the small browser window | center | `min(460px, 92vw)` | page `min(420px, 56vh)` |
-| `.wizard` | module wizard (cloud page, install.css) | wizard 7vh | `min(680px, 94vw)` | `max-height:82vh` — the one shell that sizes to content |
+| `.wizard` | module wizard · extraction dialog (cloud page, install.css) | wizard 7vh | `min(680px, 94vw)` | `max-height:82vh` — the one shell that sizes to content |
 
 All wear `r-xl` corners (10px), `--bg` surface, `--line` border, `shadow-lg`,
 `overflow:hidden` so their own headers and footers clip cleanly. Six live in
@@ -1908,18 +1926,33 @@ reason. Grouping reads a `phase` field off each page rather than slicing the
 array by index, which is what it used to do and what broke every time a module
 was added.
 
-Module 07 is **Design Assets** — the design system as configuration, sitting
-in the Platform phase because it shapes what tenants see, not how the install
-runs. Its six groups are the token categories a generated surface inherits:
-color palette (brand, accent, surfaces, semantic status kept apart from the
-brand hue), typography (faces, base size, scale ratio, self-hosted fonts),
-spacing & density (a base unit everything is a multiple of), radii & elevation,
-breakpoints & layout, and motion · icons · themes. The defaults are this
-prototype's own tokens where one exists — 4px base unit, 8px radius, subtle
-motion — so the form ships answered the way the page in front of you answers
-it. Inserting it renumbered modules 08–13; ids never changed, which is why
-nothing that reads configuration (`cval` is by id, group title and field
-label) had to move.
+Module 07 is **Design Assets** — sitting in the Platform phase because it
+shapes what tenants see, not how the install runs. It is not a form: the
+design system is **extracted from a site the tenant owns**, then read here
+(`custom:'design'` routes it to its own renderer, the third page kind after
+form and view). The page is the **display**, at the page's own width — a
+squeezed side column cut the content short, so the extraction moved off the
+page entirely. A card per token kind: the **palette** as swatch cards — the chip pure
+colour with the hex in the label row beside the name (twelve aligned rows
+instead of twelve inks negotiating with twelve backgrounds), an **editable
+role** (primary · secondary · accent · background · surface · border · text ·
+text_muted …), and the provenance line; **typography** as full-line specimens per face with
+role and rule count; the **spacing scale** drawn to its own values; **radii**
+as visible corners named by where they were read; and the **imported marks**,
+each on the surface it is for. Every token carries its provenance — share of
+the site's declarations and the variable or selector it was read from —
+because a token you can trace is a token you can trust. Extraction proposes,
+a person repoints: only the roles, the URL and the crawl size persist; the
+tokens are the extraction's to write. The extraction itself is **one button**
+on the record card, opening a **dialog** (the wizard shell): Website, Pages
+to crawl, the ownership warning, and **Last run** as seven settled steps
+(`discover_pages → collect_stylesheets → parse_tokens → find_images →
+extract_copy → synthesize → merge`), each with its timing, previous runs
+folded under. The button replays the pipeline step by step, restamps the
+record, and the page behind redraws; a run in flight holds the layer until
+it settles. Inserting the module renumbered 08–13; ids never
+changed, which is why nothing that reads configuration (`cval` is by id,
+group title and field label) had to move.
 
 Both views show **example data from the first visit**, before any tenant
 exists — this is a prototype, and a reader who opens a dashboard should see what

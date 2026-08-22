@@ -522,7 +522,7 @@ const BUILD_GROUPS = [
     lead:a => dotLead(a.state), sub:a => a.model,
     empty:'No assistants yet — the plus above makes one.' },
 
-  { kind:'pj', label:'Projects', icon:'folder', addTip:'New project — describe it', add:() => openMaker('pj'),
+  { kind:'pj', label:'Projects', icon:'folder', addTip:'New project', add:() => openProject(null),
     items:() => D.PROJECTS,
     lead:p => '<span class="row__icon">' + ic(p.icon, 13) + '</span>',
     sub:p => (p.shared ? 'shared' : 'personal') + (p.run ? ' · runs' : '') +
@@ -2814,8 +2814,15 @@ function refreshDesc(p){
   if (p.descAuto || !p.desc){ p.desc = autoDesc(p); p.descAuto = true; }
 }
 
+/* Two ways to a new project, as tabs in this dialog: a standard one — a name
+   and an icon, nothing else (the default) — or a pre-configured package.
+   Both project + buttons (chat sidebar and Build's lane) open this dialog,
+   so the choice exists wherever a project is made. */
+let projTab = 'std';
+
 function openProject(p){
   projOn = p || null;
+  projTab = 'std';
   projDraft = p
     ? { name:p.name, icon:p.icon || 'folder', shared:!!p.shared,
         assistant:p.assistant || '', kbs:(p.kbs || []).slice(), sources:(p.sources || []).slice(),
@@ -2848,6 +2855,42 @@ function renderProject(){
     : projOn.name + ' · ' + (d.run ? CADENCE_ADJ[d.run.every].toLowerCase() : 'no schedule');
 
   $('#projHelp').setAttribute('aria-pressed', String(projHints));
+
+  if (fresh){
+    const tabs = el('div','tabs arttabs');
+    [['std','Standard project'],['pack','Project packages']].forEach(([k, l]) => {
+      const b = el('button','tab', l);
+      b.type = 'button';
+      b.setAttribute('aria-selected', String(projTab === k));
+      b.onclick = () => { projTab = k; renderProject(); };
+      tabs.append(b);
+    });
+    body.append(tabs);
+    if (projTab === 'pack'){
+      $('#projSub').textContent = 'Pre-configured, functional packages — install one, adjust anything after';
+      body.append(helpNote('A package is a working project, pre-bound — install it, then adjust ' +
+        'anything on the project page or in Build, the same as a project made by hand.'));
+      D.PROJECT_PACKS.forEach(pk => {
+        const card = el('div','pack');
+        const head = el('div','pack__head',
+          '<span class="pack__ico">' + ic(pk.ico, 15) + '</span>' +
+          '<span class="pack__id"><span class="pack__nm">' + esc(pk.nm) + '</span>' +
+            '<span class="pack__sub">' + esc(pk.sub) + '</span></span>');
+        const inst = el('button','btn btn--primary btn--sm', ic('pkg', 13) + 'Install');
+        inst.type = 'button';
+        inst.onclick = () => installPack(pk);
+        head.append(inst);
+        card.append(head);
+        card.append(el('ul','pack__brings', pk.brings.map(b => '<li>' + esc(b) + '</li>').join('')));
+        body.append(card);
+      });
+      const cancel = el('button','btn btn--ghost','Cancel');
+      cancel.type = 'button';
+      cancel.onclick = closeProject;
+      foot.append(el('div','dialog__spacer'), cancel);
+      return;
+    }
+  }
 
   /* The explanation of what a project is, said once — on the way in, not over
      the shoulder of somebody who already has three of them. It retires with the
@@ -2943,6 +2986,24 @@ function syncProjectRun(p, prevSched){
     assistant:p.assistant || '—', last:'—' };
   p.run.sched = row.id;
   D.SCHEDULE.push(row);
+}
+
+/* Installing a package is creation with the bindings already made: the same
+   record shape saveProject builds, filled from the pack, its schedule row
+   written the same way — then straight to the project page it made. */
+function installPack(pk){
+  const cfg = pk.cfg;
+  const p = { id:'p' + (++projN), descAuto:false, desc:cfg.desc,
+    name:cfg.name, icon:cfg.icon, shared:false,
+    assistant:cfg.assistant, assistants:[cfg.assistant],
+    kbs:cfg.kbs.slice(), sources:cfg.sources.slice(), conn:cfg.conn.slice(),
+    code:[], pages:[], custom:{ ids:[] },
+    run:{ every:cfg.run.every, ask:cfg.run.ask }, when:'now' };
+  syncProjectRun(p);
+  D.PROJECTS.unshift(p);
+  closeProject();
+  select('chat', key('p', p.id));
+  toast('Installed ' + pk.nm + ' — first run ' + NEXT_OF[p.run.every]);
 }
 
 function saveProject(){
@@ -9604,6 +9665,23 @@ function boot(){
   COMPOSER_PH = $('#composerInput').placeholder;
   const rail = $('#rail');
   ORDER.forEach(k => {
+    /* The cloud icon is a real link to the deployment page
+       (nebulas-cloud.html) — it navigates, middle-click and all. The in-app
+       Cloud & settings section stays reachable from the links that name it
+       (Build's connect banners, the palette); the rail seat belongs to the
+       page. */
+    if (k === 'cloud'){
+      const a = el('a','rail__btn tip', ic('cloud',17));
+      a.href = 'nebulas-cloud.html';
+      /* A new tab: the workspace keeps its in-memory state (threads, filed
+         artifacts) while the settings are read beside it. */
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.setAttribute('data-tip','Nebulas cloud setting');
+      a.setAttribute('aria-label','Nebulas cloud setting');
+      rail.append(a);
+      return;
+    }
     const b = el('button','rail__btn tip', ic(SECTIONS[k].icon, 17));
     b.dataset.nav = k;
     b.setAttribute('data-tip', SECTIONS[k].label);

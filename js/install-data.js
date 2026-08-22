@@ -270,67 +270,13 @@ const MODULES = [
   ]
 },
 {
+  /* Not a form: the design system is EXTRACTED from a site the tenant owns,
+     then read here — palette swatches with roles and provenance on the left,
+     the extraction run on the right. install.js renders it via `custom`. */
   id:'design', n:'07', phase:'platform', label:'Design Assets', icon:'feather',
-  page:'Design System',
-  desc:'The tokens every tenant-facing surface inherits — colour, type, spacing, radii, and the breakpoints layouts answer to.',
-  groups:[
-    { t:'Color palette', f:[
-      { t:'input', l:'Primary / brand', v:'#4F46E5', half:true, mono:true,
-        h:'Buttons, links, focus rings — the one saturated voice on the page.' },
-      { t:'input', l:'Accent', v:'#0EA5E9', half:true, mono:true },
-      { t:'input', l:'Surface — light', v:'#FFFFFF', half:true, mono:true },
-      { t:'input', l:'Surface — dark', v:'#101014', half:true, mono:true },
-      { t:'input', l:'Success · warning · danger', v:'#16A34A · #D97706 · #DC2626', mono:true,
-        h:'Status colours are semantic — kept apart from the brand hue so state never competes with identity.' },
-      { t:'seg', l:'Neutral cast', v:'Cool grey', o:['Cool grey','Warm grey','Pure grey'] },
-      { t:'switch', l:'Derive the dark palette automatically', v:true,
-        h:'Off means every dark-mode token is set by hand.' }
-    ]},
-    { t:'Typography', f:[
-      { t:'select', l:'Heading face', v:'Inter', half:true,
-        o:['Inter','Söhne','IBM Plex Sans','Source Han Sans','Roboto','System stack'] },
-      { t:'select', l:'Body face', v:'Inter', half:true,
-        o:['Inter','IBM Plex Sans','Source Han Sans','Roboto','Georgia','System stack'] },
-      { t:'select', l:'Monospace face', v:'JetBrains Mono', half:true,
-        o:['JetBrains Mono','IBM Plex Mono','SF Mono','Consolas'] },
-      { t:'input', l:'Base size', v:'16px', half:true, mono:true },
-      { t:'select', l:'Type scale ratio', v:'1.25 — major third', half:true,
-        o:['1.125 — major second','1.2 — minor third','1.25 — major third','1.333 — perfect fourth'] },
-      { t:'select', l:'Body line height', v:'1.5', half:true, o:['1.4','1.5','1.6'] },
-      { t:'switch', l:'Self-host font files', v:true,
-        h:'Fonts are served from the tenant CDN — no calls to third-party font hosts.' }
-    ]},
-    { t:'Spacing & density', f:[
-      { t:'range', l:'Base unit', v:4, min:2, max:8, step:1, unit:'px',
-        h:'Every gap, inset and control height is a multiple of this.' },
-      { t:'seg', l:'Spacing scale', v:'Geometric ×2', o:['Linear','Geometric ×1.5','Geometric ×2'] },
-      { t:'multi', l:'Density modes offered', v:['Compact','Comfortable'], o:['Compact','Comfortable','Roomy'] },
-      { t:'input', l:'Content max width', v:'1280px', half:true, mono:true }
-    ]},
-    { t:'Radii & elevation', f:[
-      { t:'range', l:'Base corner radius', v:8, min:0, max:24, step:2, unit:'px' },
-      { t:'seg', l:'Radius steps', v:'sm · md · lg · full', o:['One radius everywhere','sm · md · lg','sm · md · lg · full'] },
-      { t:'select', l:'Elevation style', v:'Soft shadows', half:true,
-        o:['Soft shadows','Hard shadows','Borders only','Borders + shadows'] },
-      { t:'select', l:'Shadow steps', v:'3', half:true, o:['2','3','4'] }
-    ]},
-    { t:'Breakpoints & layout', f:[
-      { t:'input', l:'sm · md · lg · xl', v:'640 · 960 · 1280 · 1600', mono:true,
-        h:'In px, mobile-first — each is a min-width the layout answers to.' },
-      { t:'seg', l:'Grid', v:'12 columns', o:['8 columns','12 columns','16 columns'] },
-      { t:'switch', l:'Fluid type between breakpoints', v:false,
-        h:'Sizes interpolate with the viewport instead of stepping at each breakpoint.' }
-    ]},
-    { t:'Motion, icons & themes', f:[
-      { t:'seg', l:'Motion', v:'Subtle', o:['None','Subtle','Expressive'] },
-      { t:'input', l:'Standard duration / easing', v:'160ms · cubic-bezier(.2,.8,.2,1)', half:true, mono:true },
-      { t:'select', l:'Icon set', v:'Outline, 1.5px', half:true,
-        o:['Outline, 1.5px','Outline, 2px','Filled','Duotone'] },
-      { t:'multi', l:'Theme modes', v:['Light','Dark','System'], o:['Light','Dark','System','High contrast'] },
-      { t:'switch', l:'Respect prefers-reduced-motion', v:true,
-        h:'A device that asks for less motion gets none, whatever Motion says above.' }
-    ]}
-  ]
+  page:'Design System', custom:'design',
+  desc:'The design system read from your site, not typed in: crawl a URL, parse the tokens, assign the roles — and every tenant-facing surface inherits it.',
+  groups:[]
 },
 {
   id:'identity', n:'08', phase:'platform', label:'Identity & Multi-tenancy', icon:'user',
@@ -569,3 +515,71 @@ const MODULES = [
   ]
 }
 ];
+
+/* ===================================================== design extraction
+   Module 07's fixture: the design system as last extracted. The palette is
+   what the parser read — share of colour declarations, and where each was
+   read (a variable or the selector that used it). Roles are the editable
+   part: extraction proposes, a person can repoint. The run is the pipeline
+   the Extract button replays. */
+const DESIGN_ROLES = ['primary','secondary','accent','background','surface',
+  'border','text','text_muted','danger','muted','surface_alt','accent_deep'];
+
+const DESIGN_EXTRACT = {
+  name:'nebulas-design', uid:'637c504c-e02e-44d0-a59e-713459ec28fb',
+  site:'https://nebulas.ai/', pages:5,
+  stamp:'22/08/2026, 08:46:02',
+  swatches:[
+    { hex:'#5a47cd', nm:'brand violet',   role:'primary',     share:'3.2%',
+      read:'.dark\\:bg-[radial-gradient(ellipse_at_bottom,rgba(90,71,205,.3)_0%,rgba(90,71,205,.1)_30%)*]' },
+    { hex:'#ffe082', nm:'warm yellow',    role:'secondary',   share:'1.6%',  read:'--brand-yellow' },
+    { hex:'#ffcf3e', nm:'gold highlight', role:'accent',      share:'1.6%',  read:'.gradient-text' },
+    { hex:'#000000', nm:'midnight',       role:'background',  share:'37.1%', read:'--tw-gradient-from' },
+    { hex:'#ffffff', nm:'paper',          role:'surface',     share:'16.9%', read:'--tw-ring-offset-color' },
+    { hex:'#a1a1aa', nm:'soft border',    role:'border',      share:'1.6%',  read:'--border-light' },
+    { hex:'#09090b', nm:'ink',            role:'text',        share:'1.6%',  read:'--text-primary' },
+    { hex:'#99a1af', nm:'muted gray',     role:'text_muted',  share:'0.81%', read:'--color-gray-400' },
+    { hex:'#ef4444', nm:'signal red',     role:'danger',      share:'0.4%',  read:'--color-red-500' },
+    { hex:'#808080', nm:'mid gray',       role:'muted',       share:'0.3%',  read:'.text-neutral' },
+    { hex:'#fffbeb', nm:'cream',          role:'surface_alt', share:'0.3%',  read:'--color-amber-50' },
+    { hex:'#7b3306', nm:'umber',          role:'accent_deep', share:'0.2%',  read:'--color-amber-900' }
+  ],
+  run:[
+    { n:'discover_pages',      d:'1 page(s) fetched',                           t:170 },
+    { n:'collect_stylesheets', d:'1 stylesheet(s), 57651 bytes',                t:55 },
+    { n:'parse_tokens',        d:'24 color(s), 4 font(s), 174 CSS variable(s)', t:25 },
+    { n:'find_images',         d:'1 image(s) imported, 0 skipped',              t:821 },
+    { n:'extract_copy',        d:'2 snippet(s)',                                t:0 },
+    { n:'synthesize',          d:'9 role(s) assigned; voice inferred; no corrections needed', t:10470 },
+    { n:'merge',               d:'Design system and voice applied',             t:21 }
+  ],
+  /* Beyond colour: the faces, the spacing scale, the corner radii and the
+     imported marks — each with the same provenance discipline as the
+     palette, because a token you can trace is a token you can trust. */
+  fonts:[
+    { face:'Sohne',          fam:'"Sohne","Inter",system-ui,sans-serif', role:'display',
+      share:'31 rule(s)',  read:'--font-display' },
+    { face:'Inter',          fam:'"Inter",system-ui,sans-serif',         role:'body',
+      share:'204 rule(s)', read:'--font-sans' },
+    { face:'JetBrains Mono', fam:'"JetBrains Mono",ui-monospace,monospace', role:'mono',
+      share:'18 rule(s)',  read:'--font-mono' },
+    { face:'Georgia',        fam:'Georgia,serif',                        role:'serif accent',
+      share:'2 rule(s)',   read:'.pullquote' }
+  ],
+  spacing:{ base:4, read:'--spacing · 174 declaration(s) land on the scale',
+    vals:[4,8,12,16,24,32,48,64] },
+  radii:[
+    { v:4,    l:'4px',  read:'--radius-sm · inputs, chips' },
+    { v:8,    l:'8px',  read:'--radius-md · cards, menus' },
+    { v:16,   l:'16px', read:'--radius-xl · hero panels' },
+    { v:9999, l:'full', read:'--radius-full · pills, avatars' }
+  ],
+  logos:[
+    { nm:'nebulas-wordmark.svg', kind:'wordmark', size:'12.4 KB', on:'light' },
+    { nm:'nebulas-mark.svg',     kind:'mark',     size:'3.1 KB',  on:'dark' }
+  ],
+  prev:[
+    { when:'21/08/2026, 17:02', note:'5 pages · 24 colors · succeeded' },
+    { when:'19/08/2026, 09:38', note:'3 pages · 21 colors · succeeded' }
+  ]
+};

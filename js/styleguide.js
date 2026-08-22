@@ -328,7 +328,7 @@ const SECTIONS = [
     { cls:'1 · Levels', what:'the z ladder', wide:true, block:true, html:
       '<table class="table"><thead><tr><th class="num">z</th><th>What</th><th>Why this height</th></tr></thead><tbody>' +
       '<tr><td class="num">90</td><td><span class="t-mono">.popmenu · .toasts</span></td><td>a menu answers a click that may land over a scrim; toasts report acts from anywhere</td></tr>' +
-      '<tr><td class="num">80</td><td><span class="t-mono">.scrim</span></td><td>one plane for every modal — eleven instances across the two pages, equal, stacked by DOM order</td></tr>' +
+      '<tr><td class="num">80</td><td><span class="t-mono">.scrim</span></td><td>one plane for every modal — twelve instances across the two pages, equal, stacked by DOM order</td></tr>' +
       '<tr><td class="num">60</td><td><span class="t-mono">.tip::after</span></td><td>above content, below every deliberate surface — a tooltip never covers a choice</td></tr>' +
       '<tr><td class="num">40</td><td><span class="t-mono">.pop</span></td><td>anchored to its control, opens upward; only needs to clear the composer</td></tr>' +
       '<tr><td class="num">2–4</td><td>sticky heads · rail · grip</td><td>in-layout, not floating: they scroll with their pane and stack locally</td></tr>' +
@@ -342,7 +342,7 @@ const SECTIONS = [
       '<header class="dialog__head"><span class="dialog__ico">' + ic('share', 15) + '</span>' +
       '<span class="dialog__id"><span class="dialog__title">Share result</span></span>' +
       '<button class="iconbtn iconbtn--sm">' + ic13('x') + '</button></header></div></div>',
-      note:'One recipe, eleven instances: --scrim backdrop, 2px blur, content settling from -8px/.985 (the maker alone writes that as -1×--s-2, so its entrance breathes with density). THREE placements — top 14vh (palette, record dialogs), centered (.scrim--center: assistant detail, maker, page wizard, edit, browser window), and .scrim--wizard at 7vh (the cloud page\'s module wizard, install.css). Three ways out, always: ×, Escape, mousedown on the backdrop — all meaning Cancel where a copy is staged.' },
+      note:'One recipe, twelve instances: --scrim backdrop, 2px blur, content settling from -8px/.985 (the maker alone writes that as -1×--s-2, so its entrance breathes with density). THREE placements — top 14vh (palette, record dialogs), centered (.scrim--center: assistant detail, maker, page wizard, edit, browser window), and .scrim--wizard at 7vh (the cloud page\'s module wizard and extraction dialog, install.css). Three ways out, always: ×, Escape, mousedown on the backdrop — all meaning Cancel where a copy is staged.' },
     { cls:'3 · Escape', what:'resolved top-down', wide:true, block:true, html:
       '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
       ['edit','browser window','assistant detail','share','post','page wizard','maker','run history','project','palette','app sheet']

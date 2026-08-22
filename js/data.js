@@ -529,6 +529,50 @@ const PAGE_WIZARD = {
   }
 };
 
+/* ---------------------------------------------------------- project packs
+   The maker's second tab when a project is being created: pre-configured,
+   functional packages. Installing one writes `cfg` onto the fresh draft —
+   the same record shape a hand-built project has, bound to things that
+   exist in these fixtures — so the result is a working project, not a demo
+   of one. `brings` is the human account of what arrives. */
+const PROJECT_PACKS = [
+  { id:'pk1', nm:'Monthly close pack', ico:'chart',
+    sub:'Files the monthly close report on its own — revenue, variance, notes.',
+    brings:['Revenue analyst answers inside it','Finance corpus + q3_ledger on the shelf',
+            'Snowflake granted','Runs every month and files the report'],
+    cfg:{ name:'Monthly close', icon:'chart',
+      desc:'The monthly close, filed without being asked: revenue, variance against plan, and the notes that explain both.',
+      assistant:'Revenue analyst', kbs:['Finance corpus'], sources:['q3_ledger'], conn:['cn1'],
+      run:{ every:'Every month', ask:'File the monthly close report — revenue, variance and the notes.' } } },
+  { id:'pk2', nm:'Churn watchtower', ico:'users',
+    sub:'Watches account health daily and keeps a ranked watchlist current.',
+    brings:['Revenue analyst answers inside it','Support corpus + accounts_health + support_tickets',
+            'HubSpot granted','Runs every day and rescores the watchlist'],
+    cfg:{ name:'Churn watchtower', icon:'users',
+      desc:'Enterprise retention on a timer: daily rescoring, a ranked watchlist, and the CRM signal beside the usage signal.',
+      assistant:'Revenue analyst', kbs:['Support corpus'],
+      sources:['accounts_health','support_tickets'], conn:['cn9'],
+      run:{ every:'Every day', ask:'Rescore the watchlist and flag every account that moved a band.' } } },
+  { id:'pk3', nm:'Support triage desk', ico:'help',
+    sub:'Sorts the overnight queue by severity and drafts first replies.',
+    brings:['Support triage answers inside it','Support corpus + support_tickets on the shelf',
+            'Zendesk and Slack granted','Runs every day before the desk opens'],
+    cfg:{ name:'Support triage desk', icon:'help',
+      desc:'The overnight queue sorted before anyone sits down: severity first, first replies drafted, escalations named.',
+      assistant:'Support triage', kbs:['Support corpus'], sources:['support_tickets'],
+      conn:['cn3','cn7'],
+      run:{ every:'Every day', ask:'Sort overnight tickets by severity and draft first replies.' } } },
+  { id:'pk4', nm:'Social publishing kit', ico:'share',
+    sub:'Drafts the week across channels and reads back what any of it did.',
+    brings:['Social editor answers inside it','Brand & social kit + channel insights on the shelf',
+            'Facebook Pages granted','Runs every week and files the channel read'],
+    cfg:{ name:'Social publishing kit', icon:'share',
+      desc:'Posting across Facebook, Instagram and LinkedIn, with a weekly read on what any of it did.',
+      assistant:'Social editor', kbs:['Brand & social kit'],
+      sources:['fb_page_insights','ig_media_insights'], conn:['cn10'],
+      run:{ every:'Every week', ask:'Draft the week across channels and file the performance read.' } } }
+];
+
 /* ---------------------------------------------------------------- threads */
 const THREADS = [
   {
@@ -2681,7 +2725,7 @@ const REPLIES = [
 ];
 
 return {
-  ARTIFACTS, ARTIFACT_BY_ID, WEB_PAGES, PAGE_WIZARD, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SKILL_DESC, SCHEDULE,
+  ARTIFACTS, ARTIFACT_BY_ID, WEB_PAGES, PAGE_WIZARD, PROJECT_PACKS, THREADS, PROJECTS, ASSISTANTS, ASSISTANT_TEAMS, SKILL_DESC, SCHEDULE,
   KBS, DATASETS, DASHBOARDS, DASH_KINDS, SKILLS, AGENTS, APPS, APP_PANELS, CLOUD,
   CONNECTORS, CONNECTOR_AUTHS, DESIGNS, DESIGN_ACCENTS, SNIPPETS,
   ACCOUNT, MODELS, CASES, REPLIES

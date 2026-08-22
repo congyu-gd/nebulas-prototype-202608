@@ -23,7 +23,8 @@
 
   <aside class="menu" aria-label="Deployment modules">
     <div class="menu__head">
-      <div class="menu__mark" aria-hidden="true">N</div>
+      <!-- The workspace's mark, not a stand-in letter: one brand, two pages. -->
+      <div class="menu__mark" aria-hidden="true"><svg viewBox="0 0 22.91 18.70" fill="none"><path transform="translate(3.04 2.83)" d="M0 9.42169C0 4.21824 4.29139 0 9.58509 0L10.6919 0L11.7988 0C16.2579 0 19.8727 3.55315 19.8727 7.93617C19.8727 12.3192 16.2579 15.8723 11.7988 15.8723L0 15.8723L0 9.42169Z" fill="#ffe082"/><path transform="translate(9.81 6.17)" d="M1.52563 2.98039C2.36821 2.98039 3.05125 2.31321 3.05125 1.4902C3.05125 0.667183 2.36821 0 1.52563 0C0.683046 0 0 0.667183 0 1.4902C0 2.31321 0.683046 2.98039 1.52563 2.98039Z" fill="#2b282f"/><path transform="translate(15.60 6.17)" d="M1.52563 2.98039C2.36821 2.98039 3.05125 2.31321 3.05125 1.4902C3.05125 0.667183 2.36821 0 1.52563 0C0.683046 0 0 0.667183 0 1.4902C0 2.31321 0.683046 2.98039 1.52563 2.98039Z" fill="#2b282f"/><path fill-rule="evenodd" d="M10.8518 0.000919868C10.8995 0.00030702 10.9472 0 10.995 0L13.2624 0C14.9183 0.0256323 16.4786 0.454035 17.8386 1.19024C20.407 2.61801 22.3378 5.2016 22.7257 8.2297C22.7711 8.59739 22.7946 8.97186 22.7946 9.35191C22.7946 14.2796 18.8658 18.2696 13.9269 18.6718C13.6709 18.6917 13.4128 18.702 13.1532 18.702L0.37994 18.702L0 18.702L0 16.4697L0 10.9079C0.057969 7.09158 1.82929 4.04899 4.40095 2.1571C6.20573 0.841216 8.43835 0.0471854 10.8518 0.000919868ZM2.28844 10.6842C2.28844 6.01734 6.22246 2.23408 11.0753 2.23408L13.1046 2.23408C17.1923 2.23408 20.5061 5.42083 20.5061 9.35191C20.5061 13.283 17.1923 16.4697 13.1046 16.4697L4.57688 16.4697L2.28844 16.4697L2.28844 14.2344L2.28844 10.6842Z" fill="currentColor"/></svg></div>
       <!-- The page name is fixed; the sub-line carries which tenant it is. -->
       <div class="menu__id">
         <span class="menu__name">Nebulas cloud setting</span>
@@ -96,6 +97,31 @@
       <div class="cfg__spacer"></div>
       <button class="btn btn--secondary" id="wizCancel">Cancel</button>
       <button class="btn btn--primary" id="wizStart">Start deployment</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ================================================= extraction dialog
+     Module 07's action, as a layer: the page shows the extracted system at
+     full width; crawling a new one is an act, so it opens over the page
+     rather than squeezing it into a side column. Reuses the wizard shell. -->
+<div class="scrim scrim--wizard" id="dsxScrim" data-open="false">
+  <div class="wizard" role="dialog" aria-modal="true" aria-labelledby="dsxTitle">
+    <header class="wizard__head">
+      <div class="wizard__headrow">
+        <span class="t-eyebrow">Design Assets</span>
+        <div class="cfg__spacer"></div>
+        <button class="iconbtn iconbtn--sm" id="dsxClose" title="Close (esc)" aria-label="Close"></button>
+      </div>
+      <h2 class="t-title" id="dsxTitle">Extract design system</h2>
+      <p class="wizard__desc">Crawl a site you own, parse its tokens, and the system every tenant-facing surface inherits is rewritten from what was read.</p>
+    </header>
+    <div class="wizard__body" id="dsxBody"></div>
+    <footer class="wizard__foot">
+      <span class="cfg__hint" id="dsxHint">Pages are fetched publicly; images land in your knowledge base.</span>
+      <div class="cfg__spacer"></div>
+      <button class="btn btn--secondary" id="dsxCancel">Close</button>
+      <button class="btn btn--primary" id="dsxGo">Extract design system</button>
     </footer>
   </div>
 </div>
